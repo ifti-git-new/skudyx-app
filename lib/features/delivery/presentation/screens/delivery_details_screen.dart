@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/core/controllers/app_status_controller.dart';
 
 import '../../../../core/navigation/app_routes.dart';
-import '../../../../core/storage/app_prefs.dart';
 
 class DeliveryDetailsScreen extends StatelessWidget {
   const DeliveryDetailsScreen({super.key});
@@ -27,10 +27,12 @@ class DeliveryDetailsScreen extends StatelessWidget {
                 ),
               ),
               onPressed: () async {
-                // UI-only: mark delivery details added
-                await context.read<AppPrefs>().setHasDeliveryDetails(true);
-                if (context.mounted)
-                  context.push(AppRoutes.deliveryConfirmation);
+                await context.read<AppStatusController>().setHasDeliveryDetails(
+                  true,
+                );
+
+                // Go to Device tab (bottom nav)
+                if (context.mounted) context.go(AppRoutes.device);
               },
               child: const Text(
                 'Confirm',

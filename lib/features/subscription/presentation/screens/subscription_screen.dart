@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/core/controllers/app_status_controller.dart';
 
 import '../../../../core/navigation/app_routes.dart';
 import '../../../../core/storage/app_prefs.dart';
@@ -100,14 +101,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       ),
                     ),
                     onPressed: () async {
-                      final prefs = context.read<AppPrefs>();
-                      await prefs.setIsSubscribed(true);
+                      // mark subscribed
+                      await context.read<AppStatusController>().setSubscribed(
+                        true,
+                      );
 
-                      // OLD:
-                      // context.push(AppRoutes.deliveryDetails);
-
-                      // NEW: go to device; device shows Purchased state 2
-                      if (context.mounted) context.go(AppRoutes.device);
+                      // go to delivery details
+                      if (context.mounted)
+                        context.push(AppRoutes.deliveryDetails);
                     },
                     child: const Text(
                       'Subscribe',

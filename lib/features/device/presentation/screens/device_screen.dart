@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/features/device/presentation/screens/widgets/device_on_the_way_view.dart';
 
+import '../../../../core/controllers/app_status_controller.dart';
 import '../../../../core/navigation/app_routes.dart';
-import '../../../../core/storage/app_prefs.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class DeviceScreen extends StatelessWidget {
@@ -11,30 +12,21 @@ class DeviceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final prefs = context
-        .watch<
-          AppPrefs
-        >(); // prefs is not ChangeNotifier; this won't rebuild automatically
+    final status = context.watch<AppStatusController>();
 
-    // Because AppPrefs is not a notifier, we read it once.
-    // UI will update after a hot reload, or you can restart.
-    // Later we can add a ChangeNotifier "AppStatusController" to rebuild instantly.
-
-    final isSubscribed = prefs.isSubscribed;
-    final hasDeliveryDetails = prefs.hasDeliveryDetails;
+    final isSubscribed = status.isSubscribed;
+    final hasDeliveryDetails = status.hasDeliveryDetails;
 
     if (!isSubscribed) {
-      return _NotPurchasedView();
+      return const _NotPurchasedView();
     }
 
     if (isSubscribed && !hasDeliveryDetails) {
-      return _PurchasedNoDeliveryView();
+      return const _PurchasedNoDeliveryView();
     }
 
-    // Placeholder for later states
-    return const Center(
-      child: Text('Device Screen (Next states will come here)'),
-    );
+    // State 3: Delivery details given -> show "Device is on the way"
+    return const DeviceOnTheWayView();
   }
 }
 
@@ -52,10 +44,15 @@ class _NotPurchasedView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.lock_outline,
-                  size: 90,
-                  color: Color(0xFF94A3B8),
+                // const Icon(
+                //   Icons.lock_outline,
+                //   size: 90,
+                //   color: Color(0xFF94A3B8),
+                // ),
+                Image.asset(
+                  'assets/images/locked_device.png',
+                  width: 90,
+                  height: 90,
                 ),
                 const SizedBox(height: 22),
                 const Text(
@@ -110,11 +107,12 @@ class _PurchasedNoDeliveryView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.inventory_2_outlined,
-                  size: 90,
-                  color: Color(0xFF94A3B8),
-                ),
+                // const Icon(
+                //   Icons.inventory_2_outlined,
+                //   size: 90,
+                //   color: Color(0xFF94A3B8),
+                // ),
+                Image.asset('assets/images/box_ok.png', width: 90, height: 90),
                 const SizedBox(height: 22),
                 const Text(
                   'We’re ready to ship your\nSkudyX Emergency Button.\nAdd your delivery details.',

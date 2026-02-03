@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/core/controllers/app_status_controller.dart';
 import 'package:skudyx/features/auth/data/social/social/apple_auth_provider.dart';
 
 import '../core/config/app_config.dart';
@@ -28,6 +29,9 @@ class AppCompositionRoot extends StatelessWidget {
       providers: [
         Provider<AppConfig>.value(value: config),
         Provider<AppPrefs>.value(value: prefs),
+        ChangeNotifierProvider<AppStatusController>(
+          create: (c) => AppStatusController(prefs: c.read<AppPrefs>()),
+        ),
 
         Provider<GoogleAuthProvider>(create: (_) => GoogleAuthProvider()),
         Provider<AppleAuthProvider>(create: (_) => AppleAuthProvider()),
