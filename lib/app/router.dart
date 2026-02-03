@@ -1,33 +1,26 @@
-import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/navigation/app_routes.dart';
 import '../features/auth/presentation/controllers/auth_controller.dart';
-
-// Screens (placeholders now)
-import '../features/shell/presentation/screens/splash_screen.dart';
-import '../features/auth/presentation/screens/login_screen.dart';
-import '../features/auth/presentation/screens/register_screen.dart';
 import '../features/auth/presentation/screens/email_otp_screen.dart';
 import '../features/auth/presentation/screens/forgot_password_screen.dart';
-
-import '../features/onboarding/presentation/screens/instruction_1_screen.dart';
-import '../features/device/presentation/screens/device_screen.dart';
-
-import '../features/subscription/presentation/screens/subscription_screen.dart';
-import '../features/delivery/presentation/screens/delivery_details_screen.dart';
-import '../features/delivery/presentation/screens/delivery_confirmation_screen.dart';
-
-import '../features/notifications_inbox/presentation/screens/notifications_inbox_screen.dart';
-import '../features/settings/presentation/screens/settings_screen.dart';
-import '../features/profile/presentation/screens/profile_screen.dart';
-
-import '../features/emergency_contact/presentation/screens/emergency_contact_screen.dart';
-import '../features/emergency/presentation/screens/test_report_screen.dart';
-import '../features/emergency/presentation/screens/emergency_screen.dart';
-
-import '../features/cases/presentation/screens/case_list_screen.dart';
+import '../features/auth/presentation/screens/login_screen.dart';
+import '../features/auth/presentation/screens/register_screen.dart';
 import '../features/cases/presentation/screens/case_details_screen.dart';
+import '../features/cases/presentation/screens/case_list_screen.dart';
+import '../features/delivery/presentation/screens/delivery_confirmation_screen.dart';
+import '../features/delivery/presentation/screens/delivery_details_screen.dart';
+import '../features/device/presentation/screens/device_screen.dart';
+import '../features/emergency/presentation/screens/emergency_screen.dart';
+import '../features/emergency/presentation/screens/test_report_screen.dart';
+import '../features/emergency_contact/presentation/screens/emergency_contact_screen.dart';
+import '../features/notifications_inbox/presentation/screens/notifications_inbox_screen.dart';
+import '../features/onboarding/presentation/screens/instruction_1_screen.dart';
+import '../features/profile/presentation/screens/profile_screen.dart';
+import '../features/settings/presentation/screens/settings_screen.dart';
+// Screens (placeholders now)
+import '../features/shell/presentation/screens/splash_screen.dart';
+import '../features/subscription/presentation/screens/subscription_screen.dart';
 
 class AppRouter {
   final AuthController auth;
@@ -65,9 +58,9 @@ class AppRouter {
       return null;
     },
     routes: [
-      GoRoute(path: AppRoutes.splash, builder: (_, __) => const SplashScreen()),
+      GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),
 
-      GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginScreen()),
+      GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(
         path: AppRoutes.register,
         builder: (_, __) => const RegisterScreen(),

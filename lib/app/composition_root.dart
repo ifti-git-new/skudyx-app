@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/features/auth/data/social/social/apple_auth_provider.dart';
 
 import '../core/config/app_config.dart';
 import '../core/storage/app_prefs.dart';
+
+import '../features/auth/data/social/google_auth_provider.dart';
 import '../features/auth/presentation/controllers/auth_controller.dart';
+
 import 'router.dart';
 
 class AppCompositionRoot extends StatelessWidget {
@@ -25,10 +29,20 @@ class AppCompositionRoot extends StatelessWidget {
         Provider<AppConfig>.value(value: config),
         Provider<AppPrefs>.value(value: prefs),
 
+        // Social auth providers (separate files)
+        Provider<GoogleAuthProvider>(create: (_) => GoogleAuthProvider()),
+        Provider<AppleAuthProvider>(create: (_) => AppleAuthProvider()),
+
+        // AuthController
         ChangeNotifierProvider<AuthController>(
-          create: (c) => AuthController(prefs: c.read<AppPrefs>())..init(),
+          create: (c) => AuthController(
+            prefs: c.read<AppPrefs>(),
+            googleAuthProvider: c.read<GoogleAuthProvider>(),
+            appleAuthProvider: c.read<AppleAuthProvider>(),
+          )..init(),
         ),
 
+        // Router depends on auth
         ProxyProvider<AuthController, AppRouter>(
           update: (_, auth, __) => AppRouter(auth: auth),
         ),
