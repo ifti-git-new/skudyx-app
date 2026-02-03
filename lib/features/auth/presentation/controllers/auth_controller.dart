@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:skudyx/core/storage/app_prefs.dart';
 import 'package:skudyx/features/auth/domain/entities/repositories/social_auth_provider.dart';
 
-import '../../../../core/storage/app_prefs.dart';
+// import '../../../../core/storage/app_prefs.dart';
+// import '../../domain/entities/repositories/social_auth_provider.dart';
 import 'auth_state.dart';
 
 class AuthController extends ChangeNotifier {
@@ -29,7 +31,6 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // UI-only mock login until API is integrated
   Future<void> mockLogin({required bool isNewUser}) async {
     await prefs.setLoggedIn(true);
     await prefs.setOnboardingSeen(!isNewUser);
@@ -50,24 +51,13 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // -------- Social sign in (separate providers) --------
-
   Future<void> signInWithGoogle() async {
-    final _ = await googleAuthProvider.signIn();
-
-    // TODO: when API is ready:
-    // send tokens to backend to create/login the user session
-    // e.g. await authRepo.loginWithGoogle(_.idToken / _.accessToken)
-
+    await googleAuthProvider.signIn();
     await mockLogin(isNewUser: false);
   }
 
   Future<void> signInWithApple() async {
-    final _ = await appleAuthProvider.signIn();
-
-    // TODO: when API is ready:
-    // send tokens to backend to create/login the user session
-
+    await appleAuthProvider.signIn();
     await mockLogin(isNewUser: false);
   }
 }

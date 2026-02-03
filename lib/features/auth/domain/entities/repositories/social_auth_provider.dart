@@ -1,5 +1,4 @@
-import 'package:skudyx/features/auth/domain/entities/social_auth_result.dart'
-    show SocialAuthResult;
+import '../../entities/social_auth_result.dart';
 
 abstract class SocialAuthProvider {
   Future<SocialAuthResult> signIn();

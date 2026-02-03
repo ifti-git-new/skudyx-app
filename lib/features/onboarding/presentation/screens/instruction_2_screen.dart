@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../../../core/navigation/app_routes.dart';
 import '../../../../core/widgets/square_back_button.dart';
 import '../../../../core/widgets/sk_primary_button.dart';
@@ -23,7 +22,6 @@ class Instruction2Screen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Divider(height: 1, color: Color(0xFFF3F4F6)),
-
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -31,35 +29,33 @@ class Instruction2Screen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 22),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 22),
-                      const Text(
+                    children: const [
+                      SizedBox(height: 22),
+                      Text(
                         'Features',
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      const Text(
+                      SizedBox(height: 6),
+                      Text(
                         'Lorem ipsum dolor sit amet adipiscing elit.',
                         style: TextStyle(
                           fontSize: 16,
                           color: Color(0xFF6B7280),
                         ),
                       ),
-                      const SizedBox(height: 22),
-
-                      const _FeatureRow(
+                      SizedBox(height: 22),
+                      _Feature(
                         bg: Color(0xFFFFE5E5),
                         icon: Icons.warning_rounded,
                         iconColor: Color(0xFFE50914),
                         title: 'Alert Emergency Contact',
                         desc: 'Notifies your trusted contact instantly.',
                       ),
-                      const SizedBox(height: 22),
-
-                      const _FeatureRow(
+                      SizedBox(height: 22),
+                      _Feature(
                         bg: Color(0xFFE6F0FF),
                         icon: Icons.location_on_rounded,
                         iconColor: Color(0xFF2563EB),
@@ -67,9 +63,8 @@ class Instruction2Screen extends StatelessWidget {
                         desc:
                             'Sends your real-time location to help find you\nquickly.',
                       ),
-                      const SizedBox(height: 22),
-
-                      const _FeatureRow(
+                      SizedBox(height: 22),
+                      _Feature(
                         bg: Color(0xFFE7F9EE),
                         icon: Icons.graphic_eq_rounded,
                         iconColor: Color(0xFF16A34A),
@@ -77,14 +72,12 @@ class Instruction2Screen extends StatelessWidget {
                         desc:
                             'Streams audio from your phone to the support\nteam for real-time assistance.',
                       ),
-
-                      const SizedBox(height: 28),
+                      SizedBox(height: 28),
                     ],
                   ),
                 ),
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 0, 22, 22),
               child: SkPrimaryButton(
@@ -99,14 +92,14 @@ class Instruction2Screen extends StatelessWidget {
   }
 }
 
-class _FeatureRow extends StatelessWidget {
+class _Feature extends StatelessWidget {
   final Color bg;
   final IconData icon;
   final Color iconColor;
   final String title;
   final String desc;
 
-  const _FeatureRow({
+  const _Feature({
     required this.bg,
     required this.icon,
     required this.iconColor,

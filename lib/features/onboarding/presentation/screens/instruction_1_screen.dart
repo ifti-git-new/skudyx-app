@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../../../core/navigation/app_routes.dart';
 import '../../../../core/widgets/sk_primary_button.dart';
 
@@ -14,13 +13,10 @@ class Instruction1Screen extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 120),
-
-            // Icons row (red -> phone -> agent)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _CircleIcon(
-                  size: 64,
+                _Circle(
                   bg: const Color(0xFFFFE5E5),
                   child: Container(
                     width: 26,
@@ -34,8 +30,7 @@ class Instruction1Screen extends StatelessWidget {
                 const SizedBox(width: 14),
                 const Icon(Icons.arrow_forward, color: Color(0xFF9CA3AF)),
                 const SizedBox(width: 14),
-                _CircleIcon(
-                  size: 64,
+                _Circle(
                   bg: const Color(0xFFE6F0FF),
                   child: const Icon(
                     Icons.phone_iphone,
@@ -49,8 +44,7 @@ class Instruction1Screen extends StatelessWidget {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    _CircleIcon(
-                      size: 64,
+                    _Circle(
                       bg: const Color(0xFFE7F9EE),
                       child: const Icon(
                         Icons.support_agent,
@@ -79,9 +73,7 @@ class Instruction1Screen extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: 36),
-
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 22),
               child: Text(
@@ -94,9 +86,7 @@ class Instruction1Screen extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(height: 14),
-
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 32),
               child: Text(
@@ -109,9 +99,7 @@ class Instruction1Screen extends StatelessWidget {
                 ),
               ),
             ),
-
             const Spacer(),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: SkPrimaryButton(
@@ -119,7 +107,6 @@ class Instruction1Screen extends StatelessWidget {
                 onPressed: () => context.push(AppRoutes.instruction2),
               ),
             ),
-
             const SizedBox(height: 22),
           ],
         ),
@@ -128,22 +115,15 @@ class Instruction1Screen extends StatelessWidget {
   }
 }
 
-class _CircleIcon extends StatelessWidget {
-  final double size;
+class _Circle extends StatelessWidget {
   final Color bg;
   final Widget child;
-
-  const _CircleIcon({
-    required this.size,
-    required this.bg,
-    required this.child,
-  });
-
+  const _Circle({required this.bg, required this.child});
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      width: 64,
+      height: 64,
       decoration: BoxDecoration(shape: BoxShape.circle, color: bg),
       child: Center(child: child),
     );

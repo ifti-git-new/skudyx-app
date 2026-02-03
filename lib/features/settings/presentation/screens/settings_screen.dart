@@ -5,9 +5,6 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings (Placeholder)')),
-      body: const Center(child: Text('Settings menu UI will go here (Figma).')),
-    );
+    return const Scaffold(body: Center(child: Text('Settings (Placeholder)')));
   }
 }

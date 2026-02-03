@@ -7,21 +7,16 @@ class AppTheme {
 
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.bg,
-
       colorScheme: base.colorScheme.copyWith(
         primary: AppColors.primary,
         surface: AppColors.surface,
-        error: AppColors.danger,
       ),
-
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.bg,
         elevation: 0,
         centerTitle: true,
         foregroundColor: AppColors.textPrimary,
       ),
-
-      // FIX: CardThemeData (not CardTheme)
       cardTheme: CardThemeData(
         color: AppColors.surface,
         surfaceTintColor: AppColors.surface,
@@ -31,10 +26,9 @@ class AppTheme {
           side: const BorderSide(color: AppColors.border),
         ),
       ),
-
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: const Color(0xFFF6F7F9),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.border),
@@ -45,7 +39,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
         ),
       ),
     );

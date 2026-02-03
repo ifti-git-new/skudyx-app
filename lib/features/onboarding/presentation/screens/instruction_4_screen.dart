@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../core/navigation/app_routes.dart';
 import '../../../../core/widgets/square_back_button.dart';
 import '../../../../core/widgets/sk_primary_button.dart';
+import '../../../auth/presentation/controllers/auth_controller.dart';
 
 class Instruction4Screen extends StatelessWidget {
   const Instruction4Screen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const lineColor = Color(0xFF38BDF8);
-
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -25,7 +25,6 @@ class Instruction4Screen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Divider(height: 1, color: Color(0xFFF3F4F6)),
-
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -51,29 +50,31 @@ class Instruction4Screen extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 22),
-
-                      _ChecklistItem(text: 'Add safety contact', isLast: false),
+                      _C(text: 'Add safety contact', isLast: false),
                       SizedBox(height: 12),
-                      _ChecklistItem(text: 'Verify details', isLast: false),
+                      _C(text: 'Verify details', isLast: false),
                       SizedBox(height: 12),
-                      _ChecklistItem(text: 'Activate device', isLast: false),
+                      _C(text: 'Activate device', isLast: false),
                       SizedBox(height: 12),
-                      _ChecklistItem(text: 'Add safety contact', isLast: true),
-
+                      _C(text: 'Add safety contact', isLast: true),
                       SizedBox(height: 28),
                     ],
                   ),
                 ),
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 0, 22, 22),
               child: SkPrimaryButton(
                 text: 'Next',
-                onPressed: () {
-                  // per your spec: after instruction 4 -> Subscription
-                  context.push(AppRoutes.subscription);
+                onPressed: () async {
+                  await context.read<AuthController>().markOnboardingSeen();
+
+                  // OLD:
+                  // context.push(AppRoutes.subscription);
+
+                  // NEW: go to device; router decides if subscription is needed once
+                  if (context.mounted) context.go(AppRoutes.device);
                 },
               ),
             ),
@@ -84,16 +85,14 @@ class Instruction4Screen extends StatelessWidget {
   }
 }
 
-class _ChecklistItem extends StatelessWidget {
+class _C extends StatelessWidget {
   final String text;
   final bool isLast;
-
-  const _ChecklistItem({required this.text, required this.isLast});
+  const _C({required this.text, required this.isLast});
 
   @override
   Widget build(BuildContext context) {
-    const lineColor = Color(0xFF38BDF8);
-
+    const c = Color(0xFF38BDF8);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -106,7 +105,7 @@ class _ChecklistItem extends StatelessWidget {
                 height: 24,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: lineColor,
+                  color: c,
                 ),
                 child: const Icon(Icons.check, size: 14, color: Colors.white),
               ),
@@ -115,7 +114,7 @@ class _ChecklistItem extends StatelessWidget {
                   top: 24,
                   left: 13,
                   bottom: -18,
-                  child: Container(width: 2, color: lineColor),
+                  child: Container(width: 2, color: c),
                 ),
             ],
           ),
@@ -126,7 +125,7 @@ class _ChecklistItem extends StatelessWidget {
             height: 54,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: lineColor),
+              border: Border.all(color: c),
               color: Colors.white,
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16),

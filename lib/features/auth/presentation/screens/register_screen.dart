@@ -1,8 +1,6 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/navigation/app_routes.dart';
 import '../widgets/auth_ui_constants.dart';
 import '../widgets/auth_widgets.dart';
@@ -15,19 +13,19 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _firstNameCtrl = TextEditingController();
-  final _lastNameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
+  final _firstName = TextEditingController();
+  final _lastName = TextEditingController();
+  final _email = TextEditingController();
+  final _pass = TextEditingController();
 
   bool _obscure = true;
 
   @override
   void dispose() {
-    _firstNameCtrl.dispose();
-    _lastNameCtrl.dispose();
-    _emailCtrl.dispose();
-    _passCtrl.dispose();
+    _firstName.dispose();
+    _lastName.dispose();
+    _email.dispose();
+    _pass.dispose();
     super.dispose();
   }
 
@@ -40,16 +38,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 22),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 110),
-
                 const Text(
                   'Create Account',
                   style: TextStyle(
                     fontSize: 34,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
                     height: 1.1,
                   ),
                 ),
@@ -63,32 +58,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     height: 1.3,
                   ),
                 ),
-
                 const SizedBox(height: 34),
 
-                SkTextField(
-                  controller: _firstNameCtrl,
-                  hintText: 'First name *',
-                  keyboardType: TextInputType.name,
-                ),
+                SkTextField(controller: _firstName, hintText: 'First name *'),
                 const SizedBox(height: 16),
-
-                SkTextField(
-                  controller: _lastNameCtrl,
-                  hintText: 'Last name *',
-                  keyboardType: TextInputType.name,
-                ),
+                SkTextField(controller: _lastName, hintText: 'Last name *'),
                 const SizedBox(height: 16),
-
                 SkTextField(
-                  controller: _emailCtrl,
+                  controller: _email,
                   hintText: 'Email *',
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
-
                 SkTextField(
-                  controller: _passCtrl,
+                  controller: _pass,
                   hintText: 'Password *',
                   obscureText: _obscure,
                   suffix: IconButton(
@@ -102,7 +85,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 18),
 
                 SizedBox(
@@ -117,10 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () {
-                      // UI-only for now (later call register API then go OTP)
-                      context.push(AppRoutes.emailOtp);
-                    },
+                    onPressed: () => context.push(AppRoutes.emailOtp),
                     child: const Text(
                       'Create Account',
                       style: TextStyle(
@@ -132,7 +111,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
 
                 const SizedBox(height: 22),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -145,7 +123,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context.push(AppRoutes.login),
+                      onTap: () => context.pop(),
                       child: const Text(
                         'Login',
                         style: TextStyle(
@@ -157,42 +135,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 26),
-
-                const DividerLabelRow(text: 'Login with'),
-
-                const SizedBox(height: 18),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (!Platform.isIOS)
-                      SocialCircleButton(
-                        onTap: () {
-                          // TODO: Google Sign-in later
-                        },
-                        child: SvgPicture.asset(
-                          'assets/icons/google.svg',
-                          width: 22,
-                          height: 22,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    if (Platform.isIOS)
-                      SocialCircleButton(
-                        onTap: () {
-                          // TODO: Apple Sign-in later
-                        },
-                        child: const Icon(
-                          Icons.apple,
-                          size: 26,
-                          color: Colors.black,
-                        ),
-                      ),
-                  ],
-                ),
-
                 const SizedBox(height: 28),
               ],
             ),

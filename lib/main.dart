@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'app/app.dart';
 import 'app/bootstrap.dart';
 import 'app/composition_root.dart';
-import 'app/app.dart';
 import 'core/config/app_config.dart';
 import 'core/storage/app_prefs.dart';
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
 import '../../../../core/navigation/app_routes.dart';
+import '../controllers/auth_controller.dart';
 import '../widgets/auth_ui_constants.dart';
 
 class RegisterSuccessScreen extends StatelessWidget {
@@ -8,13 +11,13 @@ class RegisterSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.read<AuthController>();
+
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             const Spacer(),
-
-            // Icon block
             Container(
               width: 92,
               height: 92,
@@ -34,31 +37,18 @@ class RegisterSuccessScreen extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(height: 18),
-
             const Text(
               'Congratulation!',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                color: Colors.black,
-                height: 1.1,
-              ),
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 10),
             const Text(
               "You’re all set! Your registration is complete.",
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: AuthUi.subText,
-                height: 1.3,
-              ),
+              style: TextStyle(fontSize: 16, color: AuthUi.subText),
             ),
-
             const Spacer(),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: SizedBox(
@@ -73,9 +63,9 @@ class RegisterSuccessScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
-                    // After successful registration, go to onboarding
-                    context.push(AppRoutes.instruction1);
+                  onPressed: () async {
+                    await auth.mockLogin(isNewUser: true);
+                    if (context.mounted) context.go(AppRoutes.instruction1);
                   },
                   child: const Text(
                     'Done',
@@ -84,7 +74,6 @@ class RegisterSuccessScreen extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(height: 22),
           ],
         ),

@@ -29,11 +29,9 @@ class AppCompositionRoot extends StatelessWidget {
         Provider<AppConfig>.value(value: config),
         Provider<AppPrefs>.value(value: prefs),
 
-        // Social auth providers (separate files)
         Provider<GoogleAuthProvider>(create: (_) => GoogleAuthProvider()),
         Provider<AppleAuthProvider>(create: (_) => AppleAuthProvider()),
 
-        // AuthController
         ChangeNotifierProvider<AuthController>(
           create: (c) => AuthController(
             prefs: c.read<AppPrefs>(),
@@ -42,7 +40,6 @@ class AppCompositionRoot extends StatelessWidget {
           )..init(),
         ),
 
-        // Router depends on auth
         ProxyProvider<AuthController, AppRouter>(
           update: (_, auth, __) => AppRouter(auth: auth),
         ),

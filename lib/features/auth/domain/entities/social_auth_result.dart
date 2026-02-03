@@ -1,5 +1,5 @@
 class SocialAuthResult {
-  final String provider; // 'google' or 'apple'
+  final String provider; // 'google' | 'apple'
   final String? accessToken;
   final String? idToken;
 
