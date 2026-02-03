@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:skudyx/core/controllers/app_status_controller.dart';
 import 'package:skudyx/features/auth/data/social/social/apple_auth_provider.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
+import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
 
 import '../core/config/app_config.dart';
 import '../core/storage/app_prefs.dart';
@@ -35,6 +36,10 @@ class AppCompositionRoot extends StatelessWidget {
         ),
         ChangeNotifierProvider<DeviceScanController>(
           create: (_) => DeviceScanController(),
+        ),
+        ChangeNotifierProvider<EmergencyContactController>(
+          create: (c) =>
+              EmergencyContactController(prefs: c.read<AppPrefs>())..init(),
         ),
 
         Provider<GoogleAuthProvider>(create: (_) => GoogleAuthProvider()),

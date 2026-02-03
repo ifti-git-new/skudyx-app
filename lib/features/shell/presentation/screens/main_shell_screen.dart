@@ -33,10 +33,22 @@ class MainShellScreen extends StatelessWidget {
   }
 
   int _indexFromLocation(String location) {
-    if (location.startsWith(AppRoutes.device)) return 0;
-    if (location.startsWith(AppRoutes.emergencyHome)) return 1;
+    // Devices tab includes all /device/* routes
+    if (location.startsWith('/device')) return 0;
+
+    // ✅ Emergency tab includes:
+    // - /emergency-home
+    // - /emergency/*
+    // - /emergency-contact and /emergency-contact/*
+    if (location.startsWith(AppRoutes.emergencyHome) ||
+        location.startsWith('/emergency') ||
+        location.startsWith('/emergency-contact')) {
+      return 1;
+    }
+
     if (location.startsWith(AppRoutes.settings)) return 2;
     if (location.startsWith(AppRoutes.profile)) return 3;
+
     return 0;
   }
 
@@ -65,11 +77,16 @@ class MainShellScreen extends StatelessWidget {
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) async {
-        // If user is on Devices tab, show exit dialog
+        // If there's something to pop (like /device/connected), pop it first
+        if (GoRouter.of(context).canPop()) {
+          context.pop();
+          return;
+        }
+
+        // Otherwise we are at a root route inside shell
         if (currentIndex == 0) {
           await _showExitDialog(context);
         } else {
-          // Otherwise, go back to Devices tab
           context.go(AppRoutes.device);
         }
       },
@@ -81,6 +98,8 @@ class MainShellScreen extends StatelessWidget {
           type: BottomNavigationBarType.fixed,
           selectedFontSize: 12,
           unselectedFontSize: 12,
+          selectedItemColor: const Color(0xFF081B4A),
+          unselectedItemColor: const Color(0xFF6B7280),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.devices_outlined),

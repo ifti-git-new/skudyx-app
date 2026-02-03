@@ -9,6 +9,8 @@ import 'package:skudyx/features/auth/presentation/screens/email_otp_screen.dart'
 import 'package:skudyx/features/auth/presentation/screens/register_success_screen.dart';
 import 'package:skudyx/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:skudyx/features/device/presentation/device_arrived_screen.dart';
+import 'package:skudyx/features/emergency/presentation/screens/emergency_contact_form_screen.dart';
+import 'package:skudyx/features/emergency_contact/presentation/screens/emergency_contact_screen.dart';
 
 // Onboarding
 import 'package:skudyx/features/onboarding/presentation/screens/instruction_1_screen.dart';
@@ -189,6 +191,14 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.deviceConnected,
             builder: (_, __) => const DeviceConnectedScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.emergencyContact,
+            builder: (_, __) => const EmergencyContactScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.emergencyContactEdit,
+            builder: (_, __) => const EmergencyContactFormScreen(),
           ),
         ],
       ),

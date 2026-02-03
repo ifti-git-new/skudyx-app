@@ -28,6 +28,8 @@ abstract class AppRoutes {
   // Other screens (non-tab)
   static const notifications = '/notifications';
   static const emergencyContact = '/emergency-contact';
+  static const emergencyContactEdit = '/emergency-contact/edit';
+
   static const testReport = '/test-report';
   static const emergency = '/emergency';
 
