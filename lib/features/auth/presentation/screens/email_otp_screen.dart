@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/navigation/app_routes.dart';
 import '../widgets/auth_ui_constants.dart';
 
@@ -13,8 +15,20 @@ class EmailOtpScreen extends StatefulWidget {
 class _EmailOtpScreenState extends State<EmailOtpScreen> {
   static const int _len = 5;
 
-  final _controllers = List.generate(_len, (_) => TextEditingController());
-  final _nodes = List.generate(_len, (_) => FocusNode());
+  late final List<TextEditingController> _controllers;
+  late final List<FocusNode> _nodes;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = List.generate(_len, (_) => TextEditingController());
+    _nodes = List.generate(_len, (_) => FocusNode());
+
+    // autofocus first box
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _nodes.first.requestFocus();
+    });
+  }
 
   @override
   void dispose() {
@@ -27,15 +41,32 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
     super.dispose();
   }
 
-  String get otp => _controllers.map((e) => e.text).join();
+  bool get _canSubmit => _controllers.every((c) => c.text.trim().length == 1);
+
+  String get otp => _controllers.map((c) => c.text).join();
+
+  void _fillFromPaste(int startIndex, String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return;
+
+    for (int i = 0; i < digits.length && (startIndex + i) < _len; i++) {
+      _controllers[startIndex + i].text = digits[i];
+    }
+
+    final nextIndex = (startIndex + digits.length).clamp(0, _len - 1);
+    if (nextIndex >= _len - 1) {
+      _nodes[_len - 1].unfocus();
+    } else {
+      _nodes[nextIndex].requestFocus();
+    }
+  }
 
   void _onChanged(int index, String value) {
     if (value.length > 1) {
-      // If user pasted multiple chars, keep last char
-      _controllers[index].text = value.characters.last;
-      _controllers[index].selection = TextSelection.fromPosition(
-        TextPosition(offset: _controllers[index].text.length),
-      );
+      // Paste full OTP
+      _fillFromPaste(index, value);
+      setState(() {});
+      return;
     }
 
     if (value.isNotEmpty) {
@@ -48,20 +79,24 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
     setState(() {});
   }
 
-  void _onBackspace(int index) {
-    if (_controllers[index].text.isEmpty && index > 0) {
+  KeyEventResult _onKey(int index, KeyEvent event) {
+    // Backspace handling to jump to previous field
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.backspace &&
+        _controllers[index].text.isEmpty &&
+        index > 0) {
       _nodes[index - 1].requestFocus();
       _controllers[index - 1].selection = TextSelection.fromPosition(
         TextPosition(offset: _controllers[index - 1].text.length),
       );
+      setState(() {});
+      return KeyEventResult.handled;
     }
+    return KeyEventResult.ignored;
   }
 
   @override
   Widget build(BuildContext context) {
-    final canSubmit =
-        otp.length == _len && !_controllers.any((c) => c.text.isEmpty);
-
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -100,20 +135,19 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
                     child: SizedBox(
                       width: 56,
                       height: 56,
-                      child: Focus(
-                        onKeyEvent: (node, event) {
-                          // Detect backspace on desktop/web; on mobile TextField handles it
-                          if (event.logicalKey.keyLabel == 'Backspace') {
-                            _onBackspace(i);
-                          }
-                          return KeyEventResult.ignored;
-                        },
+                      child: KeyboardListener(
+                        focusNode: FocusNode(), // separate listener focus
+                        onKeyEvent: (event) => _onKey(i, event),
                         child: TextField(
                           controller: _controllers[i],
                           focusNode: _nodes[i],
+                          autofocus: i == 0,
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.center,
                           maxLength: 1,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
@@ -159,10 +193,16 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: canSubmit
+                  onPressed: _canSubmit
                       ? () {
-                          // UI-only: Later verify OTP API then show success
-                          // context.go(AppRoutes.registerSuccess);
+                          // OLD:
+                          // context.push(AppRoutes.registerSuccess);
+
+                          // NEW: after OTP -> Instruction screen 1
+                          context.go(AppRoutes.registerSuccess);
+
+                          // For debugging if needed:
+                          // debugPrint('OTP = $otp');
                         }
                       : null,
                   child: const Text(

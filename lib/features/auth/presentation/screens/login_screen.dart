@@ -143,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const Spacer(),
                     GestureDetector(
-                      onTap: () => context.go(AppRoutes.forgotPassword),
+                      onTap: () => context.push(AppRoutes.forgotPassword),
                       child: const Text(
                         'Forgot Password ?',
                         style: TextStyle(
@@ -198,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context.go(AppRoutes.register),
+                      onTap: () => context.push(AppRoutes.register),
                       child: const Text(
                         'Create Account',
                         style: TextStyle(

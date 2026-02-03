@@ -119,7 +119,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     onPressed: () {
                       // UI-only for now (later call register API then go OTP)
-                      context.go(AppRoutes.emailOtp);
+                      context.push(AppRoutes.emailOtp);
                     },
                     child: const Text(
                       'Create Account',
@@ -145,7 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context.go(AppRoutes.login),
+                      onTap: () => context.push(AppRoutes.login),
                       child: const Text(
                         'Login',
                         style: TextStyle(

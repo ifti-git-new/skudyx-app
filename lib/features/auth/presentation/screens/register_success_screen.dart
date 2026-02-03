@@ -75,7 +75,7 @@ class RegisterSuccessScreen extends StatelessWidget {
                   ),
                   onPressed: () {
                     // After successful registration, go to onboarding
-                    context.go(AppRoutes.instruction1);
+                    context.push(AppRoutes.instruction1);
                   },
                   child: const Text(
                     'Done',

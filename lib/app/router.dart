@@ -1,4 +1,8 @@
 import 'package:go_router/go_router.dart';
+import 'package:skudyx/features/auth/presentation/screens/register_success_screen.dart';
+import 'package:skudyx/features/onboarding/presentation/screens/instruction_2_screen.dart';
+import 'package:skudyx/features/onboarding/presentation/screens/instruction_3_screen.dart';
+import 'package:skudyx/features/onboarding/presentation/screens/instruction_4_screen.dart';
 
 import '../core/navigation/app_routes.dart';
 import '../features/auth/presentation/controllers/auth_controller.dart';
@@ -30,6 +34,36 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash,
     refreshListenable: auth,
+
+    // redirect: (context, state) {
+    //   final loc = state.matchedLocation;
+
+    //   // allow splash
+    //   if (loc == AppRoutes.splash) return null;
+
+    //   final loggedIn = auth.state.isAuthenticated;
+    //   final onboardingSeen = auth.state.onboardingSeen;
+
+    //   final isAuthRoute =
+    //       loc == AppRoutes.login ||
+    //       loc == AppRoutes.register ||
+    //       loc == AppRoutes.emailOtp ||
+    //       loc == AppRoutes.forgotPassword;
+
+    //   final isOnboardingRoute = loc.startsWith('/onboarding');
+
+    //   if (!loggedIn && !isAuthRoute) return AppRoutes.login;
+
+    //   if (loggedIn && !onboardingSeen && !isOnboardingRoute) {
+    //     return AppRoutes.instruction1;
+    //   }
+
+    //   if (loggedIn && isAuthRoute) return AppRoutes.device;
+
+    //   return null;
+    // },
+
+    //temporary updated redirect to allow register success screen access
     redirect: (context, state) {
       final loc = state.matchedLocation;
 
@@ -39,21 +73,33 @@ class AppRouter {
       final loggedIn = auth.state.isAuthenticated;
       final onboardingSeen = auth.state.onboardingSeen;
 
-      final isAuthRoute =
+      // Routes allowed without login
+      final isAuthFlowRoute =
+          loc == AppRoutes.login ||
+          loc == AppRoutes.register ||
+          loc == AppRoutes.emailOtp ||
+          loc == AppRoutes.forgotPassword ||
+          loc == AppRoutes.registerSuccess; // ✅ ADD THIS
+
+      final isOnboardingRoute = loc.startsWith('/onboarding');
+
+      // Not logged in => only allow auth flow routes
+      if (!loggedIn && !isAuthFlowRoute) return AppRoutes.login;
+
+      // Logged in but onboarding not seen => force onboarding
+      if (loggedIn && !onboardingSeen && !isOnboardingRoute) {
+        return AppRoutes.instruction1;
+      }
+
+      // Logged in => block only the login/register/otp/forgot routes
+      // (DO NOT block registerSuccess)
+      final isLoginRelatedRoute =
           loc == AppRoutes.login ||
           loc == AppRoutes.register ||
           loc == AppRoutes.emailOtp ||
           loc == AppRoutes.forgotPassword;
 
-      final isOnboardingRoute = loc.startsWith('/onboarding');
-
-      if (!loggedIn && !isAuthRoute) return AppRoutes.login;
-
-      if (loggedIn && !onboardingSeen && !isOnboardingRoute) {
-        return AppRoutes.instruction1;
-      }
-
-      if (loggedIn && isAuthRoute) return AppRoutes.device;
+      if (loggedIn && isLoginRelatedRoute) return AppRoutes.device;
 
       return null;
     },
@@ -64,6 +110,11 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.register,
         builder: (_, __) => const RegisterScreen(),
+      ),
+
+      GoRoute(
+        path: AppRoutes.registerSuccess,
+        builder: (_, __) => const RegisterSuccessScreen(),
       ),
       GoRoute(
         path: AppRoutes.emailOtp,
@@ -77,6 +128,19 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.instruction1,
         builder: (_, __) => const Instruction1Screen(),
+      ),
+
+      GoRoute(
+        path: AppRoutes.instruction2,
+        builder: (_, __) => const Instruction2Screen(),
+      ),
+      GoRoute(
+        path: AppRoutes.instruction3,
+        builder: (_, __) => const Instruction3Screen(),
+      ),
+      GoRoute(
+        path: AppRoutes.instruction4,
+        builder: (_, __) => const Instruction4Screen(),
       ),
 
       GoRoute(

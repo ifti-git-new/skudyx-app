@@ -3,10 +3,15 @@ abstract class AppRoutes {
 
   static const login = '/login';
   static const register = '/register';
+  static const registerSuccess = '/register-success';
+  //
   static const emailOtp = '/email-otp';
   static const forgotPassword = '/forgot-password';
 
   static const instruction1 = '/onboarding/1';
+  static const instruction2 = '/onboarding/2';
+  static const instruction3 = '/onboarding/3';
+  static const instruction4 = '/onboarding/4';
 
   static const subscription = '/subscription';
   static const deliveryDetails = '/delivery-details';
