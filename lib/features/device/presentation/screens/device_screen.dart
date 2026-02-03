@@ -39,49 +39,57 @@ class DeviceScreen extends StatelessWidget {
 }
 
 class _NotPurchasedView extends StatelessWidget {
+  const _NotPurchasedView();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 120),
-            const Icon(Icons.lock_outline, size: 90, color: Color(0xFF94A3B8)),
-            const SizedBox(height: 24),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 28),
-              child: Text(
-                'Choose a plan to activate\nSkudyX and receive your\nemergency button.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  height: 1.2,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.lock_outline,
+                  size: 90,
+                  color: Color(0xFF94A3B8),
                 ),
-              ),
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: 180,
-              height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 22),
+                const Text(
+                  'Choose a plan to activate\nSkudyX and receive your\nemergency button.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
                   ),
                 ),
-                onPressed: () => context.push(AppRoutes.subscription),
-                child: const Text(
-                  'View Plans',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: 180,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () => context.push(AppRoutes.subscription),
+                    child: const Text(
+                      'View Plans',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -89,53 +97,57 @@ class _NotPurchasedView extends StatelessWidget {
 }
 
 class _PurchasedNoDeliveryView extends StatelessWidget {
+  const _PurchasedNoDeliveryView();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 120),
-            const Icon(
-              Icons.inventory_2_outlined,
-              size: 90,
-              color: Color(0xFF94A3B8),
-            ),
-            const SizedBox(height: 24),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 28),
-              child: Text(
-                'We’re ready to ship your\nSkudyX Emergency Button.\nAdd your delivery details.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  height: 1.2,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.inventory_2_outlined,
+                  size: 90,
+                  color: Color(0xFF94A3B8),
                 ),
-              ),
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: 220,
-              height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 22),
+                const Text(
+                  'We’re ready to ship your\nSkudyX Emergency Button.\nAdd your delivery details.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
                   ),
                 ),
-                onPressed: () => context.push(AppRoutes.deliveryDetails),
-                child: const Text(
-                  'Add Delivery Address',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: 220,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () => context.push(AppRoutes.deliveryDetails),
+                    child: const Text(
+                      'Add Delivery Address',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -1,10 +1,8 @@
 import 'package:flutter/foundation.dart';
+
 import 'package:skudyx/core/storage/app_prefs.dart';
 import 'package:skudyx/features/auth/domain/entities/repositories/social_auth_provider.dart';
-
-// import '../../../../core/storage/app_prefs.dart';
-// import '../../domain/entities/repositories/social_auth_provider.dart';
-import 'auth_state.dart';
+import 'package:skudyx/features/auth/presentation/controllers/auth_state.dart';
 
 class AuthController extends ChangeNotifier {
   final AppPrefs prefs;
