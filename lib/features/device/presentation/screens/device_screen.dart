@@ -49,11 +49,7 @@ class _NotPurchasedView extends StatelessWidget {
                 //   size: 90,
                 //   color: Color(0xFF94A3B8),
                 // ),
-                Image.asset(
-                  'assets/images/locked_device.png',
-                  width: 90,
-                  height: 90,
-                ),
+                Image.asset('assets/images/lock.png', width: 90, height: 90),
                 const SizedBox(height: 22),
                 const Text(
                   'Choose a plan to activate\nSkudyX and receive your\nemergency button.',
