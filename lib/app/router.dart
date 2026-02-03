@@ -1,38 +1,38 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:skudyx/features/device/presentation/device_arrived_screen.dart';
-import 'package:skudyx/features/device/presentation/screens/device_list_screen.dart';
-import 'package:skudyx/features/device/presentation/screens/device_searching_screen.dart';
-
-import '../core/navigation/app_routes.dart';
-import '../core/storage/app_prefs.dart';
-import '../features/auth/presentation/controllers/auth_controller.dart';
+import 'package:skudyx/core/navigation/app_routes.dart';
+import 'package:skudyx/features/auth/presentation/controllers/auth_controller.dart';
 
 // Auth
-import '../features/auth/presentation/screens/login_screen.dart';
-import '../features/auth/presentation/screens/register_screen.dart';
-import '../features/auth/presentation/screens/email_otp_screen.dart';
-import '../features/auth/presentation/screens/register_success_screen.dart';
-import '../features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:skudyx/features/auth/presentation/screens/login_screen.dart';
+import 'package:skudyx/features/auth/presentation/screens/register_screen.dart';
+import 'package:skudyx/features/auth/presentation/screens/email_otp_screen.dart';
+import 'package:skudyx/features/auth/presentation/screens/register_success_screen.dart';
+import 'package:skudyx/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:skudyx/features/device/presentation/device_arrived_screen.dart';
 
 // Onboarding
-import '../features/onboarding/presentation/screens/instruction_1_screen.dart';
-import '../features/onboarding/presentation/screens/instruction_2_screen.dart';
-import '../features/onboarding/presentation/screens/instruction_3_screen.dart';
-import '../features/onboarding/presentation/screens/instruction_4_screen.dart';
+import 'package:skudyx/features/onboarding/presentation/screens/instruction_1_screen.dart';
+import 'package:skudyx/features/onboarding/presentation/screens/instruction_2_screen.dart';
+import 'package:skudyx/features/onboarding/presentation/screens/instruction_3_screen.dart';
+import 'package:skudyx/features/onboarding/presentation/screens/instruction_4_screen.dart';
 
 // Subscription & delivery
-import '../features/subscription/presentation/screens/subscription_screen.dart';
-import '../features/delivery/presentation/screens/delivery_details_screen.dart';
-import '../features/delivery/presentation/screens/delivery_confirmation_screen.dart';
+import 'package:skudyx/features/subscription/presentation/screens/subscription_screen.dart';
+import 'package:skudyx/features/delivery/presentation/screens/delivery_details_screen.dart';
+import 'package:skudyx/features/delivery/presentation/screens/delivery_confirmation_screen.dart';
 
 // Shell + tabs
-import '../features/shell/presentation/screens/splash_screen.dart';
-import '../features/shell/presentation/screens/main_shell_screen.dart';
-import '../features/device/presentation/screens/device_screen.dart';
-import '../features/emergency/presentation/screens/emergency_home_screen.dart';
-import '../features/settings/presentation/screens/settings_screen.dart';
-import '../features/profile/presentation/screens/profile_screen.dart';
+import 'package:skudyx/features/shell/presentation/screens/splash_screen.dart';
+import 'package:skudyx/features/shell/presentation/screens/main_shell_screen.dart';
+import 'package:skudyx/features/device/presentation/screens/device_screen.dart';
+import 'package:skudyx/features/emergency/presentation/screens/emergency_home_screen.dart';
+import 'package:skudyx/features/settings/presentation/screens/settings_screen.dart';
+import 'package:skudyx/features/profile/presentation/screens/profile_screen.dart';
+
+// Device flow screens (IMPORTANT: use correct paths)
+import 'package:skudyx/features/device/presentation/screens/device_searching_screen.dart';
+import 'package:skudyx/features/device/presentation/screens/device_list_screen.dart';
+import 'package:skudyx/features/device/presentation/screens/device_connected_screen.dart';
 
 class AppRouter {
   final AuthController auth;
@@ -41,10 +41,12 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash,
     refreshListenable: auth,
+
     // debugLogDiagnostics: true,
     redirect: (context, state) {
       final loc = state.matchedLocation;
 
+      // allow splash
       if (loc == AppRoutes.splash) return null;
 
       final loggedIn = auth.state.isAuthenticated;
@@ -54,6 +56,7 @@ class AppRouter {
       final isSubscribed = prefs.isSubscribed;
       final promptShown = prefs.subscriptionPromptShown;
 
+      // Public auth flow routes (allowed when logged out)
       final isAuthFlowRoute =
           loc == AppRoutes.login ||
           loc == AppRoutes.register ||
@@ -63,36 +66,38 @@ class AppRouter {
 
       final isOnboardingRoute = loc.startsWith('/onboarding');
 
-      // 1) logged out -> only auth flow
-      if (!loggedIn && !isAuthFlowRoute) return AppRoutes.login;
-
-      // 2) logged in but onboarding not seen -> force onboarding
-      if (loggedIn && !onboardingSeen && !isOnboardingRoute)
-        return AppRoutes.instruction1;
-
-      // 3) After onboarding, show subscription ONCE if not subscribed
-      // If user is trying to enter main app (tabs), but not subscribed and prompt not shown -> subscription
-      final isMainTabRoute =
-          loc == AppRoutes.device ||
+      // Any route inside "main shell area"
+      // (this includes device subroutes like /device/connected, /device/list etc)
+      final isShellAreaRoute =
+          loc.startsWith('/device') ||
           loc == AppRoutes.emergencyHome ||
           loc == AppRoutes.settings ||
-          loc == AppRoutes.profile ||
-          loc == AppRoutes.deviceArrived;
+          loc == AppRoutes.profile;
 
+      // 1) logged out -> only auth flow is allowed
+      if (!loggedIn && !isAuthFlowRoute) return AppRoutes.login;
+
+      // 2) logged in but onboarding not completed -> force onboarding routes only
+      if (loggedIn && !onboardingSeen && !isOnboardingRoute) {
+        return AppRoutes.instruction1;
+      }
+
+      // 3) After onboarding, show subscription ONCE if not subscribed
       if (loggedIn &&
           onboardingSeen &&
-          isMainTabRoute &&
+          isShellAreaRoute &&
           !isSubscribed &&
           !promptShown) {
         return AppRoutes.subscription;
       }
 
-      // 4) logged in and onboarding done -> block going back to auth flow screens
+      // 4) logged in + onboarding done -> block going back to auth flow screens
       if (loggedIn && onboardingSeen && isAuthFlowRoute)
         return AppRoutes.device;
 
       return null;
     },
+
     routes: [
       GoRoute(path: AppRoutes.splash, builder: (_, __) => const SplashScreen()),
 
@@ -147,7 +152,7 @@ class AppRouter {
         builder: (_, __) => const DeliveryConfirmationScreen(),
       ),
 
-      // Main shell (bottom nav) using a ShellRoute
+      // ShellRoute (bottom nav visible)
       ShellRoute(
         builder: (context, state, child) => MainShellScreen(child: child),
         routes: [
@@ -167,6 +172,8 @@ class AppRouter {
             path: AppRoutes.profile,
             builder: (_, __) => const ProfileScreen(),
           ),
+
+          // Device flow screens under the Devices tab
           GoRoute(
             path: AppRoutes.deviceArrived,
             builder: (_, __) => const DeviceArrivedScreen(),
@@ -178,6 +185,10 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.deviceList,
             builder: (_, __) => const DeviceListScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.deviceConnected,
+            builder: (_, __) => const DeviceConnectedScreen(),
           ),
         ],
       ),

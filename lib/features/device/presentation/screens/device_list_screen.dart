@@ -25,7 +25,7 @@ class DeviceListScreen extends StatelessWidget {
               child: Row(
                 children: [
                   InkWell(
-                    onTap: () => context.pop(),
+                    onTap: () => context.pop(), // ✅ correct
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       width: 40,
@@ -61,13 +61,12 @@ class DeviceListScreen extends StatelessWidget {
                     name: d.name,
                     timeText: d.timeText,
                     onTap: () {
-                      // TEMP: later this will connect via BLE
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Selected ${d.name}')),
                       );
 
-                      // After selecting, go back to Device tab (later -> connected dashboard)
-                      context.go(AppRoutes.device);
+                      // ✅ Go to connected dashboard
+                      context.push(AppRoutes.deviceConnected);
                     },
                   );
                 },

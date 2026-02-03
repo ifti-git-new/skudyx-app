@@ -36,4 +36,5 @@ abstract class AppRoutes {
   static const deviceArrived = '/device/arrived';
   static const deviceSearching = '/device/searching';
   static const deviceList = '/device/list';
+  static const deviceConnected = '/device/connected';
 }
