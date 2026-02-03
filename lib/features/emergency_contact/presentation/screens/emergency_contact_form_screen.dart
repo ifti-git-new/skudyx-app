@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../controllers/emergency_contact_controller.dart';
-import '../models/emergency_contact_model.dart';
+import '../../../emergency/presentation/controllers/emergency_contact_controller.dart';
+import '../../../emergency/presentation/models/emergency_contact_model.dart';
 
 class EmergencyContactFormScreen extends StatefulWidget {
   const EmergencyContactFormScreen({super.key});
