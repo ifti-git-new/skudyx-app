@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../emergency/presentation/controllers/emergency_contact_controller.dart';
-import '../../../emergency/presentation/models/emergency_contact_model.dart';
+import 'package:skudyx/core/navigation/app_routes.dart';
+import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
+import 'package:skudyx/features/emergency/presentation/models/emergency_contact_model.dart';
 
 class EmergencyContactFormScreen extends StatefulWidget {
   const EmergencyContactFormScreen({super.key});
@@ -72,7 +73,9 @@ class _EmergencyContactFormScreenState
                     address: address.text.trim(),
                   ),
                 );
-                if (context.mounted) context.pop();
+
+                // ✅ go to overview screen (not pop)
+                if (context.mounted) context.go(AppRoutes.emergencyContact);
               },
               child: const Text(
                 'Save',

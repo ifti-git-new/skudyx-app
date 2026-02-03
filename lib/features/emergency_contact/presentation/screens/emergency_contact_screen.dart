@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import 'package:skudyx/core/navigation/app_routes.dart';
+import 'package:skudyx/core/storage/app_prefs.dart';
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
-// import '../controllers/emergency_contact_controller.dart';
+import 'package:skudyx/features/emergency/presentation/models/emergency_contact_model.dart';
 
 class EmergencyContactScreen extends StatelessWidget {
   const EmergencyContactScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final c = context.watch<EmergencyContactController>();
+    final prefs = context.read<AppPrefs>();
 
-    if (!c.isAdded) {
+    // Decide based on persisted flag (bulletproof)
+    if (!prefs.ecAdded) {
       return const _WhyWeNeedThisView();
     }
 
@@ -37,7 +41,7 @@ class _WhyWeNeedThisView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // icon placeholder (replace with your asset if you have one)
+                // Placeholder icon (replace with asset if you have)
                 Container(
                   width: 84,
                   height: 84,
@@ -73,7 +77,6 @@ class _WhyWeNeedThisView extends StatelessWidget {
                 ),
                 const SizedBox(height: 22),
 
-                // Grey pill button like screenshot
                 SizedBox(
                   height: 46,
                   child: ElevatedButton(
@@ -111,13 +114,21 @@ class _WhyWeNeedThisView extends StatelessWidget {
 class _OverviewView extends StatelessWidget {
   const _OverviewView();
 
-  static const _sub = Color(0xFF6B7280);
-  static const _navy = Color(0xFF081B4A);
-
   @override
   Widget build(BuildContext context) {
     final c = context.watch<EmergencyContactController>();
-    final contact = c.contact!;
+
+    // UI-only fallback in case contact wasn't persisted
+    final contact =
+        c.contact ??
+        const EmergencyContactModel(
+          firstName: 'Jerome',
+          lastName: 'Bell',
+          phone: '+12 345 6789',
+          email: 'jerome.bell@yourmail.com',
+          relation: '-',
+          address: '21 East  Dhanmondi, Dhaka, Bangladesh',
+        );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -127,7 +138,7 @@ class _OverviewView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // top bar: title + edit icon
+              // top row: title + edit icon
               Row(
                 children: [
                   const Text(
@@ -154,40 +165,28 @@ class _OverviewView extends StatelessWidget {
               const SizedBox(height: 18),
 
               _LabelValue(label: 'Name', value: contact.fullName),
-
               const SizedBox(height: 16),
 
-              // Phone row + badge
-              _TapToVerifyRow(
+              // Phone
+              _VerifyRow(
                 label: 'Phone Number',
                 value: contact.phone,
-                badgeText: c.phoneVerified ? 'Verified' : 'Not verified',
-                badgeBg: c.phoneVerified
-                    ? const Color(0xFFDFF7DF)
-                    : const Color(0xFFFFE9A6),
-                badgeFg: c.phoneVerified
-                    ? const Color(0xFF16A34A)
-                    : const Color(0xFF92400E),
+                verified: c.phoneVerified,
                 onTap: c.phoneVerified
                     ? null
-                    : () => _showVerifyFlow(context, type: _VerifyType.phone),
+                    : () => _startVerifyFlow(context, type: _VerifyType.phone),
               ),
 
               const SizedBox(height: 16),
 
-              _TapToVerifyRow(
+              // Email
+              _VerifyRow(
                 label: 'Email',
                 value: contact.email,
-                badgeText: c.emailVerified ? 'Verified' : 'Not verified',
-                badgeBg: c.emailVerified
-                    ? const Color(0xFFDFF7DF)
-                    : const Color(0xFFFFE9A6),
-                badgeFg: c.emailVerified
-                    ? const Color(0xFF16A34A)
-                    : const Color(0xFF92400E),
+                verified: c.emailVerified,
                 onTap: c.emailVerified
                     ? null
-                    : () => _showVerifyFlow(context, type: _VerifyType.email),
+                    : () => _startVerifyFlow(context, type: _VerifyType.email),
               ),
 
               const SizedBox(height: 16),
@@ -201,23 +200,31 @@ class _OverviewView extends StatelessWidget {
     );
   }
 
-  Future<void> _showVerifyFlow(
+  Future<void> _startVerifyFlow(
     BuildContext context, {
     required _VerifyType type,
   }) async {
-    // 1) confirmation sheet
-    final send = await showModalBottomSheet<bool>(
+    // BottomSheet #1 (Later / Send)
+    final shouldSend = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _ConfirmSendSheet(type: type),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => _ConfirmationSheet(type: type),
     );
 
-    if (send != true) return;
+    if (shouldSend != true) return;
 
-    // 2) otp sheet
+    // BottomSheet #2 (OTP)
     final verified = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
       builder: (_) => _OtpSheet(type: type),
     );
 
@@ -263,20 +270,16 @@ class _LabelValue extends StatelessWidget {
   }
 }
 
-class _TapToVerifyRow extends StatelessWidget {
+class _VerifyRow extends StatelessWidget {
   final String label;
   final String value;
-  final String badgeText;
-  final Color badgeBg;
-  final Color badgeFg;
+  final bool verified;
   final VoidCallback? onTap;
 
-  const _TapToVerifyRow({
+  const _VerifyRow({
     required this.label,
     required this.value,
-    required this.badgeText,
-    required this.badgeBg,
-    required this.badgeFg,
+    required this.verified,
     required this.onTap,
   });
 
@@ -284,6 +287,14 @@ class _TapToVerifyRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final badgeText = verified ? 'Verified' : 'Not verified';
+    final badgeBg = verified
+        ? const Color(0xFFDFF7DF)
+        : const Color(0xFFFFE9A6);
+    final badgeFg = verified
+        ? const Color(0xFF16A34A)
+        : const Color(0xFF92400E);
+
     return InkWell(
       onTap: onTap,
       child: Row(
@@ -336,23 +347,29 @@ class _TapToVerifyRow extends StatelessWidget {
 
 enum _VerifyType { phone, email }
 
-class _ConfirmSendSheet extends StatelessWidget {
+class _ConfirmationSheet extends StatelessWidget {
   final _VerifyType type;
-  const _ConfirmSendSheet({required this.type});
+  const _ConfirmationSheet({required this.type});
 
   static const _navy = Color(0xFF081B4A);
   static const _sub = Color(0xFF6B7280);
 
   @override
   Widget build(BuildContext context) {
-    final label = type == _VerifyType.email ? 'email' : 'phone';
+    final target = type == _VerifyType.email ? 'email' : 'phone';
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+        padding: EdgeInsets.only(
+          left: 18,
+          right: 18,
+          top: 10,
+          bottom: 18 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // grabber + close
             Row(
               children: [
                 const Spacer(),
@@ -374,7 +391,7 @@ class _ConfirmSendSheet extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'An authentication code will be sent to this $label.',
+                'An authentication code will be sent to this $target.',
                 style: const TextStyle(fontSize: 14, color: _sub, height: 1.35),
               ),
             ),
@@ -441,10 +458,19 @@ class _OtpSheet extends StatefulWidget {
 
 class _OtpSheetState extends State<_OtpSheet> {
   static const int len = 5;
+
   final controllers = List.generate(len, (_) => TextEditingController());
   final nodes = List.generate(len, (_) => FocusNode());
 
   bool get canDone => controllers.every((c) => c.text.trim().length == 1);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) nodes.first.requestFocus();
+    });
+  }
 
   @override
   void dispose() {
@@ -455,11 +481,16 @@ class _OtpSheetState extends State<_OtpSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final label = widget.type == _VerifyType.email ? 'Email' : 'Phone';
+    final src = widget.type == _VerifyType.email ? 'Email' : 'Phone';
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+        padding: EdgeInsets.only(
+          left: 18,
+          right: 18,
+          top: 10,
+          bottom: 18 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -484,7 +515,7 @@ class _OtpSheetState extends State<_OtpSheet> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Use the authentication code from $label to\nverify.',
+                'Use the authentication code from $src to\nverify.',
                 style: const TextStyle(
                   fontSize: 14,
                   color: Color(0xFF6B7280),
@@ -508,6 +539,7 @@ class _OtpSheetState extends State<_OtpSheet> {
                       maxLength: 1,
                       textAlign: TextAlign.center,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(
                         counterText: '',
                         filled: true,
@@ -575,7 +607,10 @@ class _OtpSheetState extends State<_OtpSheet> {
                         ),
                       ),
                       onPressed: canDone
-                          ? () => Navigator.pop(context, true)
+                          ? () {
+                              HapticFeedback.selectionClick();
+                              Navigator.pop(context, true);
+                            }
                           : null,
                       child: const Text(
                         'Done',

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/navigation/app_routes.dart';
-import '../../../../core/storage/app_prefs.dart';
+import 'package:skudyx/core/navigation/app_routes.dart';
+import 'package:skudyx/core/storage/app_prefs.dart';
 
 class EmergencyHomeScreen extends StatelessWidget {
   const EmergencyHomeScreen({super.key});
@@ -12,14 +12,12 @@ class EmergencyHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final prefs = context.read<AppPrefs>();
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SizedBox(
-            width: 240,
+            width: 260,
             height: 54,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -31,7 +29,9 @@ class EmergencyHomeScreen extends StatelessWidget {
                 ),
               ),
               onPressed: () {
-                // ✅ Emergency button pressed logic
+                final prefs = context.read<AppPrefs>();
+
+                // ✅ REQUIRED LOGIC
                 final target = prefs.ecAdded
                     ? AppRoutes.emergencyContact
                     : AppRoutes.emergencyContactEdit;
@@ -39,7 +39,7 @@ class EmergencyHomeScreen extends StatelessWidget {
                 context.push(target);
               },
               child: const Text(
-                'Add Emergency Contact',
+                'Press Emergency Button',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
             ),

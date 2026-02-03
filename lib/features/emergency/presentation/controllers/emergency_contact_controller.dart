@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'package:skudyx/core/storage/app_prefs.dart';
 import '../models/emergency_contact_model.dart';
 
@@ -6,24 +7,18 @@ class EmergencyContactController extends ChangeNotifier {
   final AppPrefs prefs;
 
   EmergencyContactModel? contact;
-
   bool phoneVerified = false;
   bool emailVerified = false;
 
   EmergencyContactController({required this.prefs});
 
   Future<void> init() async {
-    // UI-only: We only persist flags for now.
     phoneVerified = prefs.ecPhoneVerified;
     emailVerified = prefs.ecEmailVerified;
 
-    // If contact added flag false, keep contact null
-    if (!prefs.ecAdded) {
-      contact = null;
-    } else {
-      // Optional: you can later persist actual contact data
-      // For now we keep a demo contact so overview shows values.
-      contact ??= const EmergencyContactModel(
+    // If contact added but app restarted, we still show a demo contact (UI-only)
+    if (prefs.ecAdded && contact == null) {
+      contact = const EmergencyContactModel(
         firstName: 'Jerome',
         lastName: 'Bell',
         phone: '+12 345 6789',
@@ -39,9 +34,10 @@ class EmergencyContactController extends ChangeNotifier {
   Future<void> saveContact(EmergencyContactModel model) async {
     contact = model;
 
-    // after save -> mark added, but verification resets
+    // ✅ IMPORTANT: This is what your emergency routing checks
     await prefs.setEcAdded(true);
 
+    // reset verification
     phoneVerified = false;
     emailVerified = false;
     await prefs.setEcPhoneVerified(false);
@@ -61,6 +57,4 @@ class EmergencyContactController extends ChangeNotifier {
     await prefs.setEcEmailVerified(v);
     notifyListeners();
   }
-
-  bool get isAdded => contact != null;
 }
