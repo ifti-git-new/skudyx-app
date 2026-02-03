@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:skudyx/features/device/presentation/device_arrived_screen.dart';
+import 'package:skudyx/features/device/presentation/screens/device_list_screen.dart';
+import 'package:skudyx/features/device/presentation/screens/device_searching_screen.dart';
 
 import '../core/navigation/app_routes.dart';
 import '../core/storage/app_prefs.dart';
@@ -73,7 +76,8 @@ class AppRouter {
           loc == AppRoutes.device ||
           loc == AppRoutes.emergencyHome ||
           loc == AppRoutes.settings ||
-          loc == AppRoutes.profile;
+          loc == AppRoutes.profile ||
+          loc == AppRoutes.deviceArrived;
 
       if (loggedIn &&
           onboardingSeen &&
@@ -162,6 +166,18 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.profile,
             builder: (_, __) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.deviceArrived,
+            builder: (_, __) => const DeviceArrivedScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.deviceSearching,
+            builder: (_, __) => const DeviceSearchingScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.deviceList,
+            builder: (_, __) => const DeviceListScreen(),
           ),
         ],
       ),

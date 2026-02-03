@@ -33,4 +33,7 @@ abstract class AppRoutes {
 
   static const cases = '/cases';
   static const caseDetails = '/cases/details';
+  static const deviceArrived = '/device/arrived';
+  static const deviceSearching = '/device/searching';
+  static const deviceList = '/device/list';
 }

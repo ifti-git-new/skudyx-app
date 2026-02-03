@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:skudyx/core/navigation/app_routes.dart';
+import 'package:skudyx/core/theme/app_colors.dart';
 
 class DeviceOnTheWayView extends StatelessWidget {
   const DeviceOnTheWayView({super.key});
@@ -46,6 +49,34 @@ class DeviceOnTheWayView extends StatelessWidget {
                 title: 'Shipped',
                 subtitle: 'Pending...',
               ),
+
+              const Spacer(),
+
+              // TEMP BUTTON
+              SizedBox(
+                width: 220,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    // TEMP: after shipped -> show Device Arrived screen
+                    context.push(AppRoutes.deviceArrived);
+                  },
+                  child: const Text(
+                    'Shipped',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 22),
             ],
           ),
         ),
@@ -67,7 +98,7 @@ class _TimelineItem extends StatelessWidget {
     required this.subtitle,
   });
 
-  static const _borderColor = Color(0xFF38BDF8); // same cyan used before
+  static const _borderColor = Color(0xFF38BDF8);
   static const _muted = Color(0xFF6B7280);
 
   @override
@@ -81,7 +112,6 @@ class _TimelineItem extends StatelessWidget {
             bottom: -14,
             child: Container(width: 2, color: _borderColor),
           ),
-
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
