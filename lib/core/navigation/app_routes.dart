@@ -47,4 +47,8 @@ abstract class AppRoutes {
   static const identityCapture = '/identity/capture';
   static const identityProcessing = '/identity/processing';
   static const identitySuccess = '/identity/success';
+
+  //case history
+  static const settingsCaseHistory = '/settings/case-history';
+  static const settingsCaseDetails = '/settings/case-history/:caseId';
 }

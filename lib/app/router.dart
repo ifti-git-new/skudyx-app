@@ -8,6 +8,7 @@ import 'package:skudyx/features/auth/presentation/screens/register_screen.dart';
 import 'package:skudyx/features/auth/presentation/screens/email_otp_screen.dart';
 import 'package:skudyx/features/auth/presentation/screens/register_success_screen.dart';
 import 'package:skudyx/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:skudyx/features/cases/presentation/screens/case_details_screen.dart';
 
 // Emergency Contact
 import 'package:skudyx/features/emergency_contact/presentation/screens/emergency_contact_form_screen.dart';
@@ -18,6 +19,7 @@ import 'package:skudyx/features/onboarding/presentation/screens/instruction_1_sc
 import 'package:skudyx/features/onboarding/presentation/screens/instruction_2_screen.dart';
 import 'package:skudyx/features/onboarding/presentation/screens/instruction_3_screen.dart';
 import 'package:skudyx/features/onboarding/presentation/screens/instruction_4_screen.dart';
+import 'package:skudyx/features/profile/presentation/screens/cases/presentation/screens/case_history_screen.dart';
 
 // Subscription & delivery
 import 'package:skudyx/features/subscription/presentation/screens/subscription_screen.dart';
@@ -187,6 +189,18 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.identityCapture,
         builder: (_, __) => const IdentityCaptureScreen(),
+      ),
+
+      GoRoute(
+        path: AppRoutes.settingsCaseHistory,
+        builder: (_, __) => const CaseHistoryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.settingsCaseDetails,
+        builder: (_, state) {
+          final caseId = state.pathParameters['caseId'] ?? '';
+          return CaseDetailsScreen(caseId: caseId);
+        },
       ),
 
       GoRoute(
