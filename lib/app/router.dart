@@ -8,7 +8,8 @@ import 'package:skudyx/features/auth/presentation/screens/register_screen.dart';
 import 'package:skudyx/features/auth/presentation/screens/email_otp_screen.dart';
 import 'package:skudyx/features/auth/presentation/screens/register_success_screen.dart';
 import 'package:skudyx/features/auth/presentation/screens/forgot_password_screen.dart';
-import 'package:skudyx/features/device/presentation/device_arrived_screen.dart';
+
+// Emergency Contact
 import 'package:skudyx/features/emergency_contact/presentation/screens/emergency_contact_form_screen.dart';
 import 'package:skudyx/features/emergency_contact/presentation/screens/emergency_contact_screen.dart';
 
@@ -31,7 +32,18 @@ import 'package:skudyx/features/emergency/presentation/screens/emergency_home_sc
 import 'package:skudyx/features/settings/presentation/screens/settings_screen.dart';
 import 'package:skudyx/features/profile/presentation/screens/profile_screen.dart';
 
-// Device flow screens (IMPORTANT: use correct paths)
+// Profile edit (no bottom nav)
+import 'package:skudyx/features/profile/presentation/screens/edit_profile_screen.dart';
+
+// ✅ Identity verification flow (no bottom nav)
+import 'package:skudyx/features/profile/presentation/screens/identity/identity_intro_screen.dart';
+import 'package:skudyx/features/profile/presentation/screens/identity/identity_select_screen.dart';
+import 'package:skudyx/features/profile/presentation/screens/identity/identity_capture_screen.dart';
+import 'package:skudyx/features/profile/presentation/screens/identity/identity_processing_screen.dart';
+import 'package:skudyx/features/profile/presentation/screens/identity/identity_success_screen.dart';
+
+// Device flow screens
+import 'package:skudyx/features/device/presentation/device_arrived_screen.dart';
 import 'package:skudyx/features/device/presentation/screens/device_searching_screen.dart';
 import 'package:skudyx/features/device/presentation/screens/device_list_screen.dart';
 import 'package:skudyx/features/device/presentation/screens/device_connected_screen.dart';
@@ -68,13 +80,16 @@ class AppRouter {
 
       final isOnboardingRoute = loc.startsWith('/onboarding');
 
-      // Any route inside "main shell area"
-      // (this includes device subroutes like /device/connected, /device/list etc)
+      // ✅ Treat all main app areas + subroutes as "main app"
+      // (IMPORTANT: includes /identity/* and /profile/edit)
       final isShellAreaRoute =
           loc.startsWith('/device') ||
-          loc == AppRoutes.emergencyHome ||
-          loc == AppRoutes.settings ||
-          loc == AppRoutes.profile;
+          loc.startsWith('/profile') ||
+          loc.startsWith('/settings') ||
+          loc.startsWith('/emergency-contact') ||
+          loc.startsWith('/identity') ||
+          loc.startsWith('/identity') ||
+          loc == AppRoutes.emergencyHome;
 
       // 1) logged out -> only auth flow is allowed
       if (!loggedIn && !isAuthFlowRoute) return AppRoutes.login;
@@ -154,6 +169,31 @@ class AppRouter {
         builder: (_, __) => const DeliveryConfirmationScreen(),
       ),
 
+      // Profile edit (outside shell -> no bottom nav)
+      GoRoute(
+        path: AppRoutes.profileEdit,
+        builder: (_, __) => const EditProfileScreen(),
+      ),
+
+      // ✅ Identity Verification flow (outside shell -> no bottom nav)
+      GoRoute(
+        path: AppRoutes.identityIntro,
+        builder: (_, __) => const IdentityIntroScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.identitySelect,
+        builder: (_, __) => const IdentitySelectScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.identityCapture,
+        builder: (_, __) => const IdentityCaptureScreen(),
+      ),
+
+      GoRoute(
+        path: AppRoutes.identitySuccess,
+        builder: (_, __) => const IdentitySuccessScreen(),
+      ),
+
       // ShellRoute (bottom nav visible)
       ShellRoute(
         builder: (context, state, child) => MainShellScreen(child: child),
@@ -175,7 +215,7 @@ class AppRouter {
             builder: (_, __) => const ProfileScreen(),
           ),
 
-          // Device flow screens under the Devices tab
+          // Device flow screens under Devices tab
           GoRoute(
             path: AppRoutes.deviceArrived,
             builder: (_, __) => const DeviceArrivedScreen(),
@@ -192,6 +232,8 @@ class AppRouter {
             path: AppRoutes.deviceConnected,
             builder: (_, __) => const DeviceConnectedScreen(),
           ),
+
+          // Emergency Contact screens (under shell so bottom nav stays)
           GoRoute(
             path: AppRoutes.emergencyContact,
             builder: (_, __) => const EmergencyContactScreen(),

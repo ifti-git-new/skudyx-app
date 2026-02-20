@@ -8,8 +8,9 @@ plugins {
 android {
     namespace = "com.example.skudyx"
 
-    // IMPORTANT: Set explicit SDK versions for BLE + permissions stability
-    compileSdk = 34
+    // ✅ Required by plugins (camera_camerax, connectivity_plus, shared_preferences, etc.)
+    compileSdk = 36
+
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -24,10 +25,12 @@ android {
     defaultConfig {
         applicationId = "com.example.skudyx"
 
-        // IMPORTANT:
-        // permission_handler + BLE permissions work well with minSdk 21+
+        // ✅ keep minSdk at least 21
         minSdk = flutter.minSdkVersion
-        targetSdk = 34
+
+        // ✅ targetSdk can be lower than compileSdk
+        // Use 35 unless you have API 36 installed and want to target it.
+        targetSdk = 35
 
         versionCode = flutter.versionCode
         versionName = flutter.versionName

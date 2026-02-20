@@ -24,6 +24,7 @@ abstract class AppRoutes {
   static const emergencyHome = '/emergency-home';
   static const settings = '/settings';
   static const profile = '/profile';
+  static const profileEdit = '/profile/edit';
 
   // Other screens (non-tab)
   static const notifications = '/notifications';
@@ -39,4 +40,11 @@ abstract class AppRoutes {
   static const deviceSearching = '/device/searching';
   static const deviceList = '/device/list';
   static const deviceConnected = '/device/connected';
+
+  // Identity verification flow
+  static const identityIntro = '/identity/intro';
+  static const identitySelect = '/identity/select';
+  static const identityCapture = '/identity/capture';
+  static const identityProcessing = '/identity/processing';
+  static const identitySuccess = '/identity/success';
 }
