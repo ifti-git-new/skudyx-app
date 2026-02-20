@@ -1,54 +1,45 @@
 import 'package:go_router/go_router.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/features/auth/presentation/controllers/auth_controller.dart';
-
+import 'package:skudyx/features/auth/presentation/screens/email_otp_screen.dart';
+import 'package:skudyx/features/auth/presentation/screens/forgot_password_screen.dart';
 // Auth
 import 'package:skudyx/features/auth/presentation/screens/login_screen.dart';
 import 'package:skudyx/features/auth/presentation/screens/register_screen.dart';
-import 'package:skudyx/features/auth/presentation/screens/email_otp_screen.dart';
 import 'package:skudyx/features/auth/presentation/screens/register_success_screen.dart';
-import 'package:skudyx/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:skudyx/features/cases/presentation/screens/case_details_screen.dart';
-
+import 'package:skudyx/features/delivery/presentation/screens/delivery_confirmation_screen.dart';
+import 'package:skudyx/features/delivery/presentation/screens/delivery_details_screen.dart';
+// Device flow screens
+import 'package:skudyx/features/device/presentation/device_arrived_screen.dart';
+import 'package:skudyx/features/device/presentation/screens/device_connected_screen.dart';
+import 'package:skudyx/features/device/presentation/screens/device_list_screen.dart';
+import 'package:skudyx/features/device/presentation/screens/device_screen.dart';
+import 'package:skudyx/features/device/presentation/screens/device_searching_screen.dart';
+import 'package:skudyx/features/emergency/presentation/screens/emergency_home_screen.dart';
 // Emergency Contact
 import 'package:skudyx/features/emergency_contact/presentation/screens/emergency_contact_form_screen.dart';
 import 'package:skudyx/features/emergency_contact/presentation/screens/emergency_contact_screen.dart';
-
 // Onboarding
 import 'package:skudyx/features/onboarding/presentation/screens/instruction_1_screen.dart';
 import 'package:skudyx/features/onboarding/presentation/screens/instruction_2_screen.dart';
 import 'package:skudyx/features/onboarding/presentation/screens/instruction_3_screen.dart';
 import 'package:skudyx/features/onboarding/presentation/screens/instruction_4_screen.dart';
 import 'package:skudyx/features/profile/presentation/screens/cases/presentation/screens/case_history_screen.dart';
-
-// Subscription & delivery
-import 'package:skudyx/features/subscription/presentation/screens/subscription_screen.dart';
-import 'package:skudyx/features/delivery/presentation/screens/delivery_details_screen.dart';
-import 'package:skudyx/features/delivery/presentation/screens/delivery_confirmation_screen.dart';
-
-// Shell + tabs
-import 'package:skudyx/features/shell/presentation/screens/splash_screen.dart';
-import 'package:skudyx/features/shell/presentation/screens/main_shell_screen.dart';
-import 'package:skudyx/features/device/presentation/screens/device_screen.dart';
-import 'package:skudyx/features/emergency/presentation/screens/emergency_home_screen.dart';
-import 'package:skudyx/features/settings/presentation/screens/settings_screen.dart';
-import 'package:skudyx/features/profile/presentation/screens/profile_screen.dart';
-
 // Profile edit (no bottom nav)
 import 'package:skudyx/features/profile/presentation/screens/edit_profile_screen.dart';
-
+import 'package:skudyx/features/profile/presentation/screens/identity/identity_capture_screen.dart';
 // ✅ Identity verification flow (no bottom nav)
 import 'package:skudyx/features/profile/presentation/screens/identity/identity_intro_screen.dart';
 import 'package:skudyx/features/profile/presentation/screens/identity/identity_select_screen.dart';
-import 'package:skudyx/features/profile/presentation/screens/identity/identity_capture_screen.dart';
-import 'package:skudyx/features/profile/presentation/screens/identity/identity_processing_screen.dart';
 import 'package:skudyx/features/profile/presentation/screens/identity/identity_success_screen.dart';
-
-// Device flow screens
-import 'package:skudyx/features/device/presentation/device_arrived_screen.dart';
-import 'package:skudyx/features/device/presentation/screens/device_searching_screen.dart';
-import 'package:skudyx/features/device/presentation/screens/device_list_screen.dart';
-import 'package:skudyx/features/device/presentation/screens/device_connected_screen.dart';
+import 'package:skudyx/features/profile/presentation/screens/profile_screen.dart';
+import 'package:skudyx/features/settings/presentation/screens/settings_screen.dart';
+import 'package:skudyx/features/shell/presentation/screens/main_shell_screen.dart';
+// Shell + tabs
+import 'package:skudyx/features/shell/presentation/screens/splash_screen.dart';
+// Subscription & delivery
+import 'package:skudyx/features/subscription/presentation/screens/subscription_screen.dart';
 
 class AppRouter {
   final AuthController auth;
@@ -111,8 +102,9 @@ class AppRouter {
       }
 
       // 4) logged in + onboarding done -> block going back to auth flow screens
-      if (loggedIn && onboardingSeen && isAuthFlowRoute)
+      if (loggedIn && onboardingSeen && isAuthFlowRoute) {
         return AppRoutes.device;
+      }
 
       return null;
     },
@@ -198,7 +190,8 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.settingsCaseDetails,
         builder: (_, state) {
-          final caseId = state.pathParameters['caseId'] ?? '';
+          final raw = state.pathParameters['caseId'] ?? '';
+          final caseId = Uri.decodeComponent(raw);
           return CaseDetailsScreen(caseId: caseId);
         },
       ),

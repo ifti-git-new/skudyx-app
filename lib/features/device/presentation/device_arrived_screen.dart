@@ -118,8 +118,9 @@ class DeviceArrivedScreen extends StatelessWidget {
                       }
 
                       // iOS will prompt automatically when BLE is accessed; permission_handler isn't required there.
-                      if (context.mounted)
+                      if (context.mounted) {
                         context.push(AppRoutes.deviceSearching);
+                      }
                     },
                     child: const Text(
                       'Search for Device',

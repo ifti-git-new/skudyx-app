@@ -203,8 +203,9 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                                     builder: (_) =>
                                         _CountrySheet(current: _country),
                                   );
-                              if (selected != null)
+                              if (selected != null) {
                                 setState(() => _country = selected);
+                              }
                             },
                           ),
                         ),

@@ -107,8 +107,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       );
 
                       // go to delivery details
-                      if (context.mounted)
+                      if (context.mounted) {
                         context.push(AppRoutes.deliveryDetails);
+                      }
                     },
                     child: const Text(
                       'Subscribe',

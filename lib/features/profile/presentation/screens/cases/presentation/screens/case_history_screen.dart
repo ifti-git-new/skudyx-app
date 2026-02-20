@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:skudyx/core/navigation/app_routes.dart';
 
 class CaseHistoryScreen extends StatelessWidget {
   const CaseHistoryScreen({super.key});

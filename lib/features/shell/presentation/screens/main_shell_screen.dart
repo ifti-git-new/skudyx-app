@@ -98,6 +98,7 @@ class MainShellScreen extends StatelessWidget {
           type: BottomNavigationBarType.fixed,
           selectedFontSize: 12,
           unselectedFontSize: 12,
+          backgroundColor: Colors.white,
           selectedItemColor: const Color(0xFF081B4A),
           unselectedItemColor: const Color(0xFF6B7280),
           items: const [

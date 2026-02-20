@@ -474,8 +474,12 @@ class _OtpSheetState extends State<_OtpSheet> {
 
   @override
   void dispose() {
-    for (final c in controllers) c.dispose();
-    for (final n in nodes) n.dispose();
+    for (final c in controllers) {
+      c.dispose();
+    }
+    for (final n in nodes) {
+      n.dispose();
+    }
     super.dispose();
   }
 
@@ -560,8 +564,9 @@ class _OtpSheetState extends State<_OtpSheet> {
                       ),
                       onChanged: (v) {
                         setState(() {});
-                        if (v.isNotEmpty && i < len - 1)
+                        if (v.isNotEmpty && i < len - 1) {
                           nodes[i + 1].requestFocus();
+                        }
                       },
                     ),
                   ),
