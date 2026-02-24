@@ -67,9 +67,7 @@ class SettingsScreen extends StatelessWidget {
                     _SettingsRow(
                       icon: Icons.help_outline_rounded,
                       title: 'FAQs',
-                      onTap: () {
-                        // TODO: open FAQs
-                      },
+                      onTap: () => context.push(AppRoutes.settingsFaqs),
                     ),
                     const _Divider(),
                     _SettingsRow(

@@ -36,6 +36,7 @@ import 'package:skudyx/features/profile/presentation/screens/identity/identity_s
 import 'package:skudyx/features/profile/presentation/screens/profile_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/complete_setup_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/contact_support_screen.dart';
+import 'package:skudyx/features/settings/presentation/screens/faqs_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/help_support_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/notification_preferences_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/settings_screen.dart';
@@ -213,6 +214,11 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.settingsContactSupport,
         builder: (_, __) => const ContactSupportScreen(),
+      ),
+
+      GoRoute(
+        path: AppRoutes.settingsFaqs,
+        builder: (_, __) => const FaqsScreen(),
       ),
 
       GoRoute(

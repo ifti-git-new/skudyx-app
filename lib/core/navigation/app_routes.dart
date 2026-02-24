@@ -55,4 +55,5 @@ abstract class AppRoutes {
   static const settingsNotifications = '/settings/notifications';
   static const settingsHelpSupport = '/settings/help-support';
   static const settingsContactSupport = '/settings/help-support/contact';
+  static const settingsFaqs = '/settings/faqs';
 }
