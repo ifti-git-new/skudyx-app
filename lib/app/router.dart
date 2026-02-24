@@ -39,7 +39,9 @@ import 'package:skudyx/features/settings/presentation/screens/contact_support_sc
 import 'package:skudyx/features/settings/presentation/screens/faqs_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/help_support_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/notification_preferences_screen.dart';
+import 'package:skudyx/features/settings/presentation/screens/privacy_policy_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/settings_screen.dart';
+import 'package:skudyx/features/settings/presentation/screens/terms_conditions_screen.dart';
 import 'package:skudyx/features/shell/presentation/screens/main_shell_screen.dart';
 // Shell + tabs
 import 'package:skudyx/features/shell/presentation/screens/splash_screen.dart';
@@ -214,6 +216,16 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.settingsContactSupport,
         builder: (_, __) => const ContactSupportScreen(),
+      ),
+
+      GoRoute(
+        path: AppRoutes.settingsPrivacyPolicy,
+        builder: (_, __) => const PrivacyPolicyScreen(),
+      ),
+
+      GoRoute(
+        path: AppRoutes.settingsTerms,
+        builder: (_, __) => const TermsConditionsScreen(),
       ),
 
       GoRoute(

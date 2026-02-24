@@ -56,4 +56,6 @@ abstract class AppRoutes {
   static const settingsHelpSupport = '/settings/help-support';
   static const settingsContactSupport = '/settings/help-support/contact';
   static const settingsFaqs = '/settings/faqs';
+  static const settingsPrivacyPolicy = '/settings/privacy-policy';
+  static const settingsTerms = '/settings/terms';
 }

@@ -73,17 +73,14 @@ class SettingsScreen extends StatelessWidget {
                     _SettingsRow(
                       icon: Icons.shield_outlined,
                       title: 'Privacy Policy',
-                      onTap: () {
-                        // TODO: open privacy policy webview
-                      },
+                      onTap: () =>
+                          context.push(AppRoutes.settingsPrivacyPolicy),
                     ),
                     const _Divider(),
                     _SettingsRow(
                       icon: Icons.description_outlined,
                       title: 'Terms & Conditions',
-                      onTap: () {
-                        // TODO: open terms webview
-                      },
+                      onTap: () => context.push(AppRoutes.settingsTerms),
                     ),
                     const _Divider(),
                     _SettingsRow(
