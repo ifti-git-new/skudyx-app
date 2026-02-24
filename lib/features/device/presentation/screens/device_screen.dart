@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:skudyx/features/device/presentation/screens/widgets/device_on_the_way_view.dart';
 
 import '../../../../core/controllers/app_status_controller.dart';
 import '../../../../core/navigation/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'widgets/device_on_the_way_view.dart';
 
-class DeviceScreen extends StatelessWidget {
+class DeviceScreen extends StatefulWidget {
   const DeviceScreen({super.key});
+
+  @override
+  State<DeviceScreen> createState() => _DeviceScreenState();
+}
+
+class _DeviceScreenState extends State<DeviceScreen> {
+  bool _redirectedToList = false;
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +23,25 @@ class DeviceScreen extends StatelessWidget {
 
     final isSubscribed = status.isSubscribed;
     final hasDeliveryDetails = status.hasDeliveryDetails;
+    final deviceArrived = status.deviceArrived;
 
+    // ✅ If device arrived, always stay in device list flow
+    if (deviceArrived) {
+      if (!_redirectedToList) {
+        _redirectedToList = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) context.go(AppRoutes.deviceList);
+        });
+      }
+
+      // Temporary while redirect happens
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Normal state machine
     if (!isSubscribed) {
       return const _NotPurchasedView();
     }
@@ -44,11 +69,6 @@ class _NotPurchasedView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // const Icon(
-                //   Icons.lock_outline,
-                //   size: 90,
-                //   color: Color(0xFF94A3B8),
-                // ),
                 Image.asset('assets/images/lock.png', width: 90, height: 90),
                 const SizedBox(height: 22),
                 const Text(
@@ -103,11 +123,6 @@ class _PurchasedNoDeliveryView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // const Icon(
-                //   Icons.inventory_2_outlined,
-                //   size: 90,
-                //   color: Color(0xFF94A3B8),
-                // ),
                 Image.asset('assets/images/box_ok.png', width: 90, height: 90),
                 const SizedBox(height: 22),
                 const Text(

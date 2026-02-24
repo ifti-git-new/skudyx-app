@@ -60,6 +60,7 @@ class AppPrefs {
   // ---------------------------
   // Device arrived (after shipping / delivery)
   // ---------------------------
+
   bool get deviceArrived => _sp.getBool(_kDeviceArrived) ?? false;
   Future<void> setDeviceArrived(bool v) => _sp.setBool(_kDeviceArrived, v);
 

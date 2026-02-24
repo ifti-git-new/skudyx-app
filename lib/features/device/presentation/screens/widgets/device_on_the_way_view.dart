@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import 'package:skudyx/core/controllers/app_status_controller.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/theme/app_colors.dart';
 
@@ -65,9 +68,14 @@ class DeviceOnTheWayView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
-                    // TEMP: after shipped -> show Device Arrived screen
-                    context.push(AppRoutes.deviceArrived);
+                  onPressed: () async {
+                    // ✅ mark device arrived so /device no longer shows OnTheWay after restart
+                    await context.read<AppStatusController>().setDeviceArrived(
+                      true,
+                    );
+
+                    // go to Device Arrived screen (bluetooth connect screen)
+                    if (context.mounted) context.push(AppRoutes.deviceArrived);
                   },
                   child: const Text(
                     'Shipped',

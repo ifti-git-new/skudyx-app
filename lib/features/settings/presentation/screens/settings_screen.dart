@@ -41,9 +41,8 @@ class SettingsScreen extends StatelessWidget {
                     _SettingsRow(
                       icon: Icons.check_circle_outline_rounded,
                       title: 'Complete Setup',
-                      onTap: () {
-                        // TODO: open complete setup checklist
-                      },
+                      onTap: () =>
+                          context.push(AppRoutes.settingsCompleteSetup),
                     ),
                     const _Divider(),
                     _SettingsRow(
