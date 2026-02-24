@@ -69,12 +69,9 @@ class DeviceOnTheWayView extends StatelessWidget {
                     ),
                   ),
                   onPressed: () async {
-                    // ✅ mark device arrived so /device no longer shows OnTheWay after restart
                     await context.read<AppStatusController>().setDeviceArrived(
                       true,
                     );
-
-                    // go to Device Arrived screen (bluetooth connect screen)
                     if (context.mounted) context.push(AppRoutes.deviceArrived);
                   },
                   child: const Text(

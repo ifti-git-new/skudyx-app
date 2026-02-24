@@ -15,42 +15,28 @@ class DeviceScreen extends StatefulWidget {
 }
 
 class _DeviceScreenState extends State<DeviceScreen> {
-  bool _redirectedToList = false;
+  bool _redirected = false;
 
   @override
   Widget build(BuildContext context) {
     final status = context.watch<AppStatusController>();
 
-    final isSubscribed = status.isSubscribed;
-    final hasDeliveryDetails = status.hasDeliveryDetails;
-    final deviceArrived = status.deviceArrived;
-
-    // ✅ If device arrived, always stay in device list flow
-    if (deviceArrived) {
-      if (!_redirectedToList) {
-        _redirectedToList = true;
+    // ✅ if device arrived -> always stay in device list flow
+    if (status.deviceArrived) {
+      if (!_redirected) {
+        _redirected = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) context.go(AppRoutes.deviceList);
         });
       }
-
-      // Temporary while redirect happens
       return const Scaffold(
         backgroundColor: Colors.white,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    // Normal state machine
-    if (!isSubscribed) {
-      return const _NotPurchasedView();
-    }
-
-    if (isSubscribed && !hasDeliveryDetails) {
-      return const _PurchasedNoDeliveryView();
-    }
-
-    // State 3: Delivery details given -> show "Device is on the way"
+    if (!status.isSubscribed) return const _NotPurchasedView();
+    if (!status.hasDeliveryDetails) return const _PurchasedNoDeliveryView();
     return const DeviceOnTheWayView();
   }
 }

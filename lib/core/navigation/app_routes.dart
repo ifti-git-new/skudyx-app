@@ -24,37 +24,34 @@ abstract class AppRoutes {
   static const emergencyHome = '/emergency-home';
   static const settings = '/settings';
   static const profile = '/profile';
+
+  // Profile edit (no bottom nav)
   static const profileEdit = '/profile/edit';
 
-  // Other screens (non-tab)
-  static const notifications = '/notifications';
-  static const emergencyContact = '/emergency-contact';
-  static const emergencyContactEdit = '/emergency-contact/edit';
-
-  static const testReport = '/test-report';
-  static const emergency = '/emergency';
-
-  static const cases = '/cases';
-  static const caseDetails = '/cases/details';
+  // Device flow (inside shell)
   static const deviceArrived = '/device/arrived';
   static const deviceSearching = '/device/searching';
   static const deviceList = '/device/list';
   static const deviceConnected = '/device/connected';
 
-  // Identity verification flow
+  // Emergency contact (inside shell)
+  static const emergencyContact = '/emergency-contact';
+  static const emergencyContactEdit = '/emergency-contact/edit';
+
+  // Identity verification flow (no bottom nav)
   static const identityIntro = '/identity/intro';
   static const identitySelect = '/identity/select';
   static const identityCapture = '/identity/capture';
-  static const identityProcessing = '/identity/processing';
   static const identitySuccess = '/identity/success';
 
-  //Settings sub-screens
+  // Settings sub-screens (keep under /settings so Settings tab stays selected)
   static const settingsCaseHistory = '/settings/case-history';
   static const settingsCaseDetails = '/settings/case-history/:caseId';
   static const settingsCompleteSetup = '/settings/complete-setup';
   static const settingsNotifications = '/settings/notifications';
   static const settingsHelpSupport = '/settings/help-support';
-  static const settingsContactSupport = '/settings/help-support/contact';
+  static const settingsContactSupport =
+      '/settings/help-support/contact'; // no bottom nav
   static const settingsFaqs = '/settings/faqs';
   static const settingsPrivacyPolicy = '/settings/privacy-policy';
   static const settingsTerms = '/settings/terms';

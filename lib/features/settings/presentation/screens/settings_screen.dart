@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
+import 'package:skudyx/features/settings/presentation/delete_account/delete_account_flow.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -87,8 +88,8 @@ class SettingsScreen extends StatelessWidget {
                       icon: Icons.delete_outline_rounded,
                       title: 'Delete Account',
                       isDestructive: true,
-                      onTap: () {
-                        // TODO: delete account flow
+                      onTap: () async {
+                        await DeleteAccountFlow.start(context);
                       },
                     ),
                   ],
