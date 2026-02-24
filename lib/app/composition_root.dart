@@ -6,6 +6,7 @@ import 'package:skudyx/features/device/presentation/controllers/device_scan_cont
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
 import 'package:skudyx/features/profile/controllers/identity_verification_controller.dart';
 import 'package:skudyx/features/profile/controllers/profile_controller.dart';
+import 'package:skudyx/features/settings/presentation/controllers/notification_prefs_controller.dart';
 
 import '../core/config/app_config.dart';
 import '../core/storage/app_prefs.dart';
@@ -46,6 +47,11 @@ class AppCompositionRoot extends StatelessWidget {
 
         ChangeNotifierProvider<ProfileController>(
           create: (_) => ProfileController(),
+        ),
+
+        ChangeNotifierProvider<NotificationPrefsController>(
+          create: (c) =>
+              NotificationPrefsController(prefs: c.read<AppPrefs>())..init(),
         ),
 
         ChangeNotifierProvider<IdentityVerificationController>(

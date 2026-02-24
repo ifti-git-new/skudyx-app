@@ -35,6 +35,7 @@ import 'package:skudyx/features/profile/presentation/screens/identity/identity_s
 import 'package:skudyx/features/profile/presentation/screens/identity/identity_success_screen.dart';
 import 'package:skudyx/features/profile/presentation/screens/profile_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/complete_setup_screen.dart';
+import 'package:skudyx/features/settings/presentation/screens/notification_preferences_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/settings_screen.dart';
 import 'package:skudyx/features/shell/presentation/screens/main_shell_screen.dart';
 // Shell + tabs
@@ -195,6 +196,11 @@ class AppRouter {
           final caseId = Uri.decodeComponent(raw);
           return CaseDetailsScreen(caseId: caseId);
         },
+      ),
+
+      GoRoute(
+        path: AppRoutes.settingsNotifications,
+        builder: (_, __) => const NotificationPreferencesScreen(),
       ),
 
       GoRoute(

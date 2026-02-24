@@ -52,4 +52,5 @@ abstract class AppRoutes {
   static const settingsCaseHistory = '/settings/case-history';
   static const settingsCaseDetails = '/settings/case-history/:caseId';
   static const settingsCompleteSetup = '/settings/complete-setup';
+  static const settingsNotifications = '/settings/notifications';
 }

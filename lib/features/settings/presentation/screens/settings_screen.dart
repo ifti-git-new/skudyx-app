@@ -48,17 +48,14 @@ class SettingsScreen extends StatelessWidget {
                     _SettingsRow(
                       icon: Icons.credit_card_rounded,
                       title: 'Subscription',
-                      onTap: () {
-                        // TODO: open subscription screen
-                      },
+                      onTap: () => context.push(AppRoutes.subscription),
                     ),
                     const _Divider(),
                     _SettingsRow(
                       icon: Icons.notifications_none_rounded,
                       title: 'Notifications',
-                      onTap: () {
-                        // TODO: open notifications preferences
-                      },
+                      onTap: () =>
+                          context.push(AppRoutes.settingsNotifications),
                     ),
                     const _Divider(),
                     _SettingsRow(

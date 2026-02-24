@@ -5,10 +5,35 @@ import 'package:provider/provider.dart';
 import '../controllers/device_scan_controller.dart';
 import '../../../../core/navigation/app_routes.dart';
 
-class DeviceListScreen extends StatelessWidget {
+class DeviceListScreen extends StatefulWidget {
   const DeviceListScreen({super.key});
 
+  @override
+  State<DeviceListScreen> createState() => _DeviceListScreenState();
+}
+
+class _DeviceListScreenState extends State<DeviceListScreen> {
   static const _bg = Color(0xFFF7F8FA);
+
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Start scan once when the screen is shown
+    if (!_started) {
+      _started = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final scan = context.read<DeviceScanController>();
+
+        // Start scan only if nothing is there yet
+        if (scan.devices.isEmpty && !scan.scanning) {
+          scan.startMockScan(); // later replace with real BLE scan
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +50,7 @@ class DeviceListScreen extends StatelessWidget {
               child: Row(
                 children: [
                   InkWell(
-                    onTap: () => context.pop(), // ✅ correct
+                    onTap: () => context.pop(),
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       width: 40,
@@ -50,28 +75,71 @@ class DeviceListScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                itemCount: scan.devices.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (_, i) {
-                  final d = scan.devices[i];
-                  return _DeviceCard(
-                    name: d.name,
-                    timeText: d.timeText,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Selected ${d.name}')),
-                      );
-
-                      // ✅ Go to connected dashboard
-                      context.push(AppRoutes.deviceConnected);
-                    },
-                  );
-                },
+            // ✅ Loading / empty state
+            if (scan.devices.isEmpty) ...[
+              Expanded(
+                child: Center(
+                  child: scan.scanning
+                      ? const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 12),
+                            Text(
+                              'Searching for devices...',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'No devices found',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              height: 44,
+                              child: ElevatedButton(
+                                onPressed: () => context
+                                    .read<DeviceScanController>()
+                                    .startMockScan(),
+                                child: const Text('Retry'),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
               ),
-            ),
+            ] else ...[
+              // ✅ List view (when devices exist)
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  itemCount: scan.devices.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (_, i) {
+                    final d = scan.devices[i];
+                    return _DeviceCard(
+                      name: d.name,
+                      timeText: d.timeText,
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Selected ${d.name}')),
+                        );
+
+                        // Go to connected dashboard
+                        context.push(AppRoutes.deviceConnected);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -30,6 +30,11 @@ class AppPrefs {
   static const _kEcPhoneVerified = 'ec_phone_verified';
   static const _kEcEmailVerified = 'ec_email_verified';
 
+  static const _kNotifSetupReminders = 'notif_setup_reminders';
+  static const _kNotifDeliveryUpdates = 'notif_delivery_updates';
+  static const _kNotifEmergencyAlerts = 'notif_emergency_alerts';
+  static const _kNotifSystemAnnouncements = 'notif_system_announcements';
+
   // ---------------------------
   // Auth
   // ---------------------------
@@ -76,6 +81,23 @@ class AppPrefs {
   bool get ecEmailVerified => _sp.getBool(_kEcEmailVerified) ?? false;
   Future<void> setEcEmailVerified(bool v) => _sp.setBool(_kEcEmailVerified, v);
 
+  bool get notifSetupReminders => _sp.getBool(_kNotifSetupReminders) ?? true;
+  Future<void> setNotifSetupReminders(bool v) =>
+      _sp.setBool(_kNotifSetupReminders, v);
+
+  bool get notifDeliveryUpdates => _sp.getBool(_kNotifDeliveryUpdates) ?? true;
+  Future<void> setNotifDeliveryUpdates(bool v) =>
+      _sp.setBool(_kNotifDeliveryUpdates, v);
+
+  bool get notifEmergencyAlerts => _sp.getBool(_kNotifEmergencyAlerts) ?? true;
+  Future<void> setNotifEmergencyAlerts(bool v) =>
+      _sp.setBool(_kNotifEmergencyAlerts, v);
+
+  bool get notifSystemAnnouncements =>
+      _sp.getBool(_kNotifSystemAnnouncements) ?? true;
+  Future<void> setNotifSystemAnnouncements(bool v) =>
+      _sp.setBool(_kNotifSystemAnnouncements, v);
+
   // ---------------------------
   // Clear all
   // ---------------------------
@@ -92,5 +114,10 @@ class AppPrefs {
     await _sp.remove(_kEcAdded);
     await _sp.remove(_kEcPhoneVerified);
     await _sp.remove(_kEcEmailVerified);
+
+    await _sp.remove(_kNotifSetupReminders);
+    await _sp.remove(_kNotifDeliveryUpdates);
+    await _sp.remove(_kNotifEmergencyAlerts);
+    await _sp.remove(_kNotifSystemAnnouncements);
   }
 }
