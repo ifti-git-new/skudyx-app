@@ -61,9 +61,7 @@ class SettingsScreen extends StatelessWidget {
                     _SettingsRow(
                       icon: Icons.headphones_rounded,
                       title: 'Help & Support',
-                      onTap: () {
-                        // TODO: open help & support
-                      },
+                      onTap: () => context.push(AppRoutes.settingsHelpSupport),
                     ),
                     const _Divider(),
                     _SettingsRow(

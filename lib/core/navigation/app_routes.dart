@@ -48,9 +48,11 @@ abstract class AppRoutes {
   static const identityProcessing = '/identity/processing';
   static const identitySuccess = '/identity/success';
 
-  //case history
+  //Settings sub-screens
   static const settingsCaseHistory = '/settings/case-history';
   static const settingsCaseDetails = '/settings/case-history/:caseId';
   static const settingsCompleteSetup = '/settings/complete-setup';
   static const settingsNotifications = '/settings/notifications';
+  static const settingsHelpSupport = '/settings/help-support';
+  static const settingsContactSupport = '/settings/help-support/contact';
 }
