@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/storage/app_prefs.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
 import 'package:skudyx/features/emergency/presentation/models/emergency_contact_model.dart';
 
@@ -60,20 +61,23 @@ class _WhyWeNeedThisView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text(
+                Text(
                   'Why we need this',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 30,
+                  style: AppTextStyles.textfont.copyWith(
                     fontWeight: FontWeight.w900,
                     height: 1.1,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Your emergency contact is the first person we\nnotify when you press the SkudyX button.\nAdding this now helps us reach someone you\ntrust as quickly as possible during an\nemergency.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 15, color: _sub, height: 1.35),
+                  style: AppTextStyles.textfont.copyWith(
+                    fontSize: 15,
+                    color: _sub,
+                    height: 1.35,
+                  ),
                 ),
                 const SizedBox(height: 22),
 
@@ -90,11 +94,11 @@ class _WhyWeNeedThisView extends StatelessWidget {
                     ),
                     onPressed: () =>
                         context.push(AppRoutes.emergencyContactEdit),
-                    child: const Padding(
+                    child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 18),
                       child: Text(
                         'Add Emergency Contact',
-                        style: TextStyle(
+                        style: AppTextStyles.textfont16.copyWith(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                         ),
@@ -141,9 +145,11 @@ class _OverviewView extends StatelessWidget {
               // top row: title + edit icon
               Row(
                 children: [
-                  const Text(
+                  Text(
                     'Emergency Contact',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    style: AppTextStyles.textfont16.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const Spacer(),
                   InkWell(
@@ -254,8 +260,7 @@ class _LabelValue extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 13,
+          style: AppTextStyles.textfont.copyWith(
             color: _sub,
             fontWeight: FontWeight.w600,
           ),
@@ -263,7 +268,7 @@ class _LabelValue extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           value,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+          style: AppTextStyles.textfont16.copyWith(fontWeight: FontWeight.w800),
         ),
       ],
     );
@@ -306,7 +311,7 @@ class _VerifyRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: AppTextStyles.textfont.copyWith(
                     fontSize: 13,
                     color: _sub,
                     fontWeight: FontWeight.w600,
@@ -315,8 +320,7 @@ class _VerifyRow extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   value,
-                  style: const TextStyle(
-                    fontSize: 15,
+                  style: AppTextStyles.textfont16.copyWith(
                     fontWeight: FontWeight.w800,
                     decoration: TextDecoration.underline,
                   ),
@@ -332,7 +336,7 @@ class _VerifyRow extends StatelessWidget {
             ),
             child: Text(
               badgeText,
-              style: TextStyle(
+              style: AppTextStyles.textfont.copyWith(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
                 color: badgeFg,
@@ -380,11 +384,13 @@ class _ConfirmationSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Confirmation',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                style: AppTextStyles.textfont16.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -392,7 +398,11 @@ class _ConfirmationSheet extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 'An authentication code will be sent to this $target.',
-                style: const TextStyle(fontSize: 14, color: _sub, height: 1.35),
+                style: AppTextStyles.textfont.copyWith(
+                  fontSize: 14,
+                  color: _sub,
+                  height: 1.35,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -411,9 +421,11 @@ class _ConfirmationSheet extends StatelessWidget {
                         ),
                       ),
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text(
+                      child: Text(
                         'Later',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                        style: AppTextStyles.textfont.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
@@ -432,9 +444,11 @@ class _ConfirmationSheet extends StatelessWidget {
                         ),
                       ),
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text(
+                      child: Text(
                         'Send',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                        style: AppTextStyles.textfont.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
@@ -508,11 +522,13 @@ class _OtpSheetState extends State<_OtpSheet> {
               ],
             ),
             const SizedBox(height: 10),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Confirmation',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                style: AppTextStyles.textfont16.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -520,7 +536,7 @@ class _OtpSheetState extends State<_OtpSheet> {
               alignment: Alignment.centerLeft,
               child: Text(
                 'Use the authentication code from $src to\nverify.',
-                style: const TextStyle(
+                style: AppTextStyles.textfont.copyWith(
                   fontSize: 14,
                   color: Color(0xFF6B7280),
                   height: 1.35,
@@ -591,9 +607,11 @@ class _OtpSheetState extends State<_OtpSheet> {
                         ),
                       ),
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text(
+                      child: Text(
                         'Cancel',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                        style: AppTextStyles.textfont.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
@@ -617,9 +635,11 @@ class _OtpSheetState extends State<_OtpSheet> {
                               Navigator.pop(context, true);
                             }
                           : null,
-                      child: const Text(
+                      child: Text(
                         'Done',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                        style: AppTextStyles.textfont.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),

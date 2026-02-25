@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 class DeviceConnectedScreen extends StatelessWidget {
   const DeviceConnectedScreen({super.key});
@@ -49,10 +50,9 @@ class DeviceConnectedScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     'Disconnect',
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: AppTextStyles.body.copyWith(
                       fontWeight: FontWeight.w800,
                       color: Colors.black,
                     ),
@@ -108,10 +108,9 @@ class DeviceConnectedScreen extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                       child: Row(
                         children: [
-                          const Text(
+                          Text(
                             'BLE Device',
-                            style: TextStyle(
-                              fontSize: 16,
+                            style: AppTextStyles.body.copyWith(
                               fontWeight: FontWeight.w900,
                               color: Colors.black,
                             ),
@@ -147,10 +146,9 @@ class DeviceConnectedScreen extends StatelessWidget {
 
               const SizedBox(height: 22),
 
-              const Text(
+              Text(
                 'Shared Information:',
-                style: TextStyle(
-                  fontSize: 16,
+                style: AppTextStyles.body.copyWith(
                   fontWeight: FontWeight.w900,
                   color: Colors.black,
                 ),
@@ -304,8 +302,7 @@ class _KeyValueRow extends StatelessWidget {
         children: [
           Text(
             left,
-            style: const TextStyle(
-              fontSize: 13,
+            style: AppTextStyles.caption.copyWith(
               color: DeviceConnectedScreen._textMuted,
               fontWeight: FontWeight.w600,
             ),
@@ -313,8 +310,7 @@ class _KeyValueRow extends StatelessWidget {
           const Spacer(),
           Text(
             right,
-            style: const TextStyle(
-              fontSize: 14,
+            style: AppTextStyles.body.copyWith(
               fontWeight: FontWeight.w900,
               color: Colors.black,
             ),
@@ -353,8 +349,7 @@ class _FeatureRow extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 15,
+            style: AppTextStyles.body.copyWith(
               fontWeight: FontWeight.w900,
               color: Colors.black,
             ),
@@ -384,7 +379,10 @@ class _Pill extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: fg),
+        style: AppTextStyles.caption.copyWith(
+          fontWeight: FontWeight.w800,
+          color: fg,
+        ),
       ),
     );
   }

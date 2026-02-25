@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 import '../../../../core/navigation/app_routes.dart';
 import '../controllers/auth_controller.dart';
@@ -44,23 +45,12 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 110),
-                const Text(
-                  'Login',
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w700,
-                    height: 1.1,
-                  ),
-                ),
+                Text('Login', style: AppTextStyles.h1),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Enter your email and password to log in',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AuthUi.subText,
-                    height: 1.3,
-                  ),
+                  style: AppTextStyles.caption,
                 ),
                 const SizedBox(height: 34),
 
@@ -110,24 +100,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : null,
                           ),
                           const SizedBox(width: 10),
-                          const Text(
-                            'Remember me',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AuthUi.subText,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                          Text('Remember me', style: AppTextStyles.caption),
                         ],
                       ),
                     ),
                     const Spacer(),
                     GestureDetector(
                       onTap: () => context.push(AppRoutes.forgotPassword),
-                      child: const Text(
+                      child: Text(
                         'Forgot Password ?',
-                        style: TextStyle(
-                          fontSize: 13,
+                        style: AppTextStyles.caption.copyWith(
                           color: AuthUi.navy,
                           fontWeight: FontWeight.w700,
                         ),
@@ -153,12 +135,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       await auth.mockLogin(isNewUser: false);
                       if (context.mounted) context.go(AppRoutes.device);
                     },
-                    child: const Text(
+                    child: Text(
                       'Login',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: AppTextStyles.button.copyWith(color: Colors.white),
                     ),
                   ),
                 ),
@@ -167,10 +146,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       "Don’t have an account?  ",
-                      style: TextStyle(
-                        fontSize: 13,
+                      style: AppTextStyles.caption.copyWith(
                         color: AuthUi.subText,
                         fontWeight: FontWeight.w500,
                       ),

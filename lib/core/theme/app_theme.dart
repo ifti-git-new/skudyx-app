@@ -15,7 +15,7 @@ class AppTheme {
         backgroundColor: AppColors.bg,
         elevation: 0,
         centerTitle: true,
-        foregroundColor: AppColors.textPrimary,
+        foregroundColor: AppColors.primary,
       ),
       cardTheme: CardThemeData(
         color: AppColors.surface,

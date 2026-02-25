@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 import '../controllers/device_scan_controller.dart';
 import '../../../../core/navigation/app_routes.dart';
@@ -66,9 +67,9 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     'Devices',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                    style: AppTextStyles.h2light.copyWith(fontSize: 18),
                   ),
                 ],
               ),
@@ -80,24 +81,25 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
               Expanded(
                 child: Center(
                   child: scan.scanning
-                      ? const Column(
+                      ? Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             CircularProgressIndicator(),
                             SizedBox(height: 12),
                             Text(
                               'Searching for devices...',
-                              style: TextStyle(fontWeight: FontWeight.w700),
+                              style: AppTextStyles.body.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ],
                         )
                       : Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text(
+                            Text(
                               'No devices found',
-                              style: TextStyle(
-                                fontSize: 16,
+                              style: AppTextStyles.body.copyWith(
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
@@ -191,7 +193,7 @@ class _DeviceCard extends StatelessWidget {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
+                    style: AppTextStyles.body.copyWith(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
                     ),
@@ -199,7 +201,7 @@ class _DeviceCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     timeText,
-                    style: const TextStyle(
+                    style: AppTextStyles.caption.copyWith(
                       fontSize: 13,
                       color: Color(0xFF6B7280),
                     ),
@@ -213,10 +215,9 @@ class _DeviceCard extends StatelessWidget {
                 color: const Color(0xFFDFF7DF),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Text(
+              child: Text(
                 'Available',
-                style: TextStyle(
-                  fontSize: 12,
+                style: AppTextStyles.caption.copyWith(
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF16A34A),
                 ),

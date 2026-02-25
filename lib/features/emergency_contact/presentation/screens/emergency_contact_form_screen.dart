@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:skudyx/core/navigation/app_routes.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
 import 'package:skudyx/features/emergency/presentation/models/emergency_contact_model.dart';
 
@@ -18,8 +19,6 @@ class _EmergencyContactFormScreenState
     extends State<EmergencyContactFormScreen> {
   static const _navy = Color(0xFF081B4A);
   static const _sub = Color(0xFF6B7280);
-  static const _border = Color(0xFFE5E7EB);
-  static const _fill = Color(0xFFF6F7F9);
 
   final first = TextEditingController(text: 'Jerome');
   final last = TextEditingController(text: 'Bell');
@@ -77,9 +76,12 @@ class _EmergencyContactFormScreenState
                 // ✅ go to overview screen (not pop)
                 if (context.mounted) context.go(AppRoutes.emergencyContact);
               },
-              child: const Text(
+              child: Text(
                 'Save',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                style: AppTextStyles.body.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -91,20 +93,22 @@ class _EmergencyContactFormScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Emergency Contact',
-                style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900),
+                style: AppTextStyles.h1.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Lorem ipsum dolor sit amet adipiscing elit.',
-                style: TextStyle(fontSize: 16, color: _sub),
+                style: AppTextStyles.body.copyWith(color: _sub),
               ),
               const SizedBox(height: 20),
 
-              const Text(
+              Text(
                 'Contact Details',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                style: AppTextStyles.textfont16.copyWith(
+                  // fontWeight: FontWeight.w900,
+                ),
               ),
               const SizedBox(height: 12),
 
@@ -152,8 +156,7 @@ class _LabelField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 13,
+          style: AppTextStyles.textfont.copyWith(
             color: _sub,
             fontWeight: FontWeight.w600,
           ),

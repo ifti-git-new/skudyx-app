@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 import '../../../../core/navigation/app_routes.dart';
 import '../widgets/auth_ui_constants.dart';
@@ -75,10 +76,7 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
           child: Column(
             children: [
               const SizedBox(height: 140),
-              const Text(
-                'Verify',
-                style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700),
-              ),
+              Text('Verify', style: AppTextStyles.h1),
               const SizedBox(height: 10),
               const Text(
                 'An authentication code has been sent to your\nemail.',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 import '../../../../core/controllers/app_status_controller.dart';
 import '../../../../core/navigation/app_routes.dart';
@@ -71,9 +72,9 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                 // go back to Device tab; it will show "Device is on the way"
                 if (context.mounted) context.go(AppRoutes.device);
               },
-              child: const Text(
+              child: Text(
                 'Confirm',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                style: AppTextStyles.button.copyWith(color: Colors.white),
               ),
             ),
           ),
@@ -100,7 +101,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
-                        children: const [
+                        children: [
                           Icon(
                             Icons.arrow_back_ios_new_rounded,
                             size: 18,
@@ -109,7 +110,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                           SizedBox(width: 8),
                           Text(
                             'Back',
-                            style: TextStyle(
+                            style: AppTextStyles.button.copyWith(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                             ),
@@ -133,18 +134,14 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Where should we deliver your SkudyX\nEmergency Button?',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        height: 1.25,
-                      ),
+                      style: AppTextStyles.h2light.copyWith(height: 1.25),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       "We’ll deliver your device to this address.",
-                      style: TextStyle(fontSize: 14, color: _subText),
+                      style: AppTextStyles.caption.copyWith(color: _subText),
                     ),
                     const SizedBox(height: 18),
 
@@ -246,8 +243,7 @@ class _LabeledField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 13,
+          style: AppTextStyles.caption.copyWith(
             color: _label,
             fontWeight: FontWeight.w600,
           ),
@@ -303,8 +299,7 @@ class _CountryDropdown extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 13,
+          style: AppTextStyles.caption.copyWith(
             color: _label,
             fontWeight: FontWeight.w600,
           ),
@@ -324,7 +319,10 @@ class _CountryDropdown extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(value, style: const TextStyle(fontSize: 14)),
+                  child: Text(
+                    value,
+                    style: AppTextStyles.caption.copyWith(fontSize: 14),
+                  ),
                 ),
                 const Icon(
                   Icons.keyboard_arrow_down_rounded,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/core/controllers/app_status_controller.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 import '../../../../core/navigation/app_routes.dart';
 import '../../../../core/storage/app_prefs.dart';
@@ -52,20 +53,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 90),
-                const Text(
+                Text(
                   'Pick Your Plan',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                  ),
+                  style: AppTextStyles.h1,
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Select how you want SkudyX to help you in an\nemergency.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: _subText, height: 1.3),
+                  style: AppTextStyles.body.copyWith(
+                    color: _subText,
+                    height: 1.3,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 _SegmentedToggle(
@@ -111,12 +111,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         context.push(AppRoutes.deliveryDetails);
                       }
                     },
-                    child: const Text(
+                    child: Text(
                       'Subscribe',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: AppTextStyles.button.copyWith(color: Colors.white),
                     ),
                   ),
                 ),
@@ -124,20 +121,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'Already a subscriber? ',
-                      style: TextStyle(
-                        fontSize: 13,
+                      style: AppTextStyles.caption.copyWith(
                         color: _subText,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     GestureDetector(
                       onTap: () {},
-                      child: const Text(
+                      child: Text(
                         'Restore',
-                        style: TextStyle(
-                          fontSize: 13,
+                        style: AppTextStyles.caption.copyWith(
                           color: _navy,
                           fontWeight: FontWeight.w800,
                         ),
@@ -249,7 +244,7 @@ class _SegmentedToggle extends StatelessWidget {
                 ),
                 child: Text(
                   left,
-                  style: TextStyle(
+                  style: AppTextStyles.button.copyWith(
                     fontWeight: FontWeight.w700,
                     color: selectedLeft
                         ? Colors.black
@@ -270,7 +265,7 @@ class _SegmentedToggle extends StatelessWidget {
                 ),
                 child: Text(
                   right,
-                  style: TextStyle(
+                  style: AppTextStyles.button.copyWith(
                     fontWeight: FontWeight.w700,
                     color: !selectedLeft
                         ? Colors.black
@@ -331,10 +326,7 @@ class _PlanCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.w800),
               ),
               if (badgeText != null) ...[
                 const SizedBox(width: 10),
@@ -349,8 +341,7 @@ class _PlanCard extends StatelessWidget {
                   ),
                   child: Text(
                     badgeText!,
-                    style: const TextStyle(
-                      fontSize: 12,
+                    style: AppTextStyles.caption.copyWith(
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF16A34A),
                     ),
@@ -362,12 +353,15 @@ class _PlanCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             description,
-            style: const TextStyle(fontSize: 14, color: _subText, height: 1.25),
+            style: AppTextStyles.caption.copyWith(
+              color: _subText,
+              height: 1.25,
+            ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Features:',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+            style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 10),
           ...features.map(
@@ -384,7 +378,10 @@ class _PlanCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       f,
-                      style: const TextStyle(fontSize: 14, height: 1.2),
+                      style: AppTextStyles.caption.copyWith(
+                        fontSize: 14,
+                        height: 1.2,
+                      ),
                     ),
                   ),
                 ],
@@ -399,14 +396,17 @@ class _PlanCard extends StatelessWidget {
                 children: [
                   TextSpan(
                     text: monthlyPrice,
-                    style: const TextStyle(
+                    style: AppTextStyles.h2.copyWith(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const TextSpan(
+                  TextSpan(
                     text: ' /Month',
-                    style: TextStyle(fontSize: 12, color: _subText),
+                    style: AppTextStyles.caption.copyWith(
+                      fontSize: 12,
+                      color: _subText,
+                    ),
                   ),
                 ],
               ),
@@ -420,7 +420,7 @@ class _PlanCard extends StatelessWidget {
               children: [
                 Text(
                   yearlyOldPrice,
-                  style: const TextStyle(
+                  style: AppTextStyles.caption.copyWith(
                     fontSize: 12,
                     color: _subText,
                     decoration: TextDecoration.lineThrough,
@@ -429,15 +429,18 @@ class _PlanCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   yearlyPrice,
-                  style: const TextStyle(
+                  style: AppTextStyles.h2.copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Text(
+                Text(
                   '/Year',
-                  style: TextStyle(fontSize: 12, color: _subText),
+                  style: AppTextStyles.caption.copyWith(
+                    fontSize: 12,
+                    color: _subText,
+                  ),
                 ),
                 const Spacer(),
                 Container(
@@ -449,9 +452,12 @@ class _PlanCard extends StatelessWidget {
                     color: _recommended,
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Recommended',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                    style: AppTextStyles.caption.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ],

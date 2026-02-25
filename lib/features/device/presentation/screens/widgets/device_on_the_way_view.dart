@@ -5,15 +5,16 @@ import 'package:provider/provider.dart';
 import 'package:skudyx/core/controllers/app_status_controller.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/theme/app_colors.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 class DeviceOnTheWayView extends StatelessWidget {
   const DeviceOnTheWayView({super.key});
 
-  static const _titleStyle = TextStyle(
-    fontSize: 26,
-    fontWeight: FontWeight.w900,
-    height: 1.2,
-  );
+  // static  _titleStyle = AppTextStyles.h2light.copyWith(
+  //   fontSize: 26,
+  //   fontWeight: FontWeight.w700,
+  //   height: 1.2,
+  // );
 
   @override
   Widget build(BuildContext context) {
@@ -25,10 +26,10 @@ class DeviceOnTheWayView extends StatelessWidget {
           child: Column(
             children: [
               const SizedBox(height: 80),
-              const Text(
+              Text(
                 "Your device is on the way.\nWe’ll notify you when it\narrives.",
                 textAlign: TextAlign.center,
-                style: _titleStyle,
+                style: AppTextStyles.h2light.copyWith(height: 1.25),
               ),
               const SizedBox(height: 26),
 
@@ -74,9 +75,11 @@ class DeviceOnTheWayView extends StatelessWidget {
                     );
                     if (context.mounted) context.push(AppRoutes.deviceArrived);
                   },
-                  child: const Text(
+                  child: Text(
                     'Shipped',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: AppTextStyles.button.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -145,7 +148,7 @@ class _TimelineItem extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: AppTextStyles.body.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
@@ -153,7 +156,10 @@ class _TimelineItem extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: const TextStyle(fontSize: 13, color: _muted),
+                      style: AppTextStyles.caption.copyWith(
+                        fontSize: 13,
+                        color: _muted,
+                      ),
                     ),
                   ],
                 ),
