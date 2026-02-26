@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
@@ -51,18 +52,14 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text(
+                Text(
                   'Privacy Policy',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                  ),
+                  style: AppTextStyles.h2light.copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Last updated: January 11, 2026',
-                  style: TextStyle(
+                  style: AppTextStyles.subtitle.copyWith(
                     fontSize: 13,
                     color: Colors.white70,
                     fontWeight: FontWeight.w600,
@@ -157,9 +154,8 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         text,
-        style: const TextStyle(
+        style: AppTextStyles.subtitle.copyWith(
           fontSize: 16,
-          fontWeight: FontWeight.w900,
           color: Colors.black,
         ),
       ),
@@ -211,9 +207,8 @@ class _InfoBlock extends StatelessWidget {
         if (title.trim().isNotEmpty) ...[
           Text(
             title,
-            style: const TextStyle(
+            style: AppTextStyles.subtitle.copyWith(
               fontSize: 16,
-              fontWeight: FontWeight.w900,
               color: Color(0xFF374151),
             ),
           ),
@@ -221,7 +216,11 @@ class _InfoBlock extends StatelessWidget {
         ],
         Text(
           body,
-          style: const TextStyle(fontSize: 13, color: _muted, height: 1.35),
+          style: AppTextStyles.subtitle.copyWith(
+            fontSize: 13,
+            color: _muted,
+            height: 1.35,
+          ),
         ),
       ],
     );

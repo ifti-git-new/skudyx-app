@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/core/theme/app_colors.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 import 'package:skudyx/features/settings/presentation/controllers/notification_prefs_controller.dart';
 
@@ -84,18 +86,17 @@ class _PermissionOffView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Notifications are\nturned off',
-            style: TextStyle(
-              fontSize: 34,
-              fontWeight: FontWeight.w900,
+            style: AppTextStyles.h2light.copyWith(
+              // fontWeight: FontWeight.w900,
               height: 1.1,
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Enable notifications to receive emergency\nalerts and device updates.',
-            style: TextStyle(fontSize: 15, color: _muted, height: 1.35),
+            style: AppTextStyles.subtitle.copyWith(color: _muted, height: 1.35),
           ),
           const SizedBox(height: 22),
 
@@ -134,9 +135,11 @@ class _PermissionOffView extends StatelessWidget {
                   );
                 }
               },
-              child: const Text(
+              child: Text(
                 'Enable Notifications',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                style: AppTextStyles.button.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),
@@ -176,19 +179,24 @@ class _EnableInSettingsSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Enable notifications in settings',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                style: AppTextStyles.textfont16.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
             const SizedBox(height: 8),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Open your phone settings, find SkudyX app,\nand allow notifications.',
-                style: TextStyle(fontSize: 14, color: _muted, height: 1.35),
+                style: AppTextStyles.caption.copyWith(
+                  color: _muted,
+                  height: 1.35,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -208,9 +216,12 @@ class _EnableInSettingsSheet extends StatelessWidget {
                         ),
                       ),
                       onPressed: () => Navigator.pop(context),
-                      child: const Text(
+                      child: Text(
                         'Maybe Later',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                        style: AppTextStyles.textfont.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -232,9 +243,12 @@ class _EnableInSettingsSheet extends StatelessWidget {
                         await openAppSettings();
                         if (context.mounted) Navigator.pop(context);
                       },
-                      child: const Text(
+                      child: Text(
                         'Open Settings',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                        style: AppTextStyles.textfont.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.bg,
+                        ),
                       ),
                     ),
                   ),

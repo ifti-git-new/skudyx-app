@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 class FaqsScreen extends StatefulWidget {
   const FaqsScreen({super.key});
@@ -95,22 +96,14 @@ class _FaqsScreenState extends State<FaqsScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text(
+                Text(
                   'Frequently Asked Questions',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                  ),
+                  style: AppTextStyles.h2light.copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   "We're here to help you get the most out of our app",
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTextStyles.subtitle.copyWith(color: Colors.white70),
                 ),
               ],
             ),
@@ -193,10 +186,7 @@ class _FaqCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     question,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: AppTextStyles.body.copyWith(fontSize: 14),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -222,10 +212,9 @@ class _FaqCard extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     answer,
-                    style: const TextStyle(
+                    style: AppTextStyles.subtitle.copyWith(
                       fontSize: 13,
                       color: _muted,
-                      height: 1.35,
                     ),
                   ),
                 ),

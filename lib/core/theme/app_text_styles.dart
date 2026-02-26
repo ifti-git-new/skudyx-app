@@ -27,7 +27,7 @@ abstract class AppTextStyles {
 
   static TextStyle get h2light => GoogleFonts.inter(
     fontSize: 26,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w600,
     height: 1.20,
     color: AppColors.text,
   );
