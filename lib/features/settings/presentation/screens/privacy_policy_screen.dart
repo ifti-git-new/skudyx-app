@@ -6,8 +6,6 @@ class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
   static const _bg = Color(0xFFF7F8FA);
-  static const _border = Color(0xFFE5E7EB);
-  static const _muted = Color(0xFF6B7280);
 
   @override
   Widget build(BuildContext context) {

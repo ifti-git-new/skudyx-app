@@ -289,8 +289,12 @@ class _OtpSheetState extends State<_OtpSheet> {
 
   @override
   void dispose() {
-    for (final c in controllers) c.dispose();
-    for (final n in nodes) n.dispose();
+    for (final c in controllers) {
+      c.dispose();
+    }
+    for (final n in nodes) {
+      n.dispose();
+    }
     super.dispose();
   }
 

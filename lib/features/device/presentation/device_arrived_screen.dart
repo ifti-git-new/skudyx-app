@@ -6,8 +6,6 @@ import '../../../../core/theme/app_colors.dart';
 
 import 'dart:io' show Platform;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:go_router/go_router.dart';
-import '../../../../core/navigation/app_routes.dart';
 
 class DeviceArrivedScreen extends StatelessWidget {
   const DeviceArrivedScreen({super.key});

@@ -351,7 +351,7 @@ class _InfoRow extends StatelessWidget {
             ],
           ),
         ),
-        if (badge != null) badge!,
+        ?badge,
       ],
     );
   }

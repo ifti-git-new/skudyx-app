@@ -113,8 +113,9 @@ class AppRouter {
         return AppRoutes.subscription;
       }
 
-      if (loggedIn && onboardingSeen && isAuthFlowRoute)
+      if (loggedIn && onboardingSeen && isAuthFlowRoute) {
         return AppRoutes.device;
+      }
 
       return null;
     },
