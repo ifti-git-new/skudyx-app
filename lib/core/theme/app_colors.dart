@@ -11,6 +11,7 @@ abstract class AppColors {
   // Text
   static const text = Color(0xFF111827);
   static const muted = Color(0xFF6B7280);
+  static const grey = Color.fromARGB(255, 119, 124, 134);
   static const hint = Color(0xFF9AA3AF);
 
   // Lines
