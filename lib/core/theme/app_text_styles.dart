@@ -6,28 +6,28 @@ abstract class AppTextStyles {
   // Headings
   static TextStyle get h1 => GoogleFonts.inter(
     fontSize: 34,
-    fontWeight: FontWeight.w900,
+    fontWeight: FontWeight.w500,
     height: 1.10,
     color: AppColors.text,
   );
 
   static TextStyle get h1light => GoogleFonts.inter(
     fontSize: 34,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w300,
     height: 1.10,
     color: AppColors.text,
   );
 
   static TextStyle get h2 => GoogleFonts.inter(
     fontSize: 26,
-    fontWeight: FontWeight.w900,
+    fontWeight: FontWeight.w500,
     height: 1.20,
     color: AppColors.text,
   );
 
   static TextStyle get h2light => GoogleFonts.inter(
     fontSize: 26,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w300,
     height: 1.20,
     color: AppColors.text,
   );
@@ -64,8 +64,8 @@ abstract class AppTextStyles {
 
   static TextStyle get caption => GoogleFonts.inter(
     fontSize: 13,
-    fontWeight: FontWeight.w600,
-    color: AppColors.muted,
+    // fontWeight: FontWeight.w600,
+    color: const Color(0Xff606060),
   );
 
   // Buttons / Links

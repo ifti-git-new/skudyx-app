@@ -10,10 +10,8 @@ import 'package:skudyx/features/settings/presentation/controllers/notification_p
 
 import '../core/config/app_config.dart';
 import '../core/storage/app_prefs.dart';
-
 import '../features/auth/data/social/google_auth_provider.dart';
 import '../features/auth/presentation/controllers/auth_controller.dart';
-
 import 'router.dart';
 
 class AppCompositionRoot extends StatelessWidget {
@@ -34,6 +32,7 @@ class AppCompositionRoot extends StatelessWidget {
       providers: [
         Provider<AppConfig>.value(value: config),
         Provider<AppPrefs>.value(value: prefs),
+
         ChangeNotifierProvider<AppStatusController>(
           create: (c) => AppStatusController(prefs: c.read<AppPrefs>()),
         ),
@@ -44,16 +43,13 @@ class AppCompositionRoot extends StatelessWidget {
           create: (c) =>
               EmergencyContactController(prefs: c.read<AppPrefs>())..init(),
         ),
-
         ChangeNotifierProvider<ProfileController>(
           create: (_) => ProfileController(),
         ),
-
         ChangeNotifierProvider<NotificationPrefsController>(
           create: (c) =>
               NotificationPrefsController(prefs: c.read<AppPrefs>())..init(),
         ),
-
         ChangeNotifierProvider<IdentityVerificationController>(
           create: (_) => IdentityVerificationController(),
         ),
@@ -69,8 +65,10 @@ class AppCompositionRoot extends StatelessWidget {
           )..init(),
         ),
 
-        ProxyProvider<AuthController, AppRouter>(
-          update: (_, auth, _) => AppRouter(auth: auth),
+        // FIX: Changed from ProxyProvider to a Provider that creates the router ONCE.
+        // The router's internal refreshListenable will still react to auth changes.
+        Provider<AppRouter>(
+          create: (c) => AppRouter(auth: c.read<AuthController>()),
         ),
       ],
       child: child,

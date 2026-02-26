@@ -150,7 +150,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       "Don’t have an account?  ",
                       style: AppTextStyles.caption.copyWith(
                         color: AuthUi.subText,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     GestureDetector(
