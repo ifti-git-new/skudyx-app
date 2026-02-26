@@ -88,40 +88,36 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
             // Header: Close Button with "Cancel" text
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  InkWell(
-                    onTap: () => context.pop(),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      height: 44,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: InkWell(
+                onTap: () => context.pop(),
+                borderRadius: BorderRadius.circular(12),
+                child: Row(
+                  children: [
+                    Container(
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.close_rounded,
-                            size: 20,
-                            color: Colors.black,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Cancel',
-                            style: AppTextStyles.button.copyWith(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ],
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 22,
+                          color: Colors.black,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(width: 12),
+                    Text(
+                      'Cancel',
+                      style: AppTextStyles.button.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 24),

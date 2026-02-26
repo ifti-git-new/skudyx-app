@@ -22,7 +22,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   static const _navy = Color(0xFF081B4A);
   static const _subText = Color(0xFF6B7280);
 
-  // FIXED: Initialized to Premium so it matches the left position
   PlanType _plan = PlanType.premium;
   BillingCycle _cycle = BillingCycle.yearly;
 
@@ -39,106 +38,169 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Selection logic remains the same, just driven by the new toggle order
     final planData = _plan == PlanType.premium ? _premiumPlan() : _basicPlan();
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 22),
-            child: Column(
-              children: [
-                const SizedBox(height: 90),
-                Text(
-                  'Pick Your Plan',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.h1light.copyWith(
-                    fontWeight: FontWeight.w800,
+        child: Column(
+          children: [
+            // Header with Cancel Button and Close Icon
+            Padding(
+              padding: const EdgeInsets.only(left: 16, top: 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: InkWell(
+                  onTap: () => context.pop(),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 22,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Cancel',
+                        style: AppTextStyles.button.copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Select how you want SkudyX to help you in an emergency.',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.body.copyWith(
-                    color: _subText,
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                // FIXED: Swapped labels and callbacks
-                _SegmentedToggle(
-                  left: 'Premium',
-                  right: 'Basic',
-                  selectedLeft: _plan == PlanType.premium,
-                  onLeft: () => setState(() => _plan = PlanType.premium),
-                  onRight: () => setState(() => _plan = PlanType.basic),
-                ),
-                const SizedBox(height: 18),
-                _PlanCard(
-                  title: planData.title,
-                  badgeText: planData.badgeText,
-                  description: planData.description,
-                  features: planData.features,
-                  monthlyPrice: planData.monthlyPrice,
-                  yearlyPrice: planData.yearlyPrice,
-                  yearlyOldPrice: planData.yearlyOldPrice,
-                  cycle: _cycle,
-                  onCycleChange: (c) => setState(() => _cycle = c),
-                ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _navy,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50),
+              ),
+            ),
+
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 24),
+                    Text(
+                      'Pick Your Plan',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.h1.copyWith(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    onPressed: () async {
-                      await context.read<AppStatusController>().setSubscribed(
-                        true,
-                      );
-                      if (context.mounted) {
-                        context.push(AppRoutes.deliveryDetails);
-                      }
-                    },
-                    child: Text(
-                      'Subscribe',
-                      style: AppTextStyles.button.copyWith(color: Colors.white),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+                    const SizedBox(height: 12),
                     Text(
-                      'Already a subscriber? ',
-                      style: AppTextStyles.caption.copyWith(color: _subText),
+                      'Select how you want SkudyX to help you in an emergency.',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.body.copyWith(
+                        color: _subText,
+                        fontSize: 16,
+                        height: 1.4,
+                      ),
                     ),
-                    GestureDetector(
-                      onTap: () {},
-                      child: Text(
-                        'Restore',
-                        style: AppTextStyles.caption.copyWith(
-                          color: _navy,
-                          fontWeight: FontWeight.w800,
+                    const SizedBox(height: 28),
+
+                    // Toggle for Premium / Basic
+                    _SegmentedToggle(
+                      left: 'Premium',
+                      right: 'Basic',
+                      selectedLeft: _plan == PlanType.premium,
+                      onLeft: () => setState(() => _plan = PlanType.premium),
+                      onRight: () => setState(() => _plan = PlanType.basic),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Subscription Card
+                    _PlanCard(
+                      title: planData.title,
+                      badgeText: planData.badgeText,
+                      description: planData.description,
+                      features: planData.features,
+                      monthlyPrice: planData.monthlyPrice,
+                      yearlyOldPrice: planData.yearlyOldPrice,
+                      yearlyPrice: planData.yearlyPrice,
+                      cycle: _cycle,
+                      onCycleChange: (c) => setState(() => _cycle = c),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Subscribe Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _navy,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                        ),
+                        onPressed: () async {
+                          await context
+                              .read<AppStatusController>()
+                              .setSubscribed(true);
+                          if (context.mounted) {
+                            context.push(AppRoutes.deliveryDetails);
+                          }
+                        },
+                        child: Text(
+                          'Subscribe',
+                          style: AppTextStyles.button.copyWith(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 16),
+
+                    // Restore Purchases
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Already a subscriber? ',
+                          style: AppTextStyles.caption.copyWith(
+                            color: _subText,
+                            fontSize: 14,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {},
+                          child: Text(
+                            'Restore',
+                            style: AppTextStyles.caption.copyWith(
+                              color: _navy,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
                   ],
                 ),
-                const SizedBox(height: 22),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -147,7 +209,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   _PlanModel _basicPlan() => const _PlanModel(
     title: 'Basic Plan',
     badgeText: null,
-    description: 'Essential emergency alerts for personal\nsafety.',
+    description: 'Essential emergency alerts for personal safety.',
     features: [
       'Alerts your emergency contact',
       'Shares your current location',
@@ -163,22 +225,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     title: 'Premium Plan',
     badgeText: 'Save 20%',
     description:
-        'Full emergency assistance with live\nmonitoring and agent support.',
+        'Full emergency assistance with live monitoring and agent support.',
     features: [
       'Dedicated support agent assistance',
       'Emergency case escalation',
       'Real-time location & movement tracking',
       'Live audio streaming from your phone',
-      'Coordination with nearby security\nservices',
+      'Coordination with nearby security services',
     ],
     monthlyPrice: '€99.99',
     yearlyOldPrice: '€400.00',
     yearlyPrice: '€799.99',
   );
 }
-
-// Data Model and Sub-widgets remain below...
-// (Included for completeness as requested)
 
 class _PlanModel {
   final String title;
@@ -201,9 +260,6 @@ class _PlanModel {
 }
 
 class _SegmentedToggle extends StatelessWidget {
-  static const _border = Color(0xFFE5E7EB);
-  static const _accent = Color(0xFF4FD3E6);
-
   final String left;
   final String right;
   final bool selectedLeft;
@@ -222,71 +278,60 @@ class _SegmentedToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 260,
-      height: 44,
+      height: 48,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        border: Border.all(color: _border),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
         borderRadius: BorderRadius.circular(999),
         color: Colors.white,
       ),
       child: Row(
         children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: onLeft,
-              child: Container(
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: selectedLeft ? _accent : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  left,
-                  style: AppTextStyles.button.copyWith(
-                    color: selectedLeft
-                        ? Colors.black
-                        : const Color(0xFF6B7280),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: onRight,
-              child: Container(
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: !selectedLeft ? _accent : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  right,
-                  style: AppTextStyles.button.copyWith(
-                    color: !selectedLeft
-                        ? Colors.black
-                        : const Color(0xFF6B7280),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          _ToggleItem(label: left, isSelected: selectedLeft, onTap: onLeft),
+          _ToggleItem(label: right, isSelected: !selectedLeft, onTap: onRight),
         ],
       ),
     );
   }
 }
 
-class _PlanCard extends StatelessWidget {
-  static const _border = Color(0xFFE5E7EB);
-  static const _subText = Color(0xFF6B7280);
-  static const _check = Color(0xFF0EA5E9);
-  static const _recommended = Color(0xFFFFE9A6);
+class _ToggleItem extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
 
+  const _ToggleItem({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF4FD3E6) : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.black : const Color(0xFF6B7280),
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanCard extends StatelessWidget {
   final String title;
   final String? badgeText;
   final String description;
@@ -313,10 +358,10 @@ class _PlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: _border),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -326,13 +371,13 @@ class _PlanCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: AppTextStyles.h2.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               if (badgeText != null) ...[
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -344,128 +389,60 @@ class _PlanCard extends StatelessWidget {
                   ),
                   child: Text(
                     badgeText!,
-                    style: AppTextStyles.caption.copyWith(
-                      color: const Color(0xFF16A34A),
-                      fontSize: 11,
+                    style: const TextStyle(
+                      color: Color(0xFF16A34A),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             description,
-            style: AppTextStyles.textfont.copyWith(height: 1.50),
+            style: const TextStyle(color: Color(0xFF6B7280), height: 1.4),
           ),
-          const SizedBox(height: 16),
-          Text(
+          const SizedBox(height: 20),
+          const Text(
             'Features:',
-            style: AppTextStyles.h2.copyWith(
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           ...features.map(
             (f) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: 10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 2),
-                    child: Icon(Icons.check, size: 18, color: _check),
+                  const Icon(
+                    Icons.check_circle_outline,
+                    size: 20,
+                    color: Color(0xFF4FD3E6),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      f,
-                      style: AppTextStyles.textfont.copyWith(
-                        fontSize: 14,
-                        height: 1.0,
-                      ),
-                    ),
+                    child: Text(f, style: const TextStyle(fontSize: 14)),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          const Divider(color: _border),
-          _PriceRow(
-            left: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: monthlyPrice,
-                    style: AppTextStyles.h2.copyWith(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  TextSpan(
-                    text: ' /Month',
-                    style: AppTextStyles.caption.copyWith(
-                      fontSize: 12,
-                      color: _subText,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            selected: cycle == BillingCycle.monthly,
+          const Divider(height: 32),
+          _PriceOption(
+            price: monthlyPrice,
+            period: '/Month',
+            isSelected: cycle == BillingCycle.monthly,
             onTap: () => onCycleChange(BillingCycle.monthly),
           ),
-          const Divider(color: _border),
-          _PriceRow(
-            left: Row(
-              children: [
-                Text(
-                  yearlyOldPrice,
-                  style: AppTextStyles.caption.copyWith(
-                    fontSize: 12,
-                    color: _subText,
-                    decoration: TextDecoration.lineThrough,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  yearlyPrice,
-                  style: AppTextStyles.h2.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '/Year',
-                  style: AppTextStyles.caption.copyWith(
-                    fontSize: 12,
-                    color: _subText,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _recommended,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    'Recommended',
-                    style: AppTextStyles.caption.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            selected: cycle == BillingCycle.yearly,
+          const Divider(height: 16),
+          _PriceOption(
+            price: yearlyPrice,
+            oldPrice: yearlyOldPrice,
+            period: '/Year',
+            isSelected: cycle == BillingCycle.yearly,
+            isRecommended: true,
             onTap: () => onCycleChange(BillingCycle.yearly),
           ),
         ],
@@ -474,14 +451,20 @@ class _PlanCard extends StatelessWidget {
   }
 }
 
-class _PriceRow extends StatelessWidget {
-  final Widget left;
-  final bool selected;
+class _PriceOption extends StatelessWidget {
+  final String price;
+  final String? oldPrice;
+  final String period;
+  final bool isSelected;
+  final bool isRecommended;
   final VoidCallback onTap;
 
-  const _PriceRow({
-    required this.left,
-    required this.selected,
+  const _PriceOption({
+    required this.price,
+    this.oldPrice,
+    required this.period,
+    required this.isSelected,
+    this.isRecommended = false,
     required this.onTap,
   });
 
@@ -490,15 +473,41 @@ class _PriceRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
-            Expanded(child: left),
+            if (oldPrice != null) ...[
+              Text(
+                oldPrice!,
+                style: const TextStyle(
+                  decoration: TextDecoration.lineThrough,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              price,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+            ),
+            Text(period, style: const TextStyle(color: Color(0xFF6B7280))),
+            const Spacer(),
+            if (isRecommended)
+              Container(
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFE9A6),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'Recommended',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
             Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected
-                  ? const Color(0xFF0EA5E9)
-                  : const Color(0xFF9CA3AF),
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: isSelected ? const Color(0xFF4FD3E6) : Colors.grey,
             ),
           ],
         ),
