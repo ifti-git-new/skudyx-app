@@ -68,20 +68,18 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
                           ),
                           child: Center(
                             child: Container(
-                              width: deviceSize,
-                              height: deviceSize,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1F2937),
-                                borderRadius: BorderRadius.circular(
-                                  deviceSize * 0.25,
-                                ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.15),
+                                    color: Colors.black.withValues(alpha: 0.02),
                                     blurRadius: 12,
-                                    offset: const Offset(0, 6),
+                                    offset: const Offset(0, 2),
                                   ),
                                 ],
+                              ),
+                              child: Image.asset(
+                                "assets/images/ble_device.png",
+                                height: 133,
                               ),
                             ),
                           ),
