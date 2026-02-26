@@ -9,19 +9,57 @@ class CaseDetailsScreen extends StatelessWidget {
   static const _bg = Color(0xFFF7F8FA);
   static const _navy = Color(0xFF081B4A);
   static const _muted = Color(0xFF6B7280);
-  static const _line = Color(0xFF38BDF8);
+  static const _accentBlue = Color(0xFF38BDF8);
+  static const _cardBorder = Color(0xFFE5E7EB);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: _bg, // Match your screen background color
+        elevation: 0,
+        scrolledUnderElevation: 0, // Prevents color change on scroll
+        automaticallyImplyLeading:
+            false, // We are providing our own leading widget
+        centerTitle: false,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Center(
+            child: InkWell(
+              onTap: () => context.pop(),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                height: 44,
+                width: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _cardBorder),
+                ),
+                child: const Icon(
+                  Icons.arrow_back,
+                  size: 20,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
+        title: const Text(
+          'Case Details',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+      ),
       backgroundColor: _bg,
-
-      // Bottom button like design
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: SizedBox(
-            height: 50,
+            height: 54,
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -29,7 +67,7 @@ class CaseDetailsScreen extends StatelessWidget {
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(30),
                 ),
               ),
               onPressed: () {
@@ -39,202 +77,185 @@ class CaseDetailsScreen extends StatelessWidget {
               },
               child: const Text(
                 'Download Case File',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ),
         ),
       ),
-
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 90),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Back chip + title
-              Row(
-                children: [
-                  InkWell(
-                    onTap: () => context.pop(),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(12),
+              // Row(
+              //   children: [
+              //     InkWell(
+              //       onTap: () => context.pop(),
+              //       borderRadius: BorderRadius.circular(12),
+              //       child: Container(
+              //         height: 44,
+              //         width: 44,
+              //         decoration: BoxDecoration(
+              //           color: Colors.white,
+              //           borderRadius: BorderRadius.circular(12),
+              //           border: Border.all(color: _cardBorder),
+              //         ),
+              //         child: const Icon(Icons.arrow_back, size: 20),
+              //       ),
+              //     ),
+              //     const SizedBox(width: 16),
+              //     const Text(
+              //       'Case Details',
+              //       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              //     ),
+              //   ],
+              // ),
+              const SizedBox(height: 20),
+
+              // Agent Info Card
+              _Card(
+                child: Column(
+                  children: [
+                    _kv(
+                      'Case ID:',
+                      caseId.isEmpty ? '#CL-2601-234214' : caseId,
+                    ),
+                    const SizedBox(height: 12),
+                    _kv('Agent ID:', '#SA-2601-123457'),
+                    const SizedBox(height: 12),
+                    _kv('Agent Name:', 'Jams Anderson'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Status History Card (Text Style)
+              _Card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    _StatusItem(
+                      label: 'Created',
+                      time: 'Sunday, Feb 02, 2026 12:00 PM',
+                    ),
+                    _StatusItem(
+                      label: 'In Progress',
+                      time: 'Sunday, Feb 02, 2026 12:00 PM',
+                    ),
+                    _StatusItem(
+                      label: 'Escalated',
+                      time: 'Sunday, Feb 02, 2026 12:00 PM',
+                    ),
+                    _StatusItem(
+                      label: 'Resolved',
+                      time: 'Sunday, Feb 02, 2026 12:00 PM',
+                      isLast: true,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Map Card
+              _Card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "User’s Movement",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: const Row(
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Stack(
                         children: [
-                          Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                          SizedBox(width: 8),
-                          Text(
-                            'Case Details',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
+                          Image.network(
+                            'https://staticmap.openstreetmap.de/staticmap.php?center=23.7806,90.4070&zoom=14&size=600x300',
+                            height: 180,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  height: 180,
+                                  color: Colors.grey[200],
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.map_outlined,
+                                      color: _muted,
+                                    ),
+                                  ),
+                                ),
+                          ),
+                          const Positioned(
+                            right: 12,
+                            bottom: 12,
+                            child: CircleAvatar(
+                              backgroundColor: Colors.white,
+                              radius: 20,
+                              child: Icon(
+                                Icons.navigation,
+                                color: _accentBlue,
+                                size: 20,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 14),
-
-              // Top info card
-              _Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _kv('Case ID:', caseId.isEmpty ? '#C1234567' : caseId),
-                      const SizedBox(height: 10),
-                      _kv('Agent ID:', '#A1234567'),
-                      const SizedBox(height: 10),
-                      _kv('Agent Name:', 'Jams Anderson'),
-                    ],
-                  ),
+                  ],
                 ),
               ),
 
               const SizedBox(height: 12),
 
-              // Timeline card
+              // Audio Card
               _Card(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                  child: Column(
-                    children: const [
-                      _TimelineRow(
-                        title: 'Case Created',
-                        time: 'Sunday, Feb 02, 2026 12:00 PM',
-                        isLast: false,
-                      ),
-                      _TimelineRow(
-                        title: 'In Progress',
-                        time: 'Sunday, Feb 02, 2026 12:00 PM',
-                        isLast: false,
-                      ),
-                      _TimelineRow(
-                        title: 'Resolved',
-                        time: 'Sunday, Feb 02, 2026 12:00 PM',
-                        isLast: true,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // Map card
-              _Card(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "User’s Movement",
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Placeholder map (replace with google_maps_flutter later)
-                      Container(
-                        height: 160,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          color: const Color(0xFFE5E7EB),
-                          image: const DecorationImage(
-                            fit: BoxFit.cover,
-                            image: NetworkImage(
-                              'https://staticmap.openstreetmap.de/staticmap.php?center=23.7806,90.4070&zoom=12&size=600x300&markers=23.7806,90.4070,lightblue1',
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Opacity(
+                        opacity: 0.2,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: List.generate(
+                            28,
+                            (i) => Container(
+                              width: 2,
+                              height: (i % 5 == 0)
+                                  ? 24
+                                  : (i % 3 == 0)
+                                  ? 16
+                                  : 10,
+                              color: _navy,
                             ),
                           ),
                         ),
-                        child: Stack(
-                          children: [
-                            Positioned(
-                              right: 12,
-                              bottom: 12,
-                              child: Container(
-                                width: 44,
-                                height: 44,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                ),
-                                child: const Icon(
-                                  Icons.navigation_rounded,
-                                  color: _line,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // Audio card
-              _Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
-                  child: Row(
-                    children: [
-                      // waveform placeholder
-                      Expanded(
-                        child: Container(
-                          height: 34,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          alignment: Alignment.centerLeft,
-                          child: const Text(
-                            '||||||||||||||||||||||||||||||||||||',
-                            style: TextStyle(color: _muted),
-                          ),
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Recording',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 12),
+                    const CircleAvatar(
+                      backgroundColor: _accentBlue,
+                      radius: 18,
+                      child: Icon(
+                        Icons.play_arrow_rounded,
+                        color: Colors.white,
                       ),
-                      const SizedBox(width: 10),
-                      const Text(
-                        'Recording',
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _line,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow_rounded,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -249,10 +270,10 @@ class CaseDetailsScreen extends StatelessWidget {
       children: [
         Text(
           k,
-          style: const TextStyle(color: _muted, fontWeight: FontWeight.w700),
+          style: const TextStyle(color: _muted, fontWeight: FontWeight.w400),
         ),
         const SizedBox(width: 8),
-        Text(v, style: const TextStyle(fontWeight: FontWeight.w900)),
+        Text(v, style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -262,21 +283,20 @@ class _Card extends StatelessWidget {
   final Widget child;
   const _Card({required this.child});
 
-  static const _border = Color(0xFFE5E7EB);
-
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _border),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -285,77 +305,32 @@ class _Card extends StatelessWidget {
   }
 }
 
-class _TimelineRow extends StatelessWidget {
-  final String title;
+class _StatusItem extends StatelessWidget {
+  final String label;
   final String time;
   final bool isLast;
 
-  const _TimelineRow({
-    required this.title,
+  const _StatusItem({
+    required this.label,
     required this.time,
-    required this.isLast,
+    this.isLast = false,
   });
-
-  static const _muted = Color(0xFF6B7280);
-  static const _line = Color(0xFF38BDF8);
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 62,
-      child: Row(
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 26,
-            child: Stack(
-              children: [
-                Positioned(
-                  top: 4,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: _line, width: 2),
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                if (!isLast)
-                  Positioned(
-                    top: 22,
-                    left: 12,
-                    bottom: 0,
-                    child: Container(width: 2, color: _line),
-                  ),
-              ],
-            ),
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    time,
-                    style: const TextStyle(fontSize: 13, color: _muted),
-                  ),
-                ],
-              ),
-            ),
+          const SizedBox(height: 4),
+          Text(
+            time,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
         ],
       ),

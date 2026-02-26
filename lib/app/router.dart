@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/features/auth/presentation/controllers/auth_controller.dart';
@@ -46,14 +47,11 @@ class AppRouter {
   final AuthController auth;
   AppRouter({required this.auth});
 
-  // Use late final to ensure the router is only built once and persists
   late final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash,
     refreshListenable: auth,
     redirect: (context, state) {
       final loc = state.matchedLocation;
-
-      // Allow the splash screen to show initially
       if (loc == AppRoutes.splash) return null;
 
       final loggedIn = auth.state.isAuthenticated;
@@ -71,36 +69,17 @@ class AppRouter {
 
       final isOnboardingRoute = loc.startsWith('/onboarding');
 
-      final isMainAppRoute =
-          loc.startsWith('/device') ||
-          loc.startsWith('/profile') ||
-          loc.startsWith('/settings') ||
-          loc.startsWith('/emergency-contact') ||
-          loc.startsWith('/identity') ||
-          loc == AppRoutes.emergencyHome;
-
-      // Logic Check
       if (!loggedIn && !isAuthFlowRoute) return AppRoutes.login;
-
-      if (loggedIn && !onboardingSeen && !isOnboardingRoute) {
+      if (loggedIn && !onboardingSeen && !isOnboardingRoute)
         return AppRoutes.instruction1;
-      }
 
-      if (loggedIn &&
-          onboardingSeen &&
-          isMainAppRoute &&
-          !isSubscribed &&
-          !promptShown) {
-        return AppRoutes.subscription;
-      }
-
-      if (loggedIn && onboardingSeen && isAuthFlowRoute) {
+      if (loggedIn && onboardingSeen && isAuthFlowRoute)
         return AppRoutes.device;
-      }
 
       return null;
     },
     routes: [
+      // --- ROOT LEVEL ROUTES (NO BOTTOM BAR) ---
       GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(
@@ -119,6 +98,25 @@ class AppRouter {
         path: AppRoutes.forgotPassword,
         builder: (_, _) => const ForgotPasswordScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.settingsCompleteSetup,
+        builder: (_, _) => const CompleteSetupScreen(),
+      ),
+
+      // Case Details - Moved here so it occupies full screen
+      GoRoute(
+        path: AppRoutes.settingsCaseDetails,
+        builder: (context, state) {
+          final caseId = state.pathParameters['caseId'] ?? '';
+          return CaseDetailsScreen(caseId: Uri.decodeComponent(caseId));
+        },
+      ),
+
+      // Contact Support - Also moved out based on your AppRoutes comment
+      GoRoute(
+        path: AppRoutes.settingsContactSupport,
+        builder: (_, _) => const ContactSupportScreen(),
+      ),
 
       GoRoute(
         path: AppRoutes.instruction1,
@@ -127,11 +125,6 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.instruction2,
         builder: (_, _) => const Instruction2Screen(),
-      ),
-
-      GoRoute(
-        path: AppRoutes.completeSetup,
-        builder: (context, state) => const CompleteSetupScreen(),
       ),
       GoRoute(
         path: AppRoutes.instruction3,
@@ -154,11 +147,11 @@ class AppRouter {
         path: AppRoutes.deliveryConfirmation,
         builder: (_, _) => const DeliveryConfirmationScreen(),
       ),
+
       GoRoute(
         path: AppRoutes.profileEdit,
         builder: (_, _) => const EditProfileScreen(),
       ),
-
       GoRoute(
         path: AppRoutes.identityIntro,
         builder: (_, _) => const IdentityIntroScreen(),
@@ -176,10 +169,32 @@ class AppRouter {
         builder: (_, _) => const IdentitySuccessScreen(),
       ),
       GoRoute(
-        path: AppRoutes.settingsContactSupport,
-        builder: (_, _) => const ContactSupportScreen(),
+        path: AppRoutes.settingsNotifications,
+        builder: (_, _) => const NotificationPreferencesScreen(),
       ),
 
+      GoRoute(
+        path: AppRoutes.settingsHelpSupport,
+        builder: (_, _) => const HelpSupportScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.settingsFaqs,
+        builder: (_, _) => const FaqsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.settingsPrivacyPolicy,
+        builder: (_, _) => const PrivacyPolicyScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.settingsTerms,
+        builder: (_, _) => const TermsConditionsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.emergencyContactEdit,
+        builder: (_, _) => const EmergencyContactFormScreen(),
+      ),
+
+      // --- SHELL ROUTES (WITH BOTTOM BAR) ---
       ShellRoute(
         builder: (context, state, child) => MainShellScreen(child: child),
         routes: [
@@ -221,46 +236,10 @@ class AppRouter {
             path: AppRoutes.emergencyContact,
             builder: (_, _) => const EmergencyContactScreen(),
           ),
-          GoRoute(
-            path: AppRoutes.emergencyContactEdit,
-            builder: (_, _) => const EmergencyContactFormScreen(),
-          ),
 
-          GoRoute(
-            path: AppRoutes.settingsCompleteSetup,
-            builder: (_, _) => const CompleteSetupScreen(),
-          ),
-          GoRoute(
-            path: AppRoutes.settingsNotifications,
-            builder: (_, _) => const NotificationPreferencesScreen(),
-          ),
-          GoRoute(
-            path: AppRoutes.settingsHelpSupport,
-            builder: (_, _) => const HelpSupportScreen(),
-          ),
-          GoRoute(
-            path: AppRoutes.settingsFaqs,
-            builder: (_, _) => const FaqsScreen(),
-          ),
-          GoRoute(
-            path: AppRoutes.settingsPrivacyPolicy,
-            builder: (_, _) => const PrivacyPolicyScreen(),
-          ),
-          GoRoute(
-            path: AppRoutes.settingsTerms,
-            builder: (_, _) => const TermsConditionsScreen(),
-          ),
           GoRoute(
             path: AppRoutes.settingsCaseHistory,
             builder: (_, _) => const CaseHistoryScreen(),
-          ),
-          GoRoute(
-            path: AppRoutes.settingsCaseDetails,
-            builder: (_, state) {
-              final raw = state.pathParameters['caseId'] ?? '';
-              final caseId = Uri.decodeComponent(raw);
-              return CaseDetailsScreen(caseId: caseId);
-            },
           ),
         ],
       ),

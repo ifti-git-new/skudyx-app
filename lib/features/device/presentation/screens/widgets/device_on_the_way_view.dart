@@ -48,50 +48,49 @@ class DeviceOnTheWayView extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
-              // InkWell(
-              //   onTap: () async {
-              //     await context.read<AppStatusController>().setDeviceArrived(
-              //       true,
-              //     );
-              //     if (context.mounted) context.push(AppRoutes.deviceArrived);
-              //   },
-              //   child: const _TimelineItem(
-              //     done: false,
-              //     isLast: true,
-              //     title: 'Shipped',
-              //     subtitle: 'Pending...',
-              //   ),
-              // ),
+              InkWell(
+                onTap: () async {
+                  await context.read<AppStatusController>().setDeviceArrived(
+                    true,
+                  );
+                  if (context.mounted) context.push(AppRoutes.deviceArrived);
+                },
+                child: const _TimelineItem(
+                  done: false,
+                  isLast: true,
+                  title: 'Shipped',
+                  subtitle: 'Pending...',
+                ),
+              ),
               const Spacer(),
 
               // TEMP BUTTON
-              SizedBox(
-                width: 220,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () async {
-                    await context.read<AppStatusController>().setDeviceArrived(
-                      true,
-                    );
-                    if (context.mounted) context.push(AppRoutes.deviceArrived);
-                  },
-                  child: Text(
-                    'Shipped',
-                    style: AppTextStyles.button.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-
+              // SizedBox(
+              //   width: 220,
+              //   height: 48,
+              //   child: ElevatedButton(
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: AppColors.primary,
+              //       foregroundColor: Colors.white,
+              //       elevation: 0,
+              //       shape: RoundedRectangleBorder(
+              //         borderRadius: BorderRadius.circular(12),
+              //       ),
+              //     ),
+              //     onPressed: () async {
+              //       await context.read<AppStatusController>().setDeviceArrived(
+              //         true,
+              //       );
+              //       if (context.mounted) context.push(AppRoutes.deviceArrived);
+              //     },
+              //     child: Text(
+              //       'Shipped',
+              //       style: AppTextStyles.button.copyWith(
+              //         fontWeight: FontWeight.w700,
+              //       ),
+              //     ),
+              //   ),
+              // ),
               const SizedBox(height: 22),
             ],
           ),

@@ -50,26 +50,29 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  InkWell(
-                    onTap: () => context.pop(),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 18,
-                      ),
-                    ),
-                  ),
+                  // InkWell(
+                  //   onTap: () => context.pop(),
+                  //   borderRadius: BorderRadius.circular(12),
+                  //   child: Container(
+                  //     width: 40,
+                  //     height: 40,
+                  //     decoration: BoxDecoration(
+                  //       color: const Color(0xFFF3F4F6),
+                  //       borderRadius: BorderRadius.circular(12),
+                  //     ),
+                  //     child: const Icon(
+                  //       Icons.arrow_back_ios_new_rounded,
+                  //       size: 18,
+                  //     ),
+                  //   ),
+                  // ),
                   const SizedBox(width: 10),
                   Text(
                     'Devices',
-                    style: AppTextStyles.h2light.copyWith(fontSize: 18),
+                    style: AppTextStyles.h2light.copyWith(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ],
               ),

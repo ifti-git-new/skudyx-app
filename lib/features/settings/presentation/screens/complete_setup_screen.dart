@@ -58,12 +58,12 @@ class CompleteSetupScreen extends StatelessWidget {
           context.push(target);
         },
       ),
-      _SetupItem(
-        title: 'Upload profile photo',
-        subtitle: 'Helps support identify you faster.',
-        done: photoDone,
-        onTap: () => context.push(AppRoutes.profileEdit),
-      ),
+      // _SetupItem(
+      //   title: 'Upload profile photo',
+      //   subtitle: 'Helps support identify you faster.',
+      //   done: photoDone,
+      //   onTap: () => context.push(AppRoutes.profileEdit),
+      // ),
       _SetupItem(
         title: 'Identity verification',
         subtitle: 'Verify your identity to complete setup.',

@@ -83,8 +83,14 @@ class Instruction4Screen extends StatelessWidget {
               child: SkPrimaryButton(
                 text: 'Next',
                 onPressed: () async {
+                  // 1. Mark onboarding as seen so they don't see these instructions again
                   await context.read<AuthController>().markOnboardingSeen();
-                  if (context.mounted) context.go(AppRoutes.device);
+
+                  if (context.mounted) {
+                    // 2. Direct the user to the Subscription screen immediately
+                    // instead of the Device tab to start the purchase/details flow.
+                    context.go(AppRoutes.subscription);
+                  }
                 },
               ),
             ),
