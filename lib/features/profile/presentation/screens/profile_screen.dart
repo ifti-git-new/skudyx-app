@@ -401,7 +401,7 @@ class _ListTileCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.h2light.copyWith(
+                  style: AppTextStyles.h2.copyWith(
                     fontSize: 15,
                     color: titleColor ?? AppColors.text,
                   ),
