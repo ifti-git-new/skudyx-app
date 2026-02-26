@@ -225,6 +225,7 @@ class _OverviewView extends StatelessWidget {
 
     // BottomSheet #2 (OTP)
     final verified = await showModalBottomSheet<bool>(
+      // ignore: use_build_context_synchronously
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,

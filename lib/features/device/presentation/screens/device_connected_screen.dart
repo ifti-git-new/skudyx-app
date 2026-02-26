@@ -239,7 +239,7 @@ class _DeviceButtonMock extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.18),
+            color: Colors.black.withAlpha(20),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -277,7 +277,7 @@ class _CardShell extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withAlpha(10),
             blurRadius: 14,
             offset: const Offset(0, 8),
           ),
@@ -339,7 +339,7 @@ class _FeatureRow extends StatelessWidget {
         border: Border.all(color: DeviceConnectedScreen._border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withAlpha(10),
             blurRadius: 14,
             offset: const Offset(0, 8),
           ),

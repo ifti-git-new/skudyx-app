@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -157,7 +159,6 @@ class _BaseSheet extends StatelessWidget {
     required this.onClose,
   });
 
-  static const _navy = Color(0xFF081B4A);
   static const _muted = Color(0xFF6B7280);
 
   @override

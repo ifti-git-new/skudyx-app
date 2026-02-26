@@ -85,7 +85,7 @@ class _FaqsScreenState extends State<FaqsScreen> {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.22),
+                      color: Colors.white.withAlpha(56),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -114,7 +114,7 @@ class _FaqsScreenState extends State<FaqsScreen> {
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 22),
               itemCount: _items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (_, i) {
                 final item = _items[i];
                 final expanded = _expandedIndex == i;
@@ -173,7 +173,7 @@ class _FaqCard extends StatelessWidget {
           border: Border.all(color: _border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withAlpha(10),
               blurRadius: 14,
               offset: const Offset(0, 8),
             ),

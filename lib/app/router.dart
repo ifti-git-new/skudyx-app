@@ -121,87 +121,87 @@ class AppRouter {
     },
 
     routes: [
-      GoRoute(path: AppRoutes.splash, builder: (_, __) => const SplashScreen()),
+      GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),
 
       // Auth
-      GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginScreen()),
+      GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(
         path: AppRoutes.register,
-        builder: (_, __) => const RegisterScreen(),
+        builder: (_, _) => const RegisterScreen(),
       ),
       GoRoute(
         path: AppRoutes.emailOtp,
-        builder: (_, __) => const EmailOtpScreen(),
+        builder: (_, _) => const EmailOtpScreen(),
       ),
       GoRoute(
         path: AppRoutes.registerSuccess,
-        builder: (_, __) => const RegisterSuccessScreen(),
+        builder: (_, _) => const RegisterSuccessScreen(),
       ),
       GoRoute(
         path: AppRoutes.forgotPassword,
-        builder: (_, __) => const ForgotPasswordScreen(),
+        builder: (_, _) => const ForgotPasswordScreen(),
       ),
 
       // Onboarding
       GoRoute(
         path: AppRoutes.instruction1,
-        builder: (_, __) => const Instruction1Screen(),
+        builder: (_, _) => const Instruction1Screen(),
       ),
       GoRoute(
         path: AppRoutes.instruction2,
-        builder: (_, __) => const Instruction2Screen(),
+        builder: (_, _) => const Instruction2Screen(),
       ),
       GoRoute(
         path: AppRoutes.instruction3,
-        builder: (_, __) => const Instruction3Screen(),
+        builder: (_, _) => const Instruction3Screen(),
       ),
       GoRoute(
         path: AppRoutes.instruction4,
-        builder: (_, __) => const Instruction4Screen(),
+        builder: (_, _) => const Instruction4Screen(),
       ),
 
       // Subscription & Delivery
       GoRoute(
         path: AppRoutes.subscription,
-        builder: (_, __) => const SubscriptionScreen(),
+        builder: (_, _) => const SubscriptionScreen(),
       ),
       GoRoute(
         path: AppRoutes.deliveryDetails,
-        builder: (_, __) => const DeliveryDetailsScreen(),
+        builder: (_, _) => const DeliveryDetailsScreen(),
       ),
       GoRoute(
         path: AppRoutes.deliveryConfirmation,
-        builder: (_, __) => const DeliveryConfirmationScreen(),
+        builder: (_, _) => const DeliveryConfirmationScreen(),
       ),
 
       // Profile edit (no bottom nav)
       GoRoute(
         path: AppRoutes.profileEdit,
-        builder: (_, __) => const EditProfileScreen(),
+        builder: (_, _) => const EditProfileScreen(),
       ),
 
       // Identity flow (no bottom nav)
       GoRoute(
         path: AppRoutes.identityIntro,
-        builder: (_, __) => const IdentityIntroScreen(),
+        builder: (_, _) => const IdentityIntroScreen(),
       ),
       GoRoute(
         path: AppRoutes.identitySelect,
-        builder: (_, __) => const IdentitySelectScreen(),
+        builder: (_, _) => const IdentitySelectScreen(),
       ),
       GoRoute(
         path: AppRoutes.identityCapture,
-        builder: (_, __) => const IdentityCaptureScreen(),
+        builder: (_, _) => const IdentityCaptureScreen(),
       ),
       GoRoute(
         path: AppRoutes.identitySuccess,
-        builder: (_, __) => const IdentitySuccessScreen(),
+        builder: (_, _) => const IdentitySuccessScreen(),
       ),
 
       // Contact Support (no bottom nav)
       GoRoute(
         path: AppRoutes.settingsContactSupport,
-        builder: (_, __) => const ContactSupportScreen(),
+        builder: (_, _) => const ContactSupportScreen(),
       ),
 
       // Shell (bottom nav visible)
@@ -210,79 +210,79 @@ class AppRouter {
         routes: [
           GoRoute(
             path: AppRoutes.device,
-            builder: (_, __) => const DeviceScreen(),
+            builder: (_, _) => const DeviceScreen(),
           ),
           GoRoute(
             path: AppRoutes.emergencyHome,
-            builder: (_, __) => const EmergencyHomeScreen(),
+            builder: (_, _) => const EmergencyHomeScreen(),
           ),
           GoRoute(
             path: AppRoutes.settings,
-            builder: (_, __) => const SettingsScreen(),
+            builder: (_, _) => const SettingsScreen(),
           ),
           GoRoute(
             path: AppRoutes.profile,
-            builder: (_, __) => const ProfileScreen(),
+            builder: (_, _) => const ProfileScreen(),
           ),
 
           // Device flow
           GoRoute(
             path: AppRoutes.deviceArrived,
-            builder: (_, __) => const DeviceArrivedScreen(),
+            builder: (_, _) => const DeviceArrivedScreen(),
           ),
           GoRoute(
             path: AppRoutes.deviceSearching,
-            builder: (_, __) => const DeviceSearchingScreen(),
+            builder: (_, _) => const DeviceSearchingScreen(),
           ),
           GoRoute(
             path: AppRoutes.deviceList,
-            builder: (_, __) => const DeviceListScreen(),
+            builder: (_, _) => const DeviceListScreen(),
           ),
           GoRoute(
             path: AppRoutes.deviceConnected,
-            builder: (_, __) => const DeviceConnectedScreen(),
+            builder: (_, _) => const DeviceConnectedScreen(),
           ),
 
           // Emergency Contact
           GoRoute(
             path: AppRoutes.emergencyContact,
-            builder: (_, __) => const EmergencyContactScreen(),
+            builder: (_, _) => const EmergencyContactScreen(),
           ),
           GoRoute(
             path: AppRoutes.emergencyContactEdit,
-            builder: (_, __) => const EmergencyContactFormScreen(),
+            builder: (_, _) => const EmergencyContactFormScreen(),
           ),
 
           // Settings sub screens (bottom nav stays, Settings tab stays selected)
           GoRoute(
             path: AppRoutes.settingsCompleteSetup,
-            builder: (_, __) => const CompleteSetupScreen(),
+            builder: (_, _) => const CompleteSetupScreen(),
           ),
           GoRoute(
             path: AppRoutes.settingsNotifications,
-            builder: (_, __) => const NotificationPreferencesScreen(),
+            builder: (_, _) => const NotificationPreferencesScreen(),
           ),
           GoRoute(
             path: AppRoutes.settingsHelpSupport,
-            builder: (_, __) => const HelpSupportScreen(),
+            builder: (_, _) => const HelpSupportScreen(),
           ),
           GoRoute(
             path: AppRoutes.settingsFaqs,
-            builder: (_, __) => const FaqsScreen(),
+            builder: (_, _) => const FaqsScreen(),
           ),
           GoRoute(
             path: AppRoutes.settingsPrivacyPolicy,
-            builder: (_, __) => const PrivacyPolicyScreen(),
+            builder: (_, _) => const PrivacyPolicyScreen(),
           ),
           GoRoute(
             path: AppRoutes.settingsTerms,
-            builder: (_, __) => const TermsConditionsScreen(),
+            builder: (_, _) => const TermsConditionsScreen(),
           ),
 
           // Case history under settings
           GoRoute(
             path: AppRoutes.settingsCaseHistory,
-            builder: (_, __) => const CaseHistoryScreen(),
+            builder: (_, _) => const CaseHistoryScreen(),
           ),
           GoRoute(
             path: AppRoutes.settingsCaseDetails,

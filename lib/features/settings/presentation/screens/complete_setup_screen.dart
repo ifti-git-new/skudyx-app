@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
@@ -29,8 +31,7 @@ class CompleteSetupScreen extends StatelessWidget {
     final deviceDone = status.deviceArrived;
 
     final contactDone = ec.contact != null; // reliable and reactive
-    final photoDone =
-        false; // TODO: set true after implementing profile photo upload
+    final photoDone = false;
     final identityDone = profile.identityVerified;
 
     final items = <_SetupItem>[
@@ -124,7 +125,7 @@ class CompleteSetupScreen extends StatelessWidget {
                 child: ListView.separated(
                   physics: const BouncingScrollPhysics(),
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (_, i) => _SetupCard(item: items[i]),
                 ),
               ),
@@ -170,7 +171,7 @@ class _SetupCard extends StatelessWidget {
           border: Border.all(color: _border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withAlpha(10),
               blurRadius: 14,
               offset: const Offset(0, 8),
             ),

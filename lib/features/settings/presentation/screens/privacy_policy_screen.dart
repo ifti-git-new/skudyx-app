@@ -39,7 +39,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.22),
+                      color: Colors.white.withAlpha(56),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -178,7 +178,7 @@ class _Card extends StatelessWidget {
         border: Border.all(color: _border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withAlpha(10),
             blurRadius: 14,
             offset: const Offset(0, 8),
           ),

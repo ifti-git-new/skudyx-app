@@ -123,7 +123,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   itemCount: scan.devices.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (_, i) {
                     final d = scan.devices[i];
                     return _DeviceCard(

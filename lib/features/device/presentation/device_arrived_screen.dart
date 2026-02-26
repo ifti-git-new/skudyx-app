@@ -76,24 +76,12 @@ class DeviceArrivedScreen extends StatelessWidget {
                       ),
                     ),
 
-                    // onPressed: () {
-                    //   // TODO later: go to BLE scan screen
-                    //   // context.push(AppRoutes.deviceSearch);
-                    //   ScaffoldMessenger.of(context).showSnackBar(
-                    //     const SnackBar(
-                    //       content: Text('Search for Device (TODO)'),
-                    //     ),
-                    //   );
-                    // },
                     onPressed: () async {
-                      // Android needs runtime permissions for BLE scan/connect
                       if (Platform.isAndroid) {
                         final scan = await Permission.bluetoothScan.request();
                         final connect = await Permission.bluetoothConnect
                             .request();
 
-                        // On some Android versions, location may still be required for BLE scanning
-                        // (safe to request; you can remove later if not needed)
                         final location = await Permission.locationWhenInUse
                             .request();
 

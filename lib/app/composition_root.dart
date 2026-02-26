@@ -70,7 +70,7 @@ class AppCompositionRoot extends StatelessWidget {
         ),
 
         ProxyProvider<AuthController, AppRouter>(
-          update: (_, auth, __) => AppRouter(auth: auth),
+          update: (_, auth, _) => AppRouter(auth: auth),
         ),
       ],
       child: child,
