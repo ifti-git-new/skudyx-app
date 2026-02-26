@@ -356,7 +356,9 @@ class _SafetyTile extends StatelessWidget {
                 active ? "Active" : "Inactive",
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: active ? Colors.green : const Color(0Xff8E1F0B),
+                  color: active
+                      ? const Color(0xFFF0C5132)
+                      : const Color(0Xff8E1F0B),
                 ),
               ),
             ),
