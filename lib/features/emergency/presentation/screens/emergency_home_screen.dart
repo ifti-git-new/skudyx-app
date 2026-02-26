@@ -48,7 +48,7 @@ class EmergencyHomeScreen extends StatelessWidget {
                   color: _textGrey,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
 
               // 4. "Add Emergency Contact" Button
               SizedBox(
