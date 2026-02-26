@@ -21,7 +21,9 @@ enum BillingCycle { monthly, yearly }
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
   static const _navy = Color(0xFF081B4A);
   static const _subText = Color(0xFF6B7280);
-  PlanType _plan = PlanType.basic;
+
+  // FIXED: Initialized to Premium so it matches the left position
+  PlanType _plan = PlanType.premium;
   BillingCycle _cycle = BillingCycle.yearly;
 
   @override
@@ -37,7 +39,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final planData = _plan == PlanType.basic ? _basicPlan() : _premiumPlan();
+    // Selection logic remains the same, just driven by the new toggle order
+    final planData = _plan == PlanType.premium ? _premiumPlan() : _basicPlan();
 
     return Scaffold(
       body: SafeArea(
@@ -51,11 +54,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 Text(
                   'Pick Your Plan',
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.h1light,
+                  style: AppTextStyles.h1light.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Select how you want SkudyX to help you in an\nemergency.',
+                  'Select how you want SkudyX to help you in an emergency.',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.body.copyWith(
                     color: _subText,
@@ -63,12 +68,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   ),
                 ),
                 const SizedBox(height: 18),
+                // FIXED: Swapped labels and callbacks
                 _SegmentedToggle(
-                  left: 'Basic',
-                  right: 'Premium',
-                  selectedLeft: _plan == PlanType.basic,
-                  onLeft: () => setState(() => _plan = PlanType.basic),
-                  onRight: () => setState(() => _plan = PlanType.premium),
+                  left: 'Premium',
+                  right: 'Basic',
+                  selectedLeft: _plan == PlanType.premium,
+                  onLeft: () => setState(() => _plan = PlanType.premium),
+                  onRight: () => setState(() => _plan = PlanType.basic),
                 ),
                 const SizedBox(height: 18),
                 _PlanCard(
@@ -96,12 +102,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       ),
                     ),
                     onPressed: () async {
-                      // mark subscribed
                       await context.read<AppStatusController>().setSubscribed(
                         true,
                       );
-
-                      // go to delivery details
                       if (context.mounted) {
                         context.push(AppRoutes.deliveryDetails);
                       }
@@ -177,6 +180,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   );
 }
 
+// Data Model and Sub-widgets remain below...
+// (Included for completeness as requested)
+
 class _PlanModel {
   final String title;
   final String? badgeText;
@@ -240,7 +246,6 @@ class _SegmentedToggle extends StatelessWidget {
                 child: Text(
                   left,
                   style: AppTextStyles.button.copyWith(
-                    // fontWeight: FontWeight.w700,
                     color: selectedLeft
                         ? Colors.black
                         : const Color(0xFF6B7280),
@@ -261,7 +266,6 @@ class _SegmentedToggle extends StatelessWidget {
                 child: Text(
                   right,
                   style: AppTextStyles.button.copyWith(
-                    // fontWeight: FontWeight.w700,
                     color: !selectedLeft
                         ? Colors.black
                         : const Color(0xFF6B7280),
@@ -339,8 +343,7 @@ class _PlanCard extends StatelessWidget {
                   child: Text(
                     badgeText!,
                     style: AppTextStyles.caption.copyWith(
-                      // fontWeight: FontWeight.w700,
-                      color: Color(0xFF16A34A),
+                      color: const Color(0xFF16A34A),
                     ),
                   ),
                 ),

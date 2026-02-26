@@ -22,7 +22,7 @@ class SkPrimaryButton extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(50),
           ),
         ),
         onPressed: onPressed,

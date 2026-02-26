@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart'; // Add this import
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 import '../../../../core/navigation/app_routes.dart';
 import '../../../../core/widgets/square_back_button.dart';
@@ -13,6 +15,7 @@ class Instruction4Screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -23,57 +26,64 @@ class Instruction4Screen extends StatelessWidget {
                 children: [SquareBackButton(onTap: () => context.pop())],
               ),
             ),
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            const SizedBox(height: 24),
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 22),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      SizedBox(height: 22),
+                    children: [
                       Text(
-                        'Get Started Checklist',
-                        style: TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w800,
+                        'Almost Done',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.h1.copyWith(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.5,
                         ),
                       ),
-                      SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Text(
-                        'Lorem ipsum dolor sit amet adipiscing elit.',
-                        style: TextStyle(
+                        'Just a few steps to activate your protection.',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.caption.copyWith(
                           fontSize: 16,
-                          color: Color(0xFF6B7280),
+                          color: const Color(0xFF6B7280),
                         ),
                       ),
-                      SizedBox(height: 22),
-                      _C(text: 'Add safety contact', isLast: false),
-                      SizedBox(height: 12),
-                      _C(text: 'Verify details', isLast: false),
-                      SizedBox(height: 12),
-                      _C(text: 'Activate device', isLast: false),
-                      SizedBox(height: 12),
-                      _C(text: 'Add safety contact', isLast: true),
-                      SizedBox(height: 28),
+                      const SizedBox(height: 48),
+
+                      // Using your SVG assets from the icons folder
+                      const _StepItem(
+                        svgPath:
+                            'assets/icons/blutooth_icon.svg', // Replace with your bluetooth svg if available
+                        title: 'Connect your SkudyX Button',
+                      ),
+                      const _StepItem(
+                        svgPath: 'assets/icons/document_icon.svg',
+                        title: 'Add an emergency contact',
+                      ),
+                      const _StepItem(
+                        svgPath: 'assets/icons/person_icon.svg',
+                        title: 'Complete your profile setup',
+                      ),
+                      const _StepItem(
+                        svgPath: 'assets/icons/active_icon.svg',
+                        title: 'Activate your device',
+                        isLast: true,
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 0, 22, 22),
+              padding: const EdgeInsets.all(22),
               child: SkPrimaryButton(
                 text: 'Next',
                 onPressed: () async {
                   await context.read<AuthController>().markOnboardingSeen();
-
-                  // OLD:
-                  // context.push(AppRoutes.subscription);
-
-                  // NEW: go to device; router decides if subscription is needed once
                   if (context.mounted) context.go(AppRoutes.device);
                 },
               ),
@@ -85,57 +95,58 @@ class Instruction4Screen extends StatelessWidget {
   }
 }
 
-class _C extends StatelessWidget {
-  final String text;
+class _StepItem extends StatelessWidget {
+  final String svgPath; // Changed from IconData to String path
+  final String title;
   final bool isLast;
-  const _C({required this.text, required this.isLast});
+
+  const _StepItem({
+    required this.svgPath,
+    required this.title,
+    this.isLast = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    const c = Color(0xFF38BDF8);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
       children: [
-        SizedBox(
-          width: 28,
-          child: Stack(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Row(
             children: [
               Container(
-                width: 24,
-                height: 24,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: c,
+                width: 40, // Fixed size for alignment
+                height: 40,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.check, size: 14, color: Colors.white),
+                child: SvgPicture.asset(
+                  svgPath,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.black,
+                    BlendMode.srcIn,
+                  ),
+                  fit: BoxFit.contain,
+                ),
               ),
-              if (!isLast)
-                Positioned(
-                  top: 24,
-                  left: 13,
-                  bottom: -18,
-                  child: Container(width: 2, color: c),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.body.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
                 ),
+              ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Container(
-            height: 54,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: c),
-              color: Colors.white,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            alignment: Alignment.centerLeft,
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
+        if (!isLast)
+          const Divider(height: 1, thickness: 1, color: Color(0xFFF3F4F6)),
       ],
     );
   }

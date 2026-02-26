@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 import '../../../../core/navigation/app_routes.dart';
 import '../controllers/auth_controller.dart';
@@ -25,28 +26,15 @@ class RegisterSuccessScreen extends StatelessWidget {
                 color: const Color(0xFFEAF7E6),
                 borderRadius: BorderRadius.circular(26),
               ),
-              child: Center(
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0xFF2DBE2D),
-                  ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 34),
-                ),
-              ),
+              child: Center(child: Image.asset('assets/images/ok.png')),
             ),
             const SizedBox(height: 18),
-            const Text(
-              'Congratulation!',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
-            ),
+            Text('Congratulation!', style: AppTextStyles.h1),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               "You’re all set! Your registration is complete.",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: AuthUi.subText),
+              style: AppTextStyles.caption.copyWith(color: AuthUi.subText),
             ),
             const Spacer(),
             Padding(
@@ -60,7 +48,7 @@ class RegisterSuccessScreen extends StatelessWidget {
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(50),
                     ),
                   ),
                   onPressed: () async {

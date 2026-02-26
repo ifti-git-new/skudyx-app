@@ -1,0 +1,24 @@
+# Set the default behavior to handle all files as text and normalize line endings to LF
+* text=auto
+
+# Explicitly declare Dart files as text and ensure LF line endings
+*.dart text eol=lf
+
+# Explicitly declare SVG files as text and ensure LF line endings
+# This prevents the CRLF warnings you saw during 'git add'
+*.svg text eol=lf
+
+# Treat images and other assets as binary (do not modify line endings)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+
+# Ensure configuration files are treated as text
+*.yaml text
+*.json text
+*.md text
+*.xml text
+.gitignore text

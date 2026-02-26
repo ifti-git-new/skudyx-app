@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 import '../../../../core/navigation/app_routes.dart';
 import '../../../../core/widgets/square_back_button.dart';
 import '../../../../core/widgets/sk_primary_button.dart';
@@ -10,6 +11,7 @@ class Instruction2Screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -21,65 +23,60 @@ class Instruction2Screen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            const Divider(height: 1, color: Color(0xFFF3F4F6)),
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      SizedBox(height: 22),
+                    children: [
+                      const SizedBox(height: 40),
                       Text(
                         'Features',
-                        style: TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w800,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.h2.copyWith(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: -0.5,
                         ),
                       ),
-                      SizedBox(height: 6),
-                      Text(
-                        'Lorem ipsum dolor sit amet adipiscing elit.',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
-                      SizedBox(height: 22),
-                      _Feature(
+                      const SizedBox(height: 40),
+                      // Feature 1: Alert Emergency
+                      const _Feature(
                         bg: Color(0xFFFFE5E5),
-                        icon: Icons.warning_rounded,
-                        iconColor: Color(0xFFE50914),
+                        imagePath:
+                            'assets/images/warning_icon.png', // Update to your specific red icon PNG
                         title: 'Alert Emergency Contact',
                         desc: 'Notifies your trusted contact instantly.',
                       ),
-                      SizedBox(height: 22),
-                      _Feature(
+                      const SizedBox(height: 40),
+                      // Feature 2: Live Location
+                      const _Feature(
                         bg: Color(0xFFE6F0FF),
-                        icon: Icons.location_on_rounded,
-                        iconColor: Color(0xFF2563EB),
+                        imagePath:
+                            'assets/images/live_location_icon.png', // Update to your specific blue icon PNG
                         title: 'Share Your Live Location',
                         desc:
-                            'Sends your real-time location to help find you\nquickly.',
+                            'Sends your real-time location to help find you quickly.',
                       ),
-                      SizedBox(height: 22),
-                      _Feature(
+                      const SizedBox(height: 40),
+                      // Feature 3: Live Audio
+                      const _Feature(
                         bg: Color(0xFFE7F9EE),
-                        icon: Icons.graphic_eq_rounded,
-                        iconColor: Color(0xFF16A34A),
+                        imagePath:
+                            'assets/images/stream_icon.png', // Update to your specific green icon PNG
                         title: 'Stream Live Audio',
                         desc:
-                            'Streams audio from your phone to the support\nteam for real-time assistance.',
+                            'Streams audio from your phone to the support team for real-time assistance.',
                       ),
-                      SizedBox(height: 28),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 0, 22, 22),
+              padding: const EdgeInsets.all(22),
               child: SkPrimaryButton(
                 text: 'Next',
                 onPressed: () => context.push(AppRoutes.instruction3),
@@ -94,52 +91,58 @@ class Instruction2Screen extends StatelessWidget {
 
 class _Feature extends StatelessWidget {
   final Color bg;
-  final IconData icon;
-  final Color iconColor;
+  final String imagePath;
   final String title;
   final String desc;
 
   const _Feature({
     required this.bg,
-    required this.icon,
-    required this.iconColor,
+    required this.imagePath,
     required this.title,
     required this.desc,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
+        // Responsive Circle with PNG Image
         Container(
-          width: 56,
-          height: 56,
+          width: 72,
+          height: 72,
           decoration: BoxDecoration(shape: BoxShape.circle, color: bg),
-          child: Icon(icon, color: iconColor, size: 26),
+          alignment: Alignment.center,
+          child: Image.asset(
+            imagePath,
+            width: 32, // Adjust size to fit nicely in the circle
+            height: 32,
+            fit: BoxFit.contain,
+            // If your PNGs are monochrome and you need to color them:
+            // color: someColor,
+          ),
         ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                desc,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF6B7280),
-                  height: 1.3,
-                ),
-              ),
-            ],
+        const SizedBox(height: 16),
+        // Title
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.h2.copyWith(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+            height: 1.2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Description
+        Text(
+          desc,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.caption.copyWith(
+            fontSize: 15,
+            color: Color(0xFF6B7280),
+            height: 1.4,
           ),
         ),
       ],

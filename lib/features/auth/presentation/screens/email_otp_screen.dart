@@ -70,114 +70,106 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 22),
-          child: Column(
-            children: [
-              const SizedBox(height: 140),
-              Text('Verify', style: AppTextStyles.h1),
-              const SizedBox(height: 10),
-              const Text(
-                'An authentication code has been sent to your\nemail.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: AuthUi.subText),
-              ),
-              const SizedBox(height: 32),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text('Verify', style: AppTextStyles.h1),
+            const SizedBox(height: 10),
+            const Text(
+              'An authentication code has been sent to your email.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: AuthUi.subText),
+            ),
+            const SizedBox(height: 32),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_len, (i) {
-                  return Padding(
-                    padding: EdgeInsets.only(right: i == _len - 1 ? 0 : 12),
-                    child: SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: TextField(
-                        controller: _controllers[i],
-                        focusNode: _nodes[i],
-                        autofocus: i == 0,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        maxLength: 1,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        decoration: InputDecoration(
-                          counterText: '',
-                          filled: true,
-                          fillColor: AuthUi.fieldFill,
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: AuthUi.fieldBorder,
-                            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(_len, (i) {
+                return Padding(
+                  padding: EdgeInsets.only(right: i == _len - 1 ? 0 : 12),
+                  child: SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: TextField(
+                      controller: _controllers[i],
+                      focusNode: _nodes[i],
+                      autofocus: i == 0,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      maxLength: 1,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: InputDecoration(
+                        counterText: '',
+                        filled: true,
+                        fillColor: AuthUi.fieldFill,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AuthUi.fieldBorder,
                           ),
                         ),
-                        onChanged: (v) => _onChanged(i, v),
                       ),
-                    ),
-                  );
-                }),
-              ),
-
-              const SizedBox(height: 22),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AuthUi.navy,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      onChanged: (v) => _onChanged(i, v),
                     ),
                   ),
-                  onPressed: _canSubmit
-                      ? () {
-                          // OLD:
-                          // context.go(AppRoutes.instruction1);
+                );
+              }),
+            ),
 
-                          // NEW:
-                          context.push(AppRoutes.registerSuccess);
-                        }
-                      : null,
-                  child: const Text(
-                    'Submit',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AuthUi.navy,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ),
+                onPressed: _canSubmit
+                    ? () {
+                        // OLD:
+                        // context.go(AppRoutes.instruction1);
 
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Didn't receive OTP - Request again  ",
+                        // NEW:
+                        context.push(AppRoutes.registerSuccess);
+                      }
+                    : null,
+                child: const Text(
+                  'Submit',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  "Didn't receive OTP - Request again  ",
+                  style: TextStyle(fontSize: 13, color: AuthUi.subText),
+                ),
+                GestureDetector(
+                  onTap: () {},
+                  child: const Text(
+                    'Resend',
                     style: TextStyle(
                       fontSize: 13,
-                      color: AuthUi.subText,
-                      fontWeight: FontWeight.w500,
+                      color: AuthUi.navy,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () {},
-                    child: const Text(
-                      'Resend',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AuthUi.navy,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

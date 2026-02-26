@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart'; // Import for SVG support
 
 import '../../../../core/navigation/app_routes.dart';
 import '../widgets/auth_ui_constants.dart';
@@ -31,6 +33,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if platform is iOS for conditional Apple button display
+    final bool isIos = Platform.isIOS;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -39,7 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 22),
             child: Column(
               children: [
-                const SizedBox(height: 110),
+                const SizedBox(height: 80),
                 const Text(
                   'Create Account',
                   style: TextStyle(
@@ -85,7 +90,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 24),
 
                 SizedBox(
                   width: double.infinity,
@@ -116,11 +121,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     const Text(
                       "Already have an account?  ",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AuthUi.subText,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: TextStyle(fontSize: 13, color: AuthUi.subText),
                     ),
                     GestureDetector(
                       onTap: () => context.pop(),
@@ -135,10 +136,88 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 28),
+
+                const SizedBox(height: 32),
+
+                // --- LOGIN WITH SECTION ---
+                Row(
+                  children: [
+                    const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Login with',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ),
+                    const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _SocialButton(
+                      svgPath: 'assets/icons/google.svg',
+                      onTap: () {
+                        // Action for Google Sign-In
+                      },
+                    ),
+                    if (isIos) ...[
+                      const SizedBox(width: 20),
+                      _SocialButton(
+                        svgPath: 'assets/icons/apple.svg',
+                        onTap: () {
+                          // Action for Apple Sign-In
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 40),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  final String svgPath;
+  final VoidCallback onTap;
+
+  const _SocialButton({required this.svgPath, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 54,
+        height: 54,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFF3F4F6)),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(15),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: SvgPicture.asset(
+          svgPath,
+          // Ensuring icons fit well within the 54x54 container
+          fit: BoxFit.contain,
         ),
       ),
     );
