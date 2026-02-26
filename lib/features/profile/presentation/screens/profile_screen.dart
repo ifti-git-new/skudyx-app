@@ -227,7 +227,7 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   _ListTileCard(
                     leadingBg: const Color(0xFFEFF6FF),
-                    leadingIcon: Icons.person_outline,
+                    leadingIcon: Icons.person_outline_sharp,
                     leadingIconColor: const Color(0xFF1D4ED8),
                     title: 'Identity Verification',
                     trailing: Row(
