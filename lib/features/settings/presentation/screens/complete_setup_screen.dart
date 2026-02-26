@@ -185,7 +185,6 @@ class _SetupCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: Color(0xFFF3F4F6),
               ),
-              // child: const Icon(Icons.setting, color: Color(0xFF111827)),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: SvgPicture.asset(
