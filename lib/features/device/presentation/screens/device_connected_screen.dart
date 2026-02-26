@@ -1,260 +1,230 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
+import 'package:skudyx/core/navigation/app_routes.dart';
 
-class DeviceConnectedScreen extends StatelessWidget {
+class DeviceConnectedScreen extends StatefulWidget {
   const DeviceConnectedScreen({super.key});
 
+  @override
+  State<DeviceConnectedScreen> createState() => _DeviceConnectedScreenState();
+}
+
+class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
   static const Color _bg = Color(0xFFF7F8FA);
   static const Color _border = Color(0xFFE5E7EB);
 
   static const Color _green = Color(0xFF22C55E);
   static const Color _greenSoft = Color(0xFFDFF7DF);
 
-  static const Color _red = Color(0xFFE11D48);
-  static const Color _redSoft = Color(0xFFFFE4E6);
+  static const Color _orange = Color(0xFFF59E0B);
+  static const Color _orangeSoft = Color(0xFFFFEDD5);
 
   static const Color _textMuted = Color(0xFF6B7280);
 
+  bool isActiveMode = true;
+
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final statusColor = isActiveMode ? _green : _orange;
+    final statusSoftColor = isActiveMode ? _greenSoft : _orangeSoft;
+
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: back + Disconnect label
-              Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final circleSize = constraints.maxWidth * 0.38;
+            final deviceSize = circleSize * 0.55;
+
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: width * 0.05,
+                vertical: 14,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  InkWell(
-                    onTap: () => context.pop(),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 18,
-                        color: Colors.black,
-                      ),
+                  _buildHeader(context),
+
+                  const SizedBox(height: 26),
+
+                  /// ✅ DEVICE CIRCLE
+                  Center(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: circleSize,
+                          height: circleSize,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: statusColor, width: 2.5),
+                            color: Colors.white,
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: deviceSize,
+                              height: deviceSize,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1F2937),
+                                borderRadius: BorderRadius.circular(
+                                  deviceSize * 0.25,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.15),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        /// ✅ TICK BADGE
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: circleSize * 0.22,
+                            height: circleSize * 0.22,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: statusColor,
+                            ),
+                            child: const Icon(Icons.check, color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Disconnect',
-                    style: AppTextStyles.body.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black,
-                    ),
+
+                  const SizedBox(height: 26),
+
+                  /// ✅ MODE SWITCHER
+                  _ModeSwitcher(
+                    isActive: isActiveMode,
+                    onChanged: (val) {
+                      setState(() {
+                        isActiveMode = val;
+                      });
+                    },
                   ),
+
+                  const SizedBox(height: 28),
+
+                  /// ✅ BLE CARD
+                  _BleCard(
+                    statusColor: statusColor,
+                    softColor: statusSoftColor,
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  const _SafetySection(),
                 ],
               ),
-
-              const SizedBox(height: 26),
-
-              // Device circle + tick badge
-              Center(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: _green, width: 3),
-                        color: Colors.white,
-                      ),
-                      child: Center(child: _DeviceButtonMock()),
-                    ),
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _green,
-                        ),
-                        child: const Icon(
-                          Icons.check,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // BLE info card
-              _CardShell(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                      child: Row(
-                        children: [
-                          Text(
-                            'BLE Device',
-                            style: AppTextStyles.body.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: Colors.black,
-                            ),
-                          ),
-                          const Spacer(),
-
-                          // ✅ Animated press (scale + ripple) + onTap disconnect
-                          _TapScale(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              context.go(AppRoutes.deviceList);
-                            },
-                            borderRadius: BorderRadius.circular(999),
-                            child: const _Pill(
-                              text: 'Connected',
-                              bg: _greenSoft,
-                              fg: Color(0xFF16A34A),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1, color: _border),
-                    const _KeyValueRow(left: 'Battery', right: '50%'),
-                    const Divider(height: 1, color: _border),
-                    const _KeyValueRow(
-                      left: 'Subscription Plan',
-                      right: 'Basic',
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 22),
-
-              Text(
-                'Shared Information:',
-                style: AppTextStyles.body.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: Colors.black,
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              const _FeatureRow(
-                title: 'Current Location',
-                pill: _Pill(
-                  text: 'Active',
-                  bg: _greenSoft,
-                  fg: Color(0xFF16A34A),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const _FeatureRow(
-                title: 'Track Movement',
-                pill: _Pill(text: 'Inactive', bg: _redSoft, fg: _red),
-              ),
-              const SizedBox(height: 12),
-              const _FeatureRow(
-                title: 'Record Audio',
-                pill: _Pill(text: 'Inactive', bg: _redSoft, fg: _red),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
-}
 
-/// Press animation wrapper: scales down on tap-down + ripple.
-class _TapScale extends StatefulWidget {
-  final Widget child;
-  final VoidCallback onTap;
-  final BorderRadius borderRadius;
-
-  const _TapScale({
-    required this.child,
-    required this.onTap,
-    required this.borderRadius,
-  });
-
-  @override
-  State<_TapScale> createState() => _TapScaleState();
-}
-
-class _TapScaleState extends State<_TapScale> {
-  bool _pressed = false;
-
-  void _setPressed(bool v) {
-    if (_pressed == v) return;
-    setState(() => _pressed = v);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedScale(
-      scale: _pressed ? 0.96 : 1.0,
-      duration: const Duration(milliseconds: 90),
-      curve: Curves.easeOut,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: widget.borderRadius,
-          onTap: widget.onTap,
-          onTapDown: (_) => _setPressed(true),
-          onTapCancel: () => _setPressed(false),
-          onTapUp: (_) => _setPressed(false),
-          child: widget.child,
-        ),
-      ),
-    );
-  }
-}
-
-/// Mock of the black SkudyX emergency button (until you add real image asset).
-class _DeviceButtonMock extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 78,
-      height: 78,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(20),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Align(
-        alignment: Alignment.bottomRight,
-        child: Padding(
-          padding: const EdgeInsets.only(right: 10, bottom: 10),
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => context.pop(),
           child: Container(
-            width: 18,
-            height: 18,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFF111827),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          ),
+        ),
+        const SizedBox(width: 12),
+        const Text(
+          "Disconnect",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+}
+
+class _ModeSwitcher extends StatelessWidget {
+  final bool isActive;
+  final ValueChanged<bool> onChanged;
+
+  const _ModeSwitcher({required this.isActive, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 360),
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            _buildTab(
+              text: "Active mode",
+              selected: isActive,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onChanged(true);
+              },
+            ),
+            _buildTab(
+              text: "Test mode",
+              selected: !isActive,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onChanged(false);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTab({
+    required String text,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF10B981) : Colors.transparent,
+            borderRadius: BorderRadius.circular(25),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            text,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.white : Colors.black87,
             ),
           ),
         ),
@@ -263,127 +233,189 @@ class _DeviceButtonMock extends StatelessWidget {
   }
 }
 
-class _CardShell extends StatelessWidget {
-  final Widget child;
-  const _CardShell({required this.child});
+class _BleCard extends StatelessWidget {
+  final Color statusColor;
+  final Color softColor;
+
+  const _BleCard({required this.statusColor, required this.softColor});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: DeviceConnectedScreen._border),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
+    return _ResponsiveCard(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                const Text(
+                  "BLE Device",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+
+                /// ✅ DISCONNECT ON TAP
+                InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () async {
+                    HapticFeedback.mediumImpact();
+
+                    /// TODO: Call your real BLE disconnect logic here
+
+                    context.go(AppRoutes.deviceList);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: softColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      "Connected",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: statusColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+          const Divider(height: 1),
+          const _InfoRow(title: "Battery", value: "50%"),
+          const Divider(height: 1),
+          const _InfoRow(title: "Subscription Plan", value: "Basic"),
         ],
       ),
-      child: child,
     );
   }
 }
 
-class _KeyValueRow extends StatelessWidget {
-  final String left;
-  final String right;
+class _SafetySection extends StatelessWidget {
+  const _SafetySection();
 
-  const _KeyValueRow({required this.left, required this.right});
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              "Safety Information Sharing:",
+              style: AppTextStyles.textfont.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.info_rounded),
+          ],
+        ),
+        const SizedBox(height: 16),
+        const _SafetyTile(title: "Share My Location", active: true),
+        const SizedBox(height: 12),
+        const _SafetyTile(title: "Live Movement Tracking"),
+        const SizedBox(height: 12),
+        const _SafetyTile(title: "Live Audio Sharing"),
+      ],
+    );
+  }
+}
+
+class _SafetyTile extends StatelessWidget {
+  final String title;
+  final bool active;
+
+  const _SafetyTile({required this.title, this.active = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return _ResponsiveCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: active ? Colors.green.shade100 : const Color(0XffFEDAD9),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                active ? "Active" : "Inactive",
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: active ? Colors.green : const Color(0Xff8E1F0B),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String title;
+  final String value;
+
+  const _InfoRow({required this.title, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Row(
-        children: [
-          Text(
-            left,
-            style: AppTextStyles.caption.copyWith(
-              color: DeviceConnectedScreen._textMuted,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            right,
-            style: AppTextStyles.body.copyWith(
-              fontWeight: FontWeight.w900,
-              color: Colors.black,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FeatureRow extends StatelessWidget {
-  final String title;
-  final Widget pill;
-
-  const _FeatureRow({required this.title, required this.pill});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 58,
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: DeviceConnectedScreen._border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
           Text(
             title,
-            style: AppTextStyles.body.copyWith(
-              fontWeight: FontWeight.w900,
-              color: Colors.black,
+            style: const TextStyle(
+              color: _DeviceConnectedScreenState._textMuted,
             ),
           ),
           const Spacer(),
-          pill,
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
         ],
       ),
     );
   }
 }
 
-class _Pill extends StatelessWidget {
-  final String text;
-  final Color bg;
-  final Color fg;
+class _ResponsiveCard extends StatelessWidget {
+  final Widget child;
 
-  const _Pill({required this.text, required this.bg, required this.fg});
+  const _ResponsiveCard({required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _DeviceConnectedScreenState._border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: Text(
-        text,
-        style: AppTextStyles.caption.copyWith(
-          fontWeight: FontWeight.w800,
-          color: fg,
-        ),
-      ),
+      child: child,
     );
   }
 }

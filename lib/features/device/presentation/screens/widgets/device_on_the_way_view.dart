@@ -47,13 +47,21 @@ class DeviceOnTheWayView extends StatelessWidget {
                 subtitle: 'Tuesday, Jan 27, 2026 12:34 PM',
               ),
               const SizedBox(height: 14),
-              const _TimelineItem(
-                done: false,
-                isLast: true,
-                title: 'Shipped',
-                subtitle: 'Pending...',
-              ),
 
+              // InkWell(
+              //   onTap: () async {
+              //     await context.read<AppStatusController>().setDeviceArrived(
+              //       true,
+              //     );
+              //     if (context.mounted) context.push(AppRoutes.deviceArrived);
+              //   },
+              //   child: const _TimelineItem(
+              //     done: false,
+              //     isLast: true,
+              //     title: 'Shipped',
+              //     subtitle: 'Pending...',
+              //   ),
+              // ),
               const Spacer(),
 
               // TEMP BUTTON
