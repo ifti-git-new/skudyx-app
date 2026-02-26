@@ -7,7 +7,6 @@ class IdentityIntroScreen extends StatelessWidget {
 
   static const _navy = Color(0xFF081B4A);
   static const _sub = Color(0xFF6B7280);
-  static const _border = Color(0xFFE5E7EB);
 
   @override
   Widget build(BuildContext context) {

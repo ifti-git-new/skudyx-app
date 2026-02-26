@@ -13,9 +13,6 @@ class ContactSupportScreen extends StatefulWidget {
 
 class _ContactSupportScreenState extends State<ContactSupportScreen> {
   static const _navy = Color(0xFF081B4A);
-  static const _sub = Color(0xFF6B7280);
-  static const _border = Color(0xFFE5E7EB);
-  static const _fill = Color(0xFFF6F7F9);
 
   // Change later to your real support email
   static const _supportEmail = 'support@skudyx.com';

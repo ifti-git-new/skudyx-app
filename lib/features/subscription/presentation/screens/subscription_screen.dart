@@ -21,11 +21,6 @@ enum BillingCycle { monthly, yearly }
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
   static const _navy = Color(0xFF081B4A);
   static const _subText = Color(0xFF6B7280);
-  static const _border = Color(0xFFE5E7EB);
-  static const _accent = Color(0xFF4FD3E6);
-  static const _check = Color(0xFF0EA5E9);
-  static const _recommended = Color(0xFFFFE9A6);
-
   PlanType _plan = PlanType.basic;
   BillingCycle _cycle = BillingCycle.yearly;
 

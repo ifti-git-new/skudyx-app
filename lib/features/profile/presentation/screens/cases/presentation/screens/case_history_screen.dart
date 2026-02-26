@@ -7,7 +7,6 @@ class CaseHistoryScreen extends StatelessWidget {
   const CaseHistoryScreen({super.key});
 
   static const _bg = Color(0xFFF7F8FA);
-  static const _muted = Color(0xFF6B7280);
 
   @override
   Widget build(BuildContext context) {

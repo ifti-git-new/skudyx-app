@@ -11,9 +11,6 @@ class NotificationPreferencesScreen extends StatelessWidget {
   const NotificationPreferencesScreen({super.key});
 
   static const _bg = Color(0xFFF7F8FA);
-  static const _navy = Color(0xFF081B4A);
-  static const _muted = Color(0xFF6B7280);
-  static const _border = Color(0xFFE5E7EB);
 
   @override
   Widget build(BuildContext context) {
@@ -265,9 +262,6 @@ class _EnableInSettingsSheet extends StatelessWidget {
 class _ToggleList extends StatelessWidget {
   final NotificationPrefsController c;
   const _ToggleList({required this.c});
-
-  static const _border = Color(0xFFE5E7EB);
-  static const _muted = Color(0xFF6B7280);
 
   @override
   Widget build(BuildContext context) {

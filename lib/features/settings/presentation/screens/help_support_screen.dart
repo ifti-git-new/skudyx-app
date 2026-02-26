@@ -6,9 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 class HelpSupportScreen extends StatelessWidget {
   const HelpSupportScreen({super.key});
 
-  static const _cardBorder = Color(0xFFE5E7EB);
-  static const _muted = Color(0xFF6B7280);
-
   // Replace later with your real endpoints/emails
   static const _supportEmail = 'support@yourapp.com';
   static const _helpCenterUrl = 'https://example.com/help';

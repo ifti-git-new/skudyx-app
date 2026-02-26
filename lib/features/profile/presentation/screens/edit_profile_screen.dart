@@ -14,7 +14,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   static const _navy = Color(0xFF081B4A);
   static const _subText = Color(0xFF6B7280);
   static const _border = Color(0xFFE5E7EB);
-  static const _fill = Color(0xFFF6F7F9);
 
   late final TextEditingController firstName;
   late final TextEditingController lastName;
