@@ -128,6 +128,11 @@ class AppRouter {
         path: AppRoutes.instruction2,
         builder: (_, _) => const Instruction2Screen(),
       ),
+
+      GoRoute(
+        path: AppRoutes.completeSetup,
+        builder: (context, state) => const CompleteSetupScreen(),
+      ),
       GoRoute(
         path: AppRoutes.instruction3,
         builder: (_, _) => const Instruction3Screen(),

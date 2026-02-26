@@ -36,6 +36,24 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     });
   }
 
+  /// ✅ Fixed Navigation:
+  /// Prevents "Nothing to pop" error and routes to Device Screen (NotPurchasedView)
+  void _onCancelPressed() {
+    final status = context.read<AppStatusController>();
+
+    // If not subscribed, we want them back on the Device tab (showing Lock screen)
+    if (!status.isSubscribed) {
+      context.go(AppRoutes.device);
+    } else {
+      // If they ARE subscribed, try to pop back to where they came from
+      if (GoRouter.of(context).canPop()) {
+        context.pop();
+      } else {
+        context.go(AppRoutes.device);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final planData = _plan == PlanType.premium ? _premiumPlan() : _basicPlan();
@@ -51,25 +69,26 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: InkWell(
-                  onTap: () => context.pop(),
+                  onTap: _onCancelPressed,
                   borderRadius: BorderRadius.circular(12),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3F4F6),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: const Icon(
+                        child: const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Icon(
                             Icons.close_rounded,
                             size: 22,
                             color: Colors.black,
                           ),
                         ),
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       Text(
                         'Cancel',
                         style: AppTextStyles.button.copyWith(

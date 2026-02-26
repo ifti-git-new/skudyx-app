@@ -43,6 +43,12 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
     super.dispose();
   }
 
+  /// ✅ Logic for Cancel Button
+  /// Redirects to Device Screen where logic will show _PurchasedNoDeliveryView
+  void _onCancelPressed() {
+    context.go(AppRoutes.device);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,19 +58,18 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
           padding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
           child: SizedBox(
             width: double.infinity,
-            height: 50, // Increased height for better mobile tap target
+            height: 50,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _navy,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    50,
-                  ), // More rounded as per modern UI
+                  borderRadius: BorderRadius.circular(50),
                 ),
               ),
               onPressed: () async {
+                // Update status and navigate to Device Tab
                 await context.read<AppStatusController>().setHasDeliveryDetails(
                   true,
                 );
@@ -89,7 +94,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: InkWell(
-                onTap: () => context.pop(),
+                onTap: _onCancelPressed,
                 borderRadius: BorderRadius.circular(12),
                 child: Row(
                   children: [
@@ -98,16 +103,16 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                         color: const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: const Icon(
+                      child: const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Icon(
                           Icons.close_rounded,
                           size: 22,
                           color: Colors.black,
                         ),
                       ),
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Text(
                       'Cancel',
                       style: AppTextStyles.button.copyWith(
@@ -131,7 +136,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                     Text(
                       'Where should we deliver your SkudyX Emergency Button?',
                       style: AppTextStyles.h1.copyWith(
-                        fontSize: 32, // Large bold header matching the image
+                        fontSize: 32,
                         fontWeight: FontWeight.w800,
                         height: 1.1,
                       ),
@@ -144,24 +149,19 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                         fontSize: 15,
                       ),
                     ),
-                    const SizedBox(height: 10),
-
+                    const SizedBox(height: 20),
                     _LabeledField(label: 'First Name', controller: _firstName),
                     const SizedBox(height: 16),
-
                     _LabeledField(
                       label: 'Phone Number',
                       controller: _phone,
                       keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 16),
-
                     _LabeledField(label: 'Address Line 1', controller: _addr1),
                     const SizedBox(height: 16),
-
                     _LabeledField(label: 'Address Line 2', controller: _addr2),
                     const SizedBox(height: 16),
-
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -181,7 +181,6 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -225,8 +224,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
 
 class _LabeledField extends StatelessWidget {
   static const _border = Color(0xFFE5E7EB);
-  static const _fill =
-      Colors.white; // Changed to white for cleaner look matching image
+  static const _fill = Colors.white;
   static const _label = Color(0xFF6B7280);
 
   final String label;
@@ -252,6 +250,7 @@ class _LabeledField extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
+        const SizedBox(height: 6),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
@@ -260,8 +259,8 @@ class _LabeledField extends StatelessWidget {
             filled: true,
             fillColor: _fill,
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 10,
+              horizontal: 12,
+              vertical: 14,
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -304,7 +303,7 @@ class _CountryDropdown extends StatelessWidget {
           label,
           style: const TextStyle(
             color: _label,
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -313,8 +312,8 @@ class _CountryDropdown extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Container(
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -326,7 +325,7 @@ class _CountryDropdown extends StatelessWidget {
                   child: Text(
                     value,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -334,6 +333,7 @@ class _CountryDropdown extends StatelessWidget {
                 const Icon(
                   Icons.keyboard_arrow_down_rounded,
                   color: Color(0xFF6B7280),
+                  size: 20,
                 ),
               ],
             ),
@@ -365,20 +365,35 @@ class _CountrySheet extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: SafeArea(
-        child: ListView.separated(
-          shrinkWrap: true,
-          itemCount: items.length,
-          separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (_, i) {
-            final v = items[i];
-            return ListTile(
-              title: Text(v),
-              trailing: v == current
-                  ? const Icon(Icons.check, color: Color(0xFF081B4A))
-                  : null,
-              onTap: () => Navigator.pop(context, v),
-            );
-          },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListView.separated(
+              shrinkWrap: true,
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (_, i) {
+                final v = items[i];
+                return ListTile(
+                  title: Text(v, style: const TextStyle(fontSize: 15)),
+                  trailing: v == current
+                      ? const Icon(Icons.check, color: Color(0xFF081B4A))
+                      : null,
+                  onTap: () => Navigator.pop(context, v),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

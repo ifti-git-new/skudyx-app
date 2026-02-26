@@ -55,4 +55,5 @@ abstract class AppRoutes {
   static const settingsFaqs = '/settings/faqs';
   static const settingsPrivacyPolicy = '/settings/privacy-policy';
   static const settingsTerms = '/settings/terms';
+  static const completeSetup = '/complete-setup'; // Add this line
 }
