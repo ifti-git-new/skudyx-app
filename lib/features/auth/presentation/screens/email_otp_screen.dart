@@ -122,7 +122,7 @@ class _EmailOtpScreenState extends State<EmailOtpScreen> {
             const SizedBox(height: 22),
             SizedBox(
               width: double.infinity,
-              height: 54,
+              height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AuthUi.navy,

@@ -21,7 +21,7 @@ class CaseDetailsScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: SizedBox(
-            height: 54,
+            height: 50,
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(

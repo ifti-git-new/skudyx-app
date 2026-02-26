@@ -48,7 +48,7 @@ class DeliveryConfirmationScreen extends StatelessWidget {
             const SizedBox(height: 26),
             SizedBox(
               width: 220,
-              height: 54,
+              height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF081B4A),

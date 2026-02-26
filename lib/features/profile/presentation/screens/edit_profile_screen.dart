@@ -77,7 +77,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             curve: Curves.easeOut,
             padding: EdgeInsets.fromLTRB(22, 0, 22, 18 + bottomInset),
             child: SizedBox(
-              height: 54,
+              height: 50,
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(

@@ -16,13 +16,14 @@ class DeliveryDetailsScreen extends StatefulWidget {
 class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
   static const _navy = Color(0xFF081B4A);
   static const _subText = Color(0xFF6B7280);
+
   final _firstName = TextEditingController(text: 'Jerome');
   final _phone = TextEditingController(text: '+12 345 6789');
   final _addr1 = TextEditingController(
-    text: '21 East  Dhanmondi, Dhaka, Bangladesh',
+    text: '21 East Dhanmondi, Dhaka, Bangladesh',
   );
   final _addr2 = TextEditingController(
-    text: '21 East  Dhanmondi, Dhaka, Bangladesh',
+    text: '21 East Dhanmondi, Dhaka, Bangladesh',
   );
   final _city = TextEditingController();
   final _state = TextEditingController();
@@ -45,33 +46,36 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
           child: SizedBox(
             width: double.infinity,
-            height: 54,
+            height: 50, // Increased height for better mobile tap target
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _navy,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(
+                    50,
+                  ), // More rounded as per modern UI
                 ),
               ),
               onPressed: () async {
-                // UI-only: mark delivery details completed
                 await context.read<AppStatusController>().setHasDeliveryDetails(
                   true,
                 );
-
-                // go back to Device tab; it will show "Device is on the way"
                 if (context.mounted) context.go(AppRoutes.device);
               },
               child: Text(
                 'Confirm',
-                style: AppTextStyles.button.copyWith(color: Colors.white),
+                style: AppTextStyles.button.copyWith(
+                  color: Colors.white,
+                  fontSize: 18,
+                ),
               ),
             ),
           ),
@@ -81,8 +85,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
         child: Column(
           children: [
             const SizedBox(height: 10),
-
-            // Back chip row
+            // Header: Close Button with "Cancel" text
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -91,25 +94,27 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                     onTap: () => context.pop(),
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      height: 40,
+                      height: 44,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            size: 18,
+                          const Icon(
+                            Icons.close_rounded,
+                            size: 20,
                             color: Colors.black,
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text(
-                            'Back',
+                            'Cancel',
                             style: AppTextStyles.button.copyWith(
                               fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
                             ),
                           ),
                         ],
@@ -119,46 +124,50 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                 ],
               ),
             ),
-
-            const SizedBox(height: 10),
-            const Divider(height: 1, color: Color(0xFFF3F4F6)),
-
-            // Form
+            const SizedBox(height: 24),
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+                padding: const EdgeInsets.symmetric(horizontal: 22),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Where should we deliver your SkudyX\nEmergency Button?',
-                      style: AppTextStyles.h2light.copyWith(height: 1.25),
+                      'Where should we deliver your SkudyX Emergency Button?',
+                      style: AppTextStyles.h1.copyWith(
+                        fontSize: 32, // Large bold header matching the image
+                        fontWeight: FontWeight.w800,
+                        height: 1.1,
+                      ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Text(
                       "We’ll deliver your device to this address.",
-                      style: AppTextStyles.caption.copyWith(color: _subText),
+                      style: AppTextStyles.caption.copyWith(
+                        color: _subText,
+                        fontSize: 15,
+                      ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 10),
 
                     _LabeledField(label: 'First Name', controller: _firstName),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     _LabeledField(
                       label: 'Phone Number',
                       controller: _phone,
                       keyboardType: TextInputType.phone,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     _LabeledField(label: 'Address Line 1', controller: _addr1),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     _LabeledField(label: 'Address Line 2', controller: _addr2),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: _LabeledField(
@@ -166,7 +175,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                             controller: _city,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: _LabeledField(
                             label: 'State/Province',
@@ -175,9 +184,10 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: _LabeledField(
@@ -185,7 +195,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                             controller: _zip,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: _CountryDropdown(
                             label: 'Country',
@@ -205,8 +215,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 90),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -220,7 +229,8 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
 
 class _LabeledField extends StatelessWidget {
   static const _border = Color(0xFFE5E7EB);
-  static const _fill = Color(0xFFF6F7F9);
+  static const _fill =
+      Colors.white; // Changed to white for cleaner look matching image
   static const _label = Color(0xFF6B7280);
 
   final String label;
@@ -240,21 +250,22 @@ class _LabeledField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.caption.copyWith(
+          style: const TextStyle(
             color: _label,
-            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 8),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             filled: true,
             fillColor: _fill,
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 14,
+              horizontal: 10,
+              vertical: 10,
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -264,7 +275,7 @@ class _LabeledField extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(
                 color: Color(0xFF081B4A),
-                width: 1.4,
+                width: 1.5,
               ),
             ),
           ),
@@ -276,7 +287,6 @@ class _LabeledField extends StatelessWidget {
 
 class _CountryDropdown extends StatelessWidget {
   static const _border = Color(0xFFE5E7EB);
-  static const _fill = Color(0xFFF6F7F9);
   static const _label = Color(0xFF6B7280);
 
   final String label;
@@ -296,20 +306,21 @@ class _CountryDropdown extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.caption.copyWith(
+          style: const TextStyle(
             color: _label,
-            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: _fill,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: _border),
             ),
@@ -318,7 +329,10 @@ class _CountryDropdown extends StatelessWidget {
                 Expanded(
                   child: Text(
                     value,
-                    style: AppTextStyles.caption.copyWith(fontSize: 14),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
                 const Icon(
@@ -349,19 +363,27 @@ class _CountrySheet extends StatelessWidget {
       'India',
     ];
 
-    return SafeArea(
-      child: ListView.separated(
-        shrinkWrap: true,
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const Divider(height: 1),
-        itemBuilder: (_, i) {
-          final v = items[i];
-          return ListTile(
-            title: Text(v),
-            trailing: v == current ? const Icon(Icons.check) : null,
-            onTap: () => Navigator.pop(context, v),
-          );
-        },
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: ListView.separated(
+          shrinkWrap: true,
+          itemCount: items.length,
+          separatorBuilder: (_, _) => const Divider(height: 1),
+          itemBuilder: (_, i) {
+            final v = items[i];
+            return ListTile(
+              title: Text(v),
+              trailing: v == current
+                  ? const Icon(Icons.check, color: Color(0xFF081B4A))
+                  : null,
+              onTap: () => Navigator.pop(context, v),
+            );
+          },
+        ),
       ),
     );
   }

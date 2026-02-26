@@ -94,7 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 SizedBox(
                   width: double.infinity,
-                  height: 54,
+                  height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AuthUi.navy,
@@ -200,7 +200,7 @@ class _SocialButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 54,
-        height: 54,
+        height: 50,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           shape: BoxShape.circle,

@@ -41,7 +41,7 @@ class IdentityIntroScreen extends StatelessWidget {
 
               Container(
                 width: 54,
-                height: 54,
+                height: 50,
                 decoration: const BoxDecoration(
                   color: Color(0xFFEAF7E6),
                   shape: BoxShape.circle,
@@ -91,7 +91,7 @@ class IdentityIntroScreen extends StatelessWidget {
 
               SizedBox(
                 width: double.infinity,
-                height: 54,
+                height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _navy,

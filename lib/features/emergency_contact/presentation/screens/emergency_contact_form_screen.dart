@@ -50,7 +50,7 @@ class _EmergencyContactFormScreenState
         child: Padding(
           padding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
           child: SizedBox(
-            height: 54,
+            height: 50,
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(

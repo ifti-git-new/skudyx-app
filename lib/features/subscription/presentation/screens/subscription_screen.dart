@@ -91,14 +91,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
-                  height: 54,
+                  height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _navy,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(50),
                       ),
                     ),
                     onPressed: () async {
@@ -121,10 +121,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   children: [
                     Text(
                       'Already a subscriber? ',
-                      style: AppTextStyles.caption.copyWith(
-                        color: _subText,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: AppTextStyles.caption.copyWith(color: _subText),
                     ),
                     GestureDetector(
                       onTap: () {},
@@ -249,6 +246,8 @@ class _SegmentedToggle extends StatelessWidget {
                     color: selectedLeft
                         ? Colors.black
                         : const Color(0xFF6B7280),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -269,6 +268,8 @@ class _SegmentedToggle extends StatelessWidget {
                     color: !selectedLeft
                         ? Colors.black
                         : const Color(0xFF6B7280),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -325,8 +326,9 @@ class _PlanCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: AppTextStyles.h2light.copyWith(
-                  fontWeight: FontWeight.w800,
+                style: AppTextStyles.h2.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
                 ),
               ),
               if (badgeText != null) ...[
@@ -344,6 +346,7 @@ class _PlanCard extends StatelessWidget {
                     badgeText!,
                     style: AppTextStyles.caption.copyWith(
                       color: const Color(0xFF16A34A),
+                      fontSize: 11,
                     ),
                   ),
                 ),
@@ -353,15 +356,15 @@ class _PlanCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             description,
-            style: AppTextStyles.caption.copyWith(
-              color: _subText,
-              height: 1.25,
-            ),
+            style: AppTextStyles.textfont.copyWith(height: 1.50),
           ),
           const SizedBox(height: 16),
           Text(
             'Features:',
-            style: AppTextStyles.h2light.copyWith(fontWeight: FontWeight.w800),
+            style: AppTextStyles.h2.copyWith(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+            ),
           ),
           const SizedBox(height: 10),
           ...features.map(
@@ -378,9 +381,9 @@ class _PlanCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       f,
-                      style: AppTextStyles.caption.copyWith(
+                      style: AppTextStyles.textfont.copyWith(
                         fontSize: 14,
-                        height: 1.2,
+                        height: 1.0,
                       ),
                     ),
                   ),
@@ -396,7 +399,7 @@ class _PlanCard extends StatelessWidget {
                 children: [
                   TextSpan(
                     text: monthlyPrice,
-                    style: AppTextStyles.h2light.copyWith(
+                    style: AppTextStyles.h2.copyWith(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
                     ),
@@ -429,7 +432,7 @@ class _PlanCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   yearlyPrice,
-                  style: AppTextStyles.h2light.copyWith(
+                  style: AppTextStyles.h2.copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),

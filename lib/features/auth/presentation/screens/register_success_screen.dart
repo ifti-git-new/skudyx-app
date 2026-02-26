@@ -41,7 +41,7 @@ class RegisterSuccessScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: SizedBox(
                 width: double.infinity,
-                height: 54,
+                height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AuthUi.navy,

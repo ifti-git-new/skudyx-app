@@ -99,7 +99,7 @@ class _PermissionOffView extends StatelessWidget {
 
           SizedBox(
             width: double.infinity,
-            height: 54,
+            height: 50,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _navy,

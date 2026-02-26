@@ -121,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
-                  height: 54,
+                  height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AuthUi.navy,

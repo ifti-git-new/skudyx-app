@@ -18,7 +18,7 @@ class EmergencyHomeScreen extends StatelessWidget {
         child: Center(
           child: SizedBox(
             width: 260,
-            height: 54,
+            height: 50,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _navy,
