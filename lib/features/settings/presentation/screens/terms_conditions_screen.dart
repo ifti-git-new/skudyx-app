@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 
 class TermsConditionsScreen extends StatelessWidget {
   const TermsConditionsScreen({super.key});
@@ -52,21 +53,19 @@ class TermsConditionsScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text(
+                Text(
                   'Terms & Conditions',
-                  style: TextStyle(
+                  style: AppTextStyles.h2light.copyWith(
                     fontSize: 26,
-                    fontWeight: FontWeight.w900,
                     color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Last updated: January 11, 2026',
-                  style: TextStyle(
+                  style: AppTextStyles.subtitle.copyWith(
                     fontSize: 13,
                     color: Colors.white70,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -79,7 +78,7 @@ class TermsConditionsScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   _SectionTitle('Acceptance of Terms'),
                   _Card(
                     child: _Paragraph(
@@ -99,9 +98,8 @@ class TermsConditionsScreen extends StatelessWidget {
                         SizedBox(height: 14),
                         Text(
                           "You agree NOT to:",
-                          style: TextStyle(
+                          style: AppTextStyles.subtitle.copyWith(
                             fontSize: 14,
-                            fontWeight: FontWeight.w900,
                             color: Colors.black,
                           ),
                         ),
@@ -170,9 +168,8 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         text,
-        style: const TextStyle(
+        style: AppTextStyles.subtitle.copyWith(
           fontSize: 16,
-          fontWeight: FontWeight.w900,
           color: Colors.black,
         ),
       ),
@@ -216,7 +213,7 @@ class _Paragraph extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
+      style: AppTextStyles.subtitle.copyWith(
         fontSize: 13,
         color: Color(0xFF6B7280),
         height: 1.35,
@@ -246,7 +243,7 @@ class _Bullet extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: AppTextStyles.subtitle.copyWith(
                 fontSize: 13,
                 color: Color(0xFF6B7280),
                 height: 1.35,
