@@ -1,8 +1,14 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:skudyx/core/network/dio_debug_interceptor.dart'; // If you have this
 import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
+import 'package:skudyx/features/cases/data/remote/case_api.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 class DeviceConnectedScreen extends StatefulWidget {
   const DeviceConnectedScreen({super.key});
@@ -295,8 +301,83 @@ class _BleCard extends StatelessWidget {
   }
 }
 
-class _SafetySection extends StatelessWidget {
+class _SafetySection extends StatefulWidget {
   const _SafetySection();
+
+  @override
+  State<_SafetySection> createState() => _SafetySectionState();
+}
+
+class _SafetySectionState extends State<_SafetySection> {
+  bool _isExpanded = false; // For internal testing section
+
+  Future<void> _triggerCase(
+    BuildContext context,
+    bool isTest,
+    String caseName,
+  ) async {
+    final scaffold = ScaffoldMessenger.of(context);
+    final caseApi = context.read<CaseApi>();
+
+    // Get real-time location
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      scaffold.showSnackBar(
+        const SnackBar(content: Text('Location services are disabled.')),
+      );
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        scaffold.showSnackBar(
+          const SnackBar(content: Text('Location permissions are denied.')),
+        );
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      scaffold.showSnackBar(
+        const SnackBar(
+          content: Text('Location permissions are permanently denied.'),
+        ),
+      );
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    final double lat = position.latitude;
+    final double long = position.longitude;
+
+    // Show loading
+    scaffold.showSnackBar(SnackBar(content: Text('Creating $caseName...')));
+
+    try {
+      final caseData = await caseApi.triggerCase(
+        latitude: lat,
+        longitude: long,
+        isTest: isTest,
+      );
+
+      final caseId = caseData['case_id'] ?? 'Unknown';
+      scaffold.showSnackBar(
+        SnackBar(content: Text('$caseName created! Case ID: $caseId')),
+      );
+    } on DioException catch (e) {
+      final msg = e.response?.data?['message'] ?? 'Failed to create case.';
+      scaffold.showSnackBar(SnackBar(content: Text(msg)));
+    } catch (e) {
+      scaffold.showSnackBar(
+        const SnackBar(content: Text('Something went wrong.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -322,6 +403,58 @@ class _SafetySection extends StatelessWidget {
         const _SafetyTile(title: "Live Movement Tracking"),
         const SizedBox(height: 12),
         const _SafetyTile(title: "Live Audio Sharing"),
+
+        // Internal Testing Buttons (Debug Only)
+        if (kDebugMode) ...[
+          const SizedBox(height: 24),
+          ExpansionTile(
+            title: const Text(
+              'Internal Testing (Dev/QA Only)',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+            initiallyExpanded: _isExpanded,
+            onExpansionChanged: (expanded) {
+              setState(() => _isExpanded = expanded);
+            },
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => _triggerCase(context, true, 'Test Case'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                      child: const Text('Create Test Case'),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () =>
+                          _triggerCase(context, false, 'Basic Case'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                      child: const Text('Create Basic Case'),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () =>
+                          _triggerCase(context, false, 'Live Case'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                      child: const Text('Create Live Case'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
