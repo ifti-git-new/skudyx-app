@@ -34,7 +34,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authWatch = context.watch<AuthController>();
     final auth = context.read<AuthController>();
+    final isLoading = authWatch.state.isLoading;
 
     return Scaffold(
       body: SafeArea(
@@ -131,14 +133,46 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () async {
-                      await auth.mockLogin(isNewUser: false);
-                      if (context.mounted) context.go(AppRoutes.device);
-                    },
-                    child: Text(
-                      'Login',
-                      style: AppTextStyles.button.copyWith(color: Colors.white),
-                    ),
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            final ok = await auth.login(
+                              email: _emailCtrl.text,
+                              password: _passCtrl.text,
+                              rememberMe: _rememberMe,
+                            );
+
+                            if (!context.mounted) return;
+
+                            if (ok) {
+                              context.go(AppRoutes.device);
+                            } else {
+                              final msg =
+                                  context
+                                      .read<AuthController>()
+                                      .state
+                                      .errorMessage ??
+                                  'Login failed';
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(SnackBar(content: Text(msg)));
+                            }
+                          },
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'Login',
+                            style: AppTextStyles.button.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
 
@@ -190,7 +224,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 18),
 
-                // Android -> Google, iOS -> Apple
                 InkWell(
                   onTap: () async {
                     if (Platform.isIOS) {

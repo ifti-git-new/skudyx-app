@@ -15,10 +15,13 @@ class AppConfig {
 
   factory AppConfig.fromEnv() {
     const flavorStr = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
+
+    // IMPORTANT: defaultValue changed to your real backend
     const apiBaseUrl = String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'https://api.example.com',
+      defaultValue: 'https://skudyx-backend-c8do.onrender.com',
     );
+
     const wsUrl = String.fromEnvironment(
       'WS_URL',
       defaultValue: 'wss://ws.example.com',

@@ -1,11 +1,16 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-
 import 'package:skudyx/core/storage/app_prefs.dart';
+import 'package:skudyx/core/storage/auth_token_storage.dart';
+import 'package:skudyx/features/auth/data/remote/auth_api.dart';
 import 'package:skudyx/features/auth/domain/entities/repositories/social_auth_provider.dart';
 import 'package:skudyx/features/auth/presentation/controllers/auth_state.dart';
 
 class AuthController extends ChangeNotifier {
   final AppPrefs prefs;
+  final AuthTokenStorage tokenStorage;
+  final AuthApi api;
+
   final SocialAuthProvider googleAuthProvider;
   final SocialAuthProvider appleAuthProvider;
 
@@ -14,6 +19,8 @@ class AuthController extends ChangeNotifier {
 
   AuthController({
     required this.prefs,
+    required this.tokenStorage,
+    required this.api,
     required this.googleAuthProvider,
     required this.appleAuthProvider,
   });
@@ -22,19 +29,80 @@ class AuthController extends ChangeNotifier {
     if (_initialized) return;
     _initialized = true;
 
+    final token = await tokenStorage.readAccessToken();
+    final isAuthed = token != null && token.isNotEmpty;
+
+    if (!isAuthed && prefs.loggedIn) {
+      await prefs.setLoggedIn(false);
+    }
+
     state = AuthState(
-      isAuthenticated: prefs.loggedIn,
+      isAuthenticated: isAuthed,
       onboardingSeen: prefs.onboardingSeen,
+      isLoading: false,
+      errorMessage: null,
     );
     notifyListeners();
   }
 
-  Future<void> mockLogin({required bool isNewUser}) async {
-    await prefs.setLoggedIn(true);
-    await prefs.setOnboardingSeen(!isNewUser);
-
-    state = state.copyWith(isAuthenticated: true, onboardingSeen: !isNewUser);
+  Future<bool> login({
+    required String email,
+    required String password,
+    required bool rememberMe,
+  }) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
     notifyListeners();
+
+    try {
+      final res = await api.login(email: email.trim(), password: password);
+
+      await tokenStorage.saveTokens(
+        accessToken: res.accessToken,
+        refreshToken: res.refreshToken,
+        persist: rememberMe,
+      );
+
+      await prefs.setLoggedIn(true);
+
+      state = state.copyWith(
+        isAuthenticated: true,
+        isLoading: false,
+        errorMessage: null,
+      );
+      notifyListeners();
+      return true;
+    } on DioException catch (e) {
+      final msg = _dioMessage(e);
+      state = state.copyWith(isLoading: false, errorMessage: msg);
+      notifyListeners();
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Something went wrong. Please try again.',
+      );
+      notifyListeners();
+      return false;
+    }
+  }
+
+  String _dioMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map && data['message'] != null) {
+      return data['message'].toString();
+    }
+    if (e.error is String) return e.error.toString();
+
+    return switch (e.type) {
+      DioExceptionType.connectionTimeout ||
+      DioExceptionType.sendTimeout ||
+      DioExceptionType.receiveTimeout =>
+        'Connection timeout. Server may be waking up—please try again.',
+      DioExceptionType.connectionError => 'No internet / connection error.',
+      DioExceptionType.badResponse =>
+        'Login failed (${e.response?.statusCode ?? ''}).',
+      _ => 'Login failed. Please try again.',
+    };
   }
 
   Future<void> markOnboardingSeen() async {
@@ -44,6 +112,7 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await tokenStorage.clear();
     await prefs.clearAll();
     state = AuthState.loggedOut();
     notifyListeners();
@@ -51,11 +120,11 @@ class AuthController extends ChangeNotifier {
 
   Future<void> signInWithGoogle() async {
     await googleAuthProvider.signIn();
-    await mockLogin(isNewUser: false);
+    // TODO: exchange provider token with backend
   }
 
   Future<void> signInWithApple() async {
     await appleAuthProvider.signIn();
-    await mockLogin(isNewUser: false);
+    // TODO: exchange provider token with backend
   }
 }

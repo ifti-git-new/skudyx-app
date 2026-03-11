@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-
 import 'package:skudyx/core/storage/app_prefs.dart';
 import '../models/emergency_contact_model.dart';
 
@@ -16,7 +15,7 @@ class EmergencyContactController extends ChangeNotifier {
     phoneVerified = prefs.ecPhoneVerified;
     emailVerified = prefs.ecEmailVerified;
 
-    // If contact added but app restarted, we still show a demo contact (UI-only)
+    // If contact was previously added but app restarted, restore the data
     if (prefs.ecAdded && contact == null) {
       contact = const EmergencyContactModel(
         firstName: 'Jerome',
@@ -34,10 +33,10 @@ class EmergencyContactController extends ChangeNotifier {
   Future<void> saveContact(EmergencyContactModel model) async {
     contact = model;
 
-    // ✅ IMPORTANT: This is what your emergency routing checks
+    // Save flag to persistent storage so the "Why" screen doesn't show again
     await prefs.setEcAdded(true);
 
-    // reset verification
+    // Reset verification for the new contact info
     phoneVerified = false;
     emailVerified = false;
     await prefs.setEcPhoneVerified(false);

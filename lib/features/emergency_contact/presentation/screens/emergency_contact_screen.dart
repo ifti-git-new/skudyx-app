@@ -14,14 +14,17 @@ class EmergencyContactScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Watch the controller. This triggers a rebuild when saveContact()
+    // or init() calls notifyListeners().
+    final controller = context.watch<EmergencyContactController>();
     final prefs = context.read<AppPrefs>();
 
-    // Decide based on persisted flag (bulletproof)
-    if (!prefs.ecAdded) {
-      return const _WhyWeNeedThisView();
+    // ✅ Logical Check: If the preference is true OR the controller has a contact loaded
+    if (prefs.ecAdded || controller.contact != null) {
+      return const _OverviewView();
     }
 
-    return const _OverviewView();
+    return const _WhyWeNeedThisView();
   }
 }
 
@@ -42,7 +45,6 @@ class _WhyWeNeedThisView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Placeholder icon (replace with asset if you have)
                 Container(
                   width: 84,
                   height: 84,
@@ -80,7 +82,6 @@ class _WhyWeNeedThisView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 22),
-
                 SizedBox(
                   height: 46,
                   child: ElevatedButton(
@@ -95,7 +96,7 @@ class _WhyWeNeedThisView extends StatelessWidget {
                     onPressed: () =>
                         context.push(AppRoutes.emergencyContactEdit),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 18),
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
                       child: Text(
                         'Add Emergency Contact',
                         style: AppTextStyles.textfont16.copyWith(
@@ -122,7 +123,7 @@ class _OverviewView extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.watch<EmergencyContactController>();
 
-    // UI-only fallback in case contact wasn't persisted
+    // Fallback logic remains to prevent crashes if data is still loading
     final contact =
         c.contact ??
         const EmergencyContactModel(
@@ -138,11 +139,10 @@ class _OverviewView extends StatelessWidget {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+          padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // top row: title + edit icon
               Row(
                 children: [
                   Text(
@@ -167,13 +167,9 @@ class _OverviewView extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 18),
-
               _LabelValue(label: 'Name', value: contact.fullName),
               const SizedBox(height: 16),
-
-              // Phone
               _VerifyRow(
                 label: 'Phone Number',
                 value: contact.phone,
@@ -182,10 +178,7 @@ class _OverviewView extends StatelessWidget {
                     ? null
                     : () => _startVerifyFlow(context, type: _VerifyType.phone),
               ),
-
               const SizedBox(height: 16),
-
-              // Email
               _VerifyRow(
                 label: 'Email',
                 value: contact.email,
@@ -194,7 +187,6 @@ class _OverviewView extends StatelessWidget {
                     ? null
                     : () => _startVerifyFlow(context, type: _VerifyType.email),
               ),
-
               const SizedBox(height: 16),
               _LabelValue(label: 'Relation', value: contact.relation),
               const SizedBox(height: 16),
@@ -210,7 +202,6 @@ class _OverviewView extends StatelessWidget {
     BuildContext context, {
     required _VerifyType type,
   }) async {
-    // BottomSheet #1 (Later / Send)
     final shouldSend = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -223,9 +214,9 @@ class _OverviewView extends StatelessWidget {
 
     if (shouldSend != true) return;
 
-    // BottomSheet #2 (OTP)
+    if (!context.mounted) return;
+
     final verified = await showModalBottomSheet<bool>(
-      // ignore: use_build_context_synchronously
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
@@ -246,13 +237,12 @@ class _OverviewView extends StatelessWidget {
   }
 }
 
+// --- Internal Helper Widgets ---
+
 class _LabelValue extends StatelessWidget {
   final String label;
   final String value;
-
   const _LabelValue({required this.label, required this.value});
-
-  static const _sub = Color(0xFF6B7280);
 
   @override
   Widget build(BuildContext context) {
@@ -262,7 +252,7 @@ class _LabelValue extends StatelessWidget {
         Text(
           label,
           style: AppTextStyles.textfont.copyWith(
-            color: _sub,
+            color: const Color(0xFF6B7280),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -289,8 +279,6 @@ class _VerifyRow extends StatelessWidget {
     required this.onTap,
   });
 
-  static const _sub = Color(0xFF6B7280);
-
   @override
   Widget build(BuildContext context) {
     final badgeText = verified ? 'Verified' : 'Not verified';
@@ -314,7 +302,7 @@ class _VerifyRow extends StatelessWidget {
                   label,
                   style: AppTextStyles.textfont.copyWith(
                     fontSize: 13,
-                    color: _sub,
+                    color: const Color(0xFF6B7280),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -356,13 +344,9 @@ class _ConfirmationSheet extends StatelessWidget {
   final _VerifyType type;
   const _ConfirmationSheet({required this.type});
 
-  static const _navy = Color(0xFF081B4A);
-  static const _sub = Color(0xFF6B7280);
-
   @override
   Widget build(BuildContext context) {
     final target = type == _VerifyType.email ? 'email' : 'phone';
-
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -374,7 +358,6 @@ class _ConfirmationSheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // grabber + close
             Row(
               children: [
                 const Spacer(),
@@ -395,15 +378,12 @@ class _ConfirmationSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'An authentication code will be sent to this $target.',
-                style: AppTextStyles.textfont.copyWith(
-                  fontSize: 14,
-                  color: _sub,
-                  height: 1.35,
-                ),
+            Text(
+              'An authentication code will be sent to this $target.',
+              style: AppTextStyles.textfont.copyWith(
+                fontSize: 14,
+                color: const Color(0xFF6B7280),
+                height: 1.35,
               ),
             ),
             const SizedBox(height: 16),
@@ -414,19 +394,16 @@ class _ConfirmationSheet extends StatelessWidget {
                     height: 48,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        elevation: 0,
                         backgroundColor: const Color(0xFFE5E7EB),
-                        foregroundColor: _navy,
+                        foregroundColor: const Color(0xFF081B4A),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       onPressed: () => Navigator.pop(context, false),
-                      child: Text(
+                      child: const Text(
                         'Later',
-                        style: AppTextStyles.textfont.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),
@@ -437,19 +414,16 @@ class _ConfirmationSheet extends StatelessWidget {
                     height: 48,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        elevation: 0,
-                        backgroundColor: _navy,
+                        backgroundColor: const Color(0xFF081B4A),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       onPressed: () => Navigator.pop(context, true),
-                      child: Text(
+                      child: const Text(
                         'Send',
-                        style: AppTextStyles.textfont.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),
@@ -473,7 +447,6 @@ class _OtpSheet extends StatefulWidget {
 
 class _OtpSheetState extends State<_OtpSheet> {
   static const int len = 5;
-
   final controllers = List.generate(len, (_) => TextEditingController());
   final nodes = List.generate(len, (_) => FocusNode());
 
@@ -489,10 +462,10 @@ class _OtpSheetState extends State<_OtpSheet> {
 
   @override
   void dispose() {
-    for (final c in controllers) {
+    for (var c in controllers) {
       c.dispose();
     }
-    for (final n in nodes) {
+    for (var n in nodes) {
       n.dispose();
     }
     super.dispose();
@@ -501,7 +474,6 @@ class _OtpSheetState extends State<_OtpSheet> {
   @override
   Widget build(BuildContext context) {
     final src = widget.type == _VerifyType.email ? 'Email' : 'Phone';
-
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -533,27 +505,22 @@ class _OtpSheetState extends State<_OtpSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Use the authentication code from $src to\nverify.',
-                style: AppTextStyles.textfont.copyWith(
-                  fontSize: 14,
-                  color: Color(0xFF6B7280),
-                  height: 1.35,
-                ),
+            Text(
+              'Use the authentication code from $src to\nverify.',
+              style: AppTextStyles.textfont.copyWith(
+                fontSize: 14,
+                color: const Color(0xFF6B7280),
               ),
             ),
             const SizedBox(height: 14),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(len, (i) {
                 return Padding(
                   padding: EdgeInsets.only(right: i == len - 1 ? 0 : 10),
                   child: SizedBox(
-                    width: 56,
-                    height: 56,
+                    width: 54,
+                    height: 54,
                     child: TextField(
                       controller: controllers[i],
                       focusNode: nodes[i],
@@ -581,18 +548,15 @@ class _OtpSheetState extends State<_OtpSheet> {
                       ),
                       onChanged: (v) {
                         setState(() {});
-                        if (v.isNotEmpty && i < len - 1) {
+                        if (v.isNotEmpty && i < len - 1)
                           nodes[i + 1].requestFocus();
-                        }
                       },
                     ),
                   ),
                 );
               }),
             ),
-
             const SizedBox(height: 16),
-
             Row(
               children: [
                 Expanded(
@@ -600,7 +564,6 @@ class _OtpSheetState extends State<_OtpSheet> {
                     height: 48,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        elevation: 0,
                         backgroundColor: const Color(0xFFE5E7EB),
                         foregroundColor: const Color(0xFF081B4A),
                         shape: RoundedRectangleBorder(
@@ -608,11 +571,9 @@ class _OtpSheetState extends State<_OtpSheet> {
                         ),
                       ),
                       onPressed: () => Navigator.pop(context, false),
-                      child: Text(
+                      child: const Text(
                         'Cancel',
-                        style: AppTextStyles.textfont.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),
@@ -623,7 +584,6 @@ class _OtpSheetState extends State<_OtpSheet> {
                     height: 48,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        elevation: 0,
                         backgroundColor: const Color(0xFF081B4A),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
@@ -631,16 +591,11 @@ class _OtpSheetState extends State<_OtpSheet> {
                         ),
                       ),
                       onPressed: canDone
-                          ? () {
-                              HapticFeedback.selectionClick();
-                              Navigator.pop(context, true);
-                            }
+                          ? () => Navigator.pop(context, true)
                           : null,
-                      child: Text(
+                      child: const Text(
                         'Done',
-                        style: AppTextStyles.textfont.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),
