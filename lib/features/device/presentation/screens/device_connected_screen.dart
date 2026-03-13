@@ -1,14 +1,15 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:skudyx/core/network/dio_debug_interceptor.dart'; // If you have this
-import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
+import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/features/cases/data/remote/case_api.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 
 class DeviceConnectedScreen extends StatefulWidget {
   const DeviceConnectedScreen({super.key});
@@ -43,7 +44,6 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final circleSize = constraints.maxWidth * 0.38;
-            final deviceSize = circleSize * 0.55;
 
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -55,7 +55,6 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(context),
-
                   const SizedBox(height: 26),
 
                   /// ✅ DEVICE CIRCLE
@@ -115,11 +114,7 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
                   /// ✅ MODE SWITCHER
                   _ModeSwitcher(
                     isActive: isActiveMode,
-                    onChanged: (val) {
-                      setState(() {
-                        isActiveMode = val;
-                      });
-                    },
+                    onChanged: (val) => setState(() => isActiveMode = val),
                   ),
 
                   const SizedBox(height: 28),
@@ -259,14 +254,12 @@ class _BleCard extends StatelessWidget {
                 ),
                 const Spacer(),
 
-                /// ✅ DISCONNECT ON TAP
                 InkWell(
                   borderRadius: BorderRadius.circular(20),
                   onTap: () async {
                     HapticFeedback.mediumImpact();
 
-                    /// TODO: Call your real BLE disconnect logic here
-
+                    /// TODO: real BLE disconnect logic
                     context.go(AppRoutes.deviceList);
                   },
                   child: AnimatedContainer(
@@ -309,78 +302,252 @@ class _SafetySection extends StatefulWidget {
 }
 
 class _SafetySectionState extends State<_SafetySection> {
-  bool _isExpanded = false; // For internal testing section
+  bool _isExpanded = false;
 
-  Future<void> _triggerCase(
-    BuildContext context,
-    bool isTest,
-    String caseName,
-  ) async {
+  bool _starting = false;
+  bool _tracking = false;
+
+  String? _caseId;
+  String? _caseName;
+
+  Timer? _timer;
+  bool _tickInFlight = false;
+
+  int _successUpdates = 0;
+  int _failedUpdates = 0;
+
+  final List<Map<String, dynamic>> _allCoordinates = [];
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<bool> _ensureLocationReady(BuildContext context) async {
     final scaffold = ScaffoldMessenger.of(context);
-    final caseApi = context.read<CaseApi>();
 
-    // Get real-time location
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
+    final enabled = await Geolocator.isLocationServiceEnabled();
+    if (!enabled) {
       scaffold.showSnackBar(
         const SnackBar(content: Text('Location services are disabled.')),
       );
-      return;
+      return false;
     }
 
-    LocationPermission permission = await Geolocator.checkPermission();
+    var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        scaffold.showSnackBar(
-          const SnackBar(content: Text('Location permissions are denied.')),
-        );
-        return;
-      }
+    }
+
+    if (permission == LocationPermission.denied) {
+      scaffold.showSnackBar(
+        const SnackBar(content: Text('Location permission denied.')),
+      );
+      return false;
     }
 
     if (permission == LocationPermission.deniedForever) {
       scaffold.showSnackBar(
         const SnackBar(
-          content: Text('Location permissions are permanently denied.'),
+          content: Text('Location permission permanently denied.'),
         ),
       );
-      return;
+      return false;
     }
 
-    Position position = await Geolocator.getCurrentPosition(
+    return true;
+  }
+
+  Future<Position> _getCurrentPosition() {
+    return Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
+      timeLimit: const Duration(seconds: 10),
     );
+  }
 
-    final double lat = position.latitude;
-    final double long = position.longitude;
+  Future<void> _startCaseAndTracking({
+    required BuildContext context,
+    required bool isTest,
+    required String caseName,
+  }) async {
+    if (_starting || _tracking) return;
 
-    // Show loading
+    final ok = await _ensureLocationReady(context);
+    if (!ok) return;
+
+    final scaffold = ScaffoldMessenger.of(context);
+    final caseApi = context.read<CaseApi>();
+
+    setState(() {
+      _starting = true;
+      _caseName = caseName;
+      _caseId = null;
+      _successUpdates = 0;
+      _failedUpdates = 0;
+      _allCoordinates.clear();
+    });
+
     scaffold.showSnackBar(SnackBar(content: Text('Creating $caseName...')));
 
     try {
+      // initial location (for trigger)
+      final firstPos = await _getCurrentPosition();
+
+      // create case
       final caseData = await caseApi.triggerCase(
-        latitude: lat,
-        longitude: long,
+        latitude: firstPos.latitude,
+        longitude: firstPos.longitude,
         isTest: isTest,
       );
 
-      final caseId = caseData['case_id'] ?? 'Unknown';
+      final createdCaseId = (caseData['case_id'] ?? '').toString();
+      if (createdCaseId.isEmpty) {
+        throw Exception('Missing case_id from backend response');
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _caseId = createdCaseId;
+        _tracking = true;
+        _starting = false;
+      });
+
       scaffold.showSnackBar(
-        SnackBar(content: Text('$caseName created! Case ID: $caseId')),
+        SnackBar(content: Text('$caseName started! Case ID: $createdCaseId')),
       );
+
+      // Send first update immediately
+      await _sendOneTick(caseApi);
+
+      // Start strict periodic updates (every 2 seconds) until End
+      _timer?.cancel();
+      _timer = Timer.periodic(const Duration(seconds: 2), (_) async {
+        if (!_tracking) return;
+        if (_tickInFlight) return;
+
+        _tickInFlight = true;
+        try {
+          await _sendOneTick(caseApi);
+        } finally {
+          _tickInFlight = false;
+        }
+      });
     } on DioException catch (e) {
-      final msg = e.response?.data?['message'] ?? 'Failed to create case.';
+      final String msg =
+          ((e.response?.data as Map?)?['message']?.toString()) ??
+          'Failed to start case.';
+
       scaffold.showSnackBar(SnackBar(content: Text(msg)));
-    } catch (e) {
+
+      if (!mounted) return;
+      setState(() {
+        _starting = false;
+        _tracking = false;
+        _caseId = null;
+        _caseName = null;
+      });
+      _timer?.cancel();
+      _timer = null;
+    } catch (_) {
       scaffold.showSnackBar(
-        const SnackBar(content: Text('Something went wrong.')),
+        const SnackBar(
+          content: Text('Something went wrong starting the case.'),
+        ),
       );
+
+      if (!mounted) return;
+      setState(() {
+        _starting = false;
+        _tracking = false;
+        _caseId = null;
+        _caseName = null;
+      });
+      _timer?.cancel();
+      _timer = null;
     }
+  }
+
+  Future<void> _sendOneTick(CaseApi caseApi) async {
+    final id = _caseId;
+    if (id == null) return;
+
+    try {
+      final pos = await _getCurrentPosition();
+
+      _allCoordinates.add({
+        'latitude': pos.latitude,
+        'longitude': pos.longitude,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+
+      await caseApi.updateLocation(
+        caseId: id,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+      );
+
+      _successUpdates += 1;
+      if (mounted) setState(() {});
+    } catch (e) {
+      _failedUpdates += 1;
+      if (mounted) setState(() {});
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('Tick failed: $e');
+      }
+      // Do NOT stop tracking on tick failure
+    }
+  }
+
+  Future<void> _endTracking(BuildContext context) async {
+    if (!_tracking && !_starting) return;
+
+    _timer?.cancel();
+    _timer = null;
+
+    final endedCaseId = _caseId;
+    final endedName = _caseName;
+    final total = _allCoordinates.length;
+
+    setState(() {
+      _tracking = false;
+      _starting = false;
+      _caseId = null;
+      _caseName = null;
+      _tickInFlight = false;
+    });
+
+    if (kDebugMode) {
+      // ignore: avoid_print
+      print('=== END CASE TRACKING ===');
+      // ignore: avoid_print
+      print(
+        'case_name=$endedName case_id=$endedCaseId total_points=$total '
+        'success=$_successUpdates failed=$_failedUpdates',
+      );
+      // ignore: avoid_print
+      print(_allCoordinates);
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Ended ${endedName ?? 'case'} (${endedCaseId ?? '-'}) '
+          '- points: $total (ok $_successUpdates / fail $_failedUpdates)',
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final statusText = _starting
+        ? 'Starting...'
+        : _tracking
+        ? 'Tracking ON'
+        : 'Tracking OFF';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -404,7 +571,6 @@ class _SafetySectionState extends State<_SafetySection> {
         const SizedBox(height: 12),
         const _SafetyTile(title: "Live Audio Sharing"),
 
-        // Internal Testing Buttons (Debug Only)
         if (kDebugMode) ...[
           const SizedBox(height: 24),
           ExpansionTile(
@@ -413,41 +579,88 @@ class _SafetySectionState extends State<_SafetySection> {
               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
             ),
             initiallyExpanded: _isExpanded,
-            onExpansionChanged: (expanded) {
-              setState(() => _isExpanded = expanded);
-            },
+            onExpansionChanged: (expanded) =>
+                setState(() => _isExpanded = expanded),
             children: [
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '$statusText\n'
+                        'Case: ${_caseName ?? '-'}\n'
+                        'case_id: ${_caseId ?? (_starting ? '(creating...)' : '-')}\n'
+                        'Points: ${_allCoordinates.length}\n'
+                        'Updates: ok $_successUpdates / fail $_failedUpdates',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
                     ElevatedButton(
-                      onPressed: () => _triggerCase(context, true, 'Test Case'),
+                      onPressed: (_tracking || _starting)
+                          ? null
+                          : () => _startCaseAndTracking(
+                              context: context,
+                              isTest: true,
+                              caseName: 'Test Case',
+                            ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         minimumSize: const Size(double.infinity, 48),
                       ),
-                      child: const Text('Create Test Case'),
+                      child: const Text('Start Test Case'),
                     ),
                     const SizedBox(height: 12),
+
                     ElevatedButton(
-                      onPressed: () =>
-                          _triggerCase(context, false, 'Basic Case'),
+                      onPressed: (_tracking || _starting)
+                          ? null
+                          : () => _startCaseAndTracking(
+                              context: context,
+                              isTest: false,
+                              caseName: 'Basic Case',
+                            ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                         minimumSize: const Size(double.infinity, 48),
                       ),
-                      child: const Text('Create Basic Case'),
+                      child: const Text('Start Basic Case'),
                     ),
                     const SizedBox(height: 12),
+
                     ElevatedButton(
-                      onPressed: () =>
-                          _triggerCase(context, false, 'Live Case'),
+                      onPressed: (_tracking || _starting)
+                          ? null
+                          : () => _startCaseAndTracking(
+                              context: context,
+                              isTest: false,
+                              caseName: 'Live Case',
+                            ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         minimumSize: const Size(double.infinity, 48),
                       ),
-                      child: const Text('Create Live Case'),
+                      child: const Text('Start Live Case'),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    OutlinedButton(
+                      onPressed: (_tracking || _starting)
+                          ? () => _endTracking(context)
+                          : null,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                      child: const Text('End'),
                     ),
                   ],
                 ),

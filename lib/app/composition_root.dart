@@ -14,6 +14,7 @@ import 'package:skudyx/features/auth/presentation/controllers/auth_controller.da
 import 'package:skudyx/features/cases/data/remote/case_api.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
+import 'package:skudyx/features/emergency_contact/data/remote/emergency_contact_api.dart';
 import 'package:skudyx/features/profile/controllers/identity_verification_controller.dart';
 import 'package:skudyx/features/profile/controllers/profile_controller.dart';
 import 'package:skudyx/features/settings/presentation/controllers/notification_prefs_controller.dart';
@@ -37,11 +38,9 @@ class AppCompositionRoot extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Base app deps
         Provider<AppConfig>.value(value: config),
         Provider<AppPrefs>.value(value: prefs),
 
-        // Secure storage + token storage (must be ABOVE Dio, because Dio interceptor reads token)
         Provider<FlutterSecureStorage>(
           create: (_) => const FlutterSecureStorage(),
         ),
@@ -49,7 +48,6 @@ class AppCompositionRoot extends StatelessWidget {
           create: (c) => AuthTokenStorage(c.read<FlutterSecureStorage>()),
         ),
 
-        // Dio (must be ABOVE anything that depends on Dio)
         Provider<Dio>(
           create: (c) {
             final cfg = c.read<AppConfig>();
@@ -67,7 +65,6 @@ class AppCompositionRoot extends StatelessWidget {
               ),
             );
 
-            // Attach Authorization header automatically
             dio.interceptors.add(
               InterceptorsWrapper(
                 onRequest: (options, handler) async {
@@ -85,7 +82,6 @@ class AppCompositionRoot extends StatelessWidget {
               ),
             );
 
-            // Debug monitoring (request/response logs, secrets masked by interceptor)
             if (kDebugMode) {
               dio.interceptors.add(
                 DioDebugInterceptor(
@@ -101,21 +97,26 @@ class AppCompositionRoot extends StatelessWidget {
           },
         ),
 
-        // APIs that depend on Dio -> use ProxyProvider (safe ordering)
         ProxyProvider<Dio, AuthApi>(update: (_, dio, __) => AuthApi(dio: dio)),
         ProxyProvider<Dio, CaseApi>(update: (_, dio, __) => CaseApi(dio: dio)),
+        ProxyProvider<Dio, EmergencyContactApi>(
+          update: (_, dio, __) => EmergencyContactApi(dio: dio),
+        ),
 
-        // Other controllers/providers
         ChangeNotifierProvider<AppStatusController>(
           create: (c) => AppStatusController(prefs: c.read<AppPrefs>()),
         ),
         ChangeNotifierProvider<DeviceScanController>(
           create: (_) => DeviceScanController(),
         ),
+
         ChangeNotifierProvider<EmergencyContactController>(
-          create: (c) =>
-              EmergencyContactController(prefs: c.read<AppPrefs>())..init(),
+          create: (c) => EmergencyContactController(
+            prefs: c.read<AppPrefs>(),
+            api: c.read<EmergencyContactApi>(),
+          )..init(),
         ),
+
         ChangeNotifierProvider<ProfileController>(
           create: (_) => ProfileController(),
         ),
@@ -127,11 +128,9 @@ class AppCompositionRoot extends StatelessWidget {
           create: (_) => IdentityVerificationController(),
         ),
 
-        // Social auth providers
         Provider<GoogleAuthProvider>(create: (_) => GoogleAuthProvider()),
         Provider<AppleAuthProvider>(create: (_) => AppleAuthProvider()),
 
-        // Auth controller (depends on AuthApi + token storage + prefs)
         ChangeNotifierProvider<AuthController>(
           create: (c) => AuthController(
             prefs: c.read<AppPrefs>(),
@@ -142,7 +141,6 @@ class AppCompositionRoot extends StatelessWidget {
           )..init(),
         ),
 
-        // Router
         Provider<AppRouter>(
           create: (c) => AppRouter(auth: c.read<AuthController>()),
         ),

@@ -22,11 +22,11 @@ class _EmergencyContactFormScreenState
 
   final first = TextEditingController(text: 'Jerome');
   final last = TextEditingController(text: 'Bell');
-  final phone = TextEditingController(text: '+12 345 6789');
-  final email = TextEditingController(text: 'jerome.bell@yourmail.com');
-  final relation = TextEditingController(text: '-');
+  final phone = TextEditingController(text: '+8801611807607');
+  final email = TextEditingController(text: 'apusardar07+12@gmail.com');
+  final relation = TextEditingController(text: 'Father');
   final address = TextEditingController(
-    text: '21 East  Dhanmondi, Dhaka, Bangladesh',
+    text: '21 East Dhanmondi, Dhaka, Bangladesh',
   );
 
   @override
@@ -42,7 +42,7 @@ class _EmergencyContactFormScreenState
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.read<EmergencyContactController>();
+    final controller = context.watch<EmergencyContactController>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -61,28 +61,53 @@ class _EmergencyContactFormScreenState
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: () async {
-                await controller.saveContact(
-                  EmergencyContactModel(
-                    firstName: first.text.trim(),
-                    lastName: last.text.trim(),
-                    phone: phone.text.trim(),
-                    email: email.text.trim(),
-                    relation: relation.text.trim(),
-                    address: address.text.trim(),
-                  ),
-                );
+              onPressed: controller.isSaving
+                  ? null
+                  : () async {
+                      final model = EmergencyContactModel(
+                        firstName: first.text.trim(),
+                        lastName: last.text.trim(),
+                        phone: phone.text.trim(),
+                        email: email.text.trim(),
+                        relation: relation.text.trim(),
+                        address: address.text.trim(),
+                      );
 
-                // ✅ go to overview screen (not pop)
-                if (context.mounted) context.go(AppRoutes.emergencyContact);
-              },
-              child: Text(
-                'Save',
-                style: AppTextStyles.body.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
-              ),
+                      final ok = await context
+                          .read<EmergencyContactController>()
+                          .saveContactToBackend(model);
+
+                      if (!context.mounted) return;
+
+                      if (ok) {
+                        context.go(AppRoutes.emergencyContact);
+                      } else {
+                        final msg =
+                            context
+                                .read<EmergencyContactController>()
+                                .errorMessage ??
+                            'Failed to save emergency contact.';
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(msg)));
+                      }
+                    },
+              child: controller.isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      'Save',
+                      style: AppTextStyles.body.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -103,15 +128,11 @@ class _EmergencyContactFormScreenState
                 style: AppTextStyles.body.copyWith(color: _sub),
               ),
               const SizedBox(height: 20),
-
               Text(
                 'Contact Details',
-                style: AppTextStyles.textfont16.copyWith(
-                  // fontWeight: FontWeight.w900,
-                ),
+                style: AppTextStyles.textfont16.copyWith(),
               ),
               const SizedBox(height: 12),
-
               Row(
                 children: [
                   Expanded(
