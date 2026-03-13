@@ -263,8 +263,19 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     onTap: () async {
                       await auth.logout();
+                      if (!context.mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('User Logged out')),
+                      );
+
+                      // Optional tiny delay so snackbar renders before navigation
+                      await Future<void>.delayed(
+                        const Duration(milliseconds: 150),
+                      );
+
                       if (context.mounted) {
-                        GoRouter.of(context).go(AppRoutes.login);
+                        context.go(AppRoutes.login);
                       }
                     },
                   ),

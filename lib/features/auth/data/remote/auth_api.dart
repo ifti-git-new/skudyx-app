@@ -86,4 +86,22 @@ class AuthApi {
           error: 'Login failed',
         );
   }
+
+  /// Logout API call
+  Future<void> logout() async {
+    final res = await dio.post(
+      '/api/v1/auth/logout',
+      options: Options(extra: const {'requiresAuth': true}),
+    );
+
+    final body = res.data;
+    if (body is! Map<String, dynamic> || body['success'] != true) {
+      final msg = (body['message'] ?? 'Logout failed').toString();
+      throw DioException(
+        requestOptions: res.requestOptions,
+        response: res,
+        error: msg,
+      );
+    }
+  }
 }

@@ -17,6 +17,8 @@ class AuthController extends ChangeNotifier {
   AuthState state = AuthState.loggedOut();
   bool _initialized = false;
 
+  bool isLoggingOut = false;
+
   AuthController({
     required this.prefs,
     required this.tokenStorage,
@@ -111,10 +113,31 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Logout: calls API first, then clears local data
   Future<void> logout() async {
+    if (isLoggingOut) return;
+
+    isLoggingOut = true;
+    notifyListeners();
+
+    try {
+      // Call backend logout API
+      await api.logout();
+    } catch (_) {
+      // Even if API fails, still clear local data (user should be able to logout)
+      // Optionally log the error for debugging
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('Logout API failed, but clearing local data anyway');
+      }
+    }
+
+    // Always clear local tokens and prefs
     await tokenStorage.clear();
     await prefs.clearAll();
+
     state = AuthState.loggedOut();
+    isLoggingOut = false;
     notifyListeners();
   }
 
