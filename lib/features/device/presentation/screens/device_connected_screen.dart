@@ -57,7 +57,6 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
                   _buildHeader(context),
                   const SizedBox(height: 26),
 
-                  /// ✅ DEVICE CIRCLE
                   Center(
                     child: Stack(
                       clipBehavior: Clip.none,
@@ -89,8 +88,6 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
                             ),
                           ),
                         ),
-
-                        /// ✅ TICK BADGE
                         Positioned(
                           right: 0,
                           top: 0,
@@ -111,7 +108,6 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
 
                   const SizedBox(height: 26),
 
-                  /// ✅ MODE SWITCHER
                   _ModeSwitcher(
                     isActive: isActiveMode,
                     onChanged: (val) => setState(() => isActiveMode = val),
@@ -119,7 +115,6 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
 
                   const SizedBox(height: 28),
 
-                  /// ✅ BLE CARD
                   _BleCard(
                     statusColor: statusColor,
                     softColor: statusSoftColor,
@@ -253,13 +248,10 @@ class _BleCard extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
-
                 InkWell(
                   borderRadius: BorderRadius.circular(20),
                   onTap: () async {
                     HapticFeedback.mediumImpact();
-
-                    /// TODO: real BLE disconnect logic
                     context.go(AppRoutes.deviceList);
                   },
                   child: AnimatedContainer(
@@ -315,6 +307,8 @@ class _SafetySectionState extends State<_SafetySection> {
 
   int _successUpdates = 0;
   int _failedUpdates = 0;
+
+  bool _statusUpdating = false;
 
   final List<Map<String, dynamic>> _allCoordinates = [];
 
@@ -391,10 +385,8 @@ class _SafetySectionState extends State<_SafetySection> {
     scaffold.showSnackBar(SnackBar(content: Text('Creating $caseName...')));
 
     try {
-      // initial location (for trigger)
       final firstPos = await _getCurrentPosition();
 
-      // create case
       final caseData = await caseApi.triggerCase(
         latitude: firstPos.latitude,
         longitude: firstPos.longitude,
@@ -417,12 +409,10 @@ class _SafetySectionState extends State<_SafetySection> {
         SnackBar(content: Text('$caseName started! Case ID: $createdCaseId')),
       );
 
-      // Send first update immediately
       await _sendOneTick(caseApi);
 
-      // Start strict periodic updates (every 2 seconds) until End
       _timer?.cancel();
-      _timer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      _timer = Timer.periodic(const Duration(seconds: 2), (_) async {
         if (!_tracking) return;
         if (_tickInFlight) return;
 
@@ -437,7 +427,6 @@ class _SafetySectionState extends State<_SafetySection> {
       final String msg =
           ((e.response?.data as Map?)?['message']?.toString()) ??
           'Failed to start case.';
-
       scaffold.showSnackBar(SnackBar(content: Text(msg)));
 
       if (!mounted) return;
@@ -447,6 +436,7 @@ class _SafetySectionState extends State<_SafetySection> {
         _caseId = null;
         _caseName = null;
       });
+
       _timer?.cancel();
       _timer = null;
     } catch (_) {
@@ -463,6 +453,7 @@ class _SafetySectionState extends State<_SafetySection> {
         _caseId = null;
         _caseName = null;
       });
+
       _timer?.cancel();
       _timer = null;
     }
@@ -496,7 +487,91 @@ class _SafetySectionState extends State<_SafetySection> {
         // ignore: avoid_print
         print('Tick failed: $e');
       }
-      // Do NOT stop tracking on tick failure
+    }
+  }
+
+  Future<String?> _askNote(BuildContext context, String status) async {
+    final ctrl = TextEditingController(
+      text: 'Do you want to mark $status from app test button?',
+    );
+
+    final note = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text('Update Status: $status'),
+          content: TextField(
+            controller: ctrl,
+            decoration: const InputDecoration(
+              labelText: 'Note (optional)',
+              border: OutlineInputBorder(),
+            ),
+            minLines: 2,
+            maxLines: 4,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text),
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
+    );
+
+    ctrl.dispose();
+    return note;
+  }
+
+  Future<void> _updateFinalStatus(BuildContext context, String status) async {
+    final id = _caseId;
+    if (id == null || id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No case_id found. Start a case first.')),
+      );
+      return;
+    }
+    if (_statusUpdating) return;
+
+    final caseApi = context.read<CaseApi>();
+    final note = await _askNote(context, status);
+    if (!mounted) return;
+    if (note == null) return; // cancelled
+
+    setState(() => _statusUpdating = true);
+
+    try {
+      await caseApi.updateStatus(caseId: id, status: status, note: note);
+
+      // Stop tracking when final status is sent
+      _timer?.cancel();
+      _timer = null;
+
+      setState(() {
+        _tracking = false;
+        _starting = false;
+        _tickInFlight = false;
+        _statusUpdating = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Case $id updated to $status')));
+    } on DioException catch (e) {
+      final String msg =
+          ((e.response?.data as Map?)?['message']?.toString()) ??
+          'Failed to update status.';
+      setState(() => _statusUpdating = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    } catch (_) {
+      setState(() => _statusUpdating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Something went wrong updating status.')),
+      );
     }
   }
 
@@ -604,40 +679,41 @@ class _SafetySectionState extends State<_SafetySection> {
                     ),
                     const SizedBox(height: 12),
 
-                    ElevatedButton(
-                      onPressed: (_tracking || _starting)
-                          ? null
-                          : () => _startCaseAndTracking(
-                              context: context,
-                              isTest: true,
-                              caseName: 'Test Case',
-                            ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        minimumSize: const Size(double.infinity, 48),
-                      ),
-                      child: const Text('Start Test Case'),
-                    ),
-                    const SizedBox(height: 12),
+                    //--TEMPORARILY REMOVED - TEST BUTTONS FOR STARTING CASES AND TRACKING--//
+                    // Existing start buttons (unchanged behavior)
+                    // ElevatedButton(
+                    //   onPressed: (_tracking || _starting || _statusUpdating)
+                    //       ? null
+                    //       : () => _startCaseAndTracking(
+                    //           context: context,
+                    //           isTest: true,
+                    //           caseName: 'Test Case',
+                    //         ),
+                    //   style: ElevatedButton.styleFrom(
+                    //     backgroundColor: Colors.blue,
+                    //     minimumSize: const Size(double.infinity, 48),
+                    //   ),
+                    //   child: const Text('Start Test Case'),
+                    // ),
+                    // const SizedBox(height: 12),
 
+                    // ElevatedButton(
+                    //   onPressed: (_tracking || _starting || _statusUpdating)
+                    //       ? null
+                    //       : () => _startCaseAndTracking(
+                    //           context: context,
+                    //           isTest: false,
+                    //           caseName: 'Basic Case',
+                    //         ),
+                    //   style: ElevatedButton.styleFrom(
+                    //     backgroundColor: Colors.orange,
+                    //     minimumSize: const Size(double.infinity, 48),
+                    //   ),
+                    //   child: const Text('Start Basic Case'),
+                    // ),
+                    // const SizedBox(height: 12),
                     ElevatedButton(
-                      onPressed: (_tracking || _starting)
-                          ? null
-                          : () => _startCaseAndTracking(
-                              context: context,
-                              isTest: false,
-                              caseName: 'Basic Case',
-                            ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        minimumSize: const Size(double.infinity, 48),
-                      ),
-                      child: const Text('Start Basic Case'),
-                    ),
-                    const SizedBox(height: 12),
-
-                    ElevatedButton(
-                      onPressed: (_tracking || _starting)
+                      onPressed: (_tracking || _starting || _statusUpdating)
                           ? null
                           : () => _startCaseAndTracking(
                               context: context,
@@ -645,22 +721,116 @@ class _SafetySectionState extends State<_SafetySection> {
                               caseName: 'Live Case',
                             ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          99,
+                          197,
+                          106,
+                        ),
                         minimumSize: const Size(double.infinity, 48),
                       ),
-                      child: const Text('Start Live Case'),
+                      child: const Text(
+                        'Start Live Case',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
 
                     const SizedBox(height: 16),
 
-                    OutlinedButton(
-                      onPressed: (_tracking || _starting)
-                          ? () => _endTracking(context)
-                          : null,
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48),
+                    // The "End" button is now removed to encourage using the status update buttons for a more realistic flow.
+                    //temporary off now
+                    // OutlinedButton(
+                    //   onPressed: (_tracking || _starting)
+                    //       ? () => _endTracking(context)
+                    //       : null,
+                    //   style: OutlinedButton.styleFrom(
+                    //     minimumSize: const Size(double.infinity, 48),
+                    //   ),
+                    //   child: const Text('End'),
+                    // ),
+                    const SizedBox(height: 20),
+                    const Divider(),
+                    const SizedBox(height: 12),
+
+                    // NEW: Status update buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: (_caseId == null || _statusUpdating)
+                                ? null
+                                : () => _updateFinalStatus(context, 'Resolved'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF16A34A),
+                              minimumSize: const Size(double.infinity, 44),
+                            ),
+                            child: _statusUpdating
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Resolved',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: (_caseId == null || _statusUpdating)
+                                ? null
+                                : () =>
+                                      _updateFinalStatus(context, 'Unresolved'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color.fromARGB(
+                                255,
+                                179,
+                                32,
+                                32,
+                              ),
+                              minimumSize: const Size(double.infinity, 44),
+                            ),
+                            child: const Text(
+                              'Unresolved',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: (_caseId == null || _statusUpdating)
+                            ? null
+                            : () => _updateFinalStatus(context, 'False'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6B7280),
+                          minimumSize: const Size(double.infinity, 44),
+                        ),
+                        child: const Text(
+                          'False',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                      child: const Text('End'),
                     ),
                   ],
                 ),
