@@ -23,7 +23,7 @@ class DeviceSessionController extends ChangeNotifier {
   }
 
   Future<void> disconnectDevice() async {
-    // disconnect ends session and clears case
+    // ✅ Disconnect clears everything
     await stopTracking(clearCase: true);
     connectedDevice = null;
     notifyListeners();
@@ -35,8 +35,10 @@ class DeviceSessionController extends ChangeNotifier {
   bool starting = false;
   bool tracking = false;
 
-  String? caseId;
-  String? caseName;
+  String? caseId; // ✅ nullable
+  String? caseName; // ✅ nullable
+  String? lastError; // ✅ nullable
+  String? lastStatus; // ✅ nullable
 
   Timer? _timer;
   bool _tickInFlight = false;
@@ -45,9 +47,6 @@ class DeviceSessionController extends ChangeNotifier {
   int failedUpdates = 0;
 
   bool statusUpdating = false;
-
-  String? lastError;
-  String? lastStatus; // optional
 
   final List<Map<String, dynamic>> coordinates = [];
 
@@ -73,13 +72,9 @@ class DeviceSessionController extends ChangeNotifier {
       permission = await Geolocator.requestPermission();
     }
 
-    if (permission == LocationPermission.denied) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       _setError('Location permission denied.');
-      return false;
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      _setError('Location permission permanently denied.');
       return false;
     }
 
@@ -101,6 +96,7 @@ class DeviceSessionController extends ChangeNotifier {
       _setError('No device connected.');
       return false;
     }
+
     if (starting || tracking) return false;
 
     clearError();
@@ -132,7 +128,7 @@ class DeviceSessionController extends ChangeNotifier {
 
       final createdCaseId = (data['case_id'] ?? '').toString();
       if (createdCaseId.isEmpty) {
-        throw Exception('Missing case_id from backend response');
+        throw Exception('Missing case_id');
       }
 
       caseId = createdCaseId;
@@ -142,10 +138,8 @@ class DeviceSessionController extends ChangeNotifier {
       tracking = true;
       notifyListeners();
 
-      // send first tick immediately
       await _sendOneTick();
 
-      // start timer every 2 seconds
       _timer?.cancel();
       _timer = Timer.periodic(const Duration(seconds: 2), (_) async {
         if (!tracking) return;
@@ -165,6 +159,7 @@ class DeviceSessionController extends ChangeNotifier {
       final msg = (resp is Map && resp['message'] != null)
           ? resp['message'].toString()
           : (e.message ?? 'Failed to start case.');
+
       _setError(msg);
 
       starting = false;
@@ -182,7 +177,7 @@ class DeviceSessionController extends ChangeNotifier {
         // ignore: avoid_print
         print('startCase error: $e');
       }
-      _setError('Something went wrong starting the case.');
+      _setError('Failed to start case.');
 
       starting = false;
       tracking = false;
@@ -216,15 +211,11 @@ class DeviceSessionController extends ChangeNotifier {
         longitude: pos.longitude,
       );
 
-      successUpdates += 1;
+      successUpdates++;
       notifyListeners();
-    } catch (e) {
-      failedUpdates += 1;
+    } catch (_) {
+      failedUpdates++;
       notifyListeners();
-      if (kDebugMode) {
-        // ignore: avoid_print
-        print('Tick failed: $e');
-      }
     }
   }
 
@@ -255,9 +246,10 @@ class DeviceSessionController extends ChangeNotifier {
   }) async {
     final id = caseId;
     if (id == null || id.isEmpty) {
-      _setError('No case_id found. Start a case first.');
+      _setError('No active case.');
       return false;
     }
+
     if (statusUpdating) return false;
 
     clearError();
@@ -265,18 +257,12 @@ class DeviceSessionController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data = await caseApi.updateStatus(
-        caseId: id,
-        status: status,
-        note: note,
-      );
+      await caseApi.updateStatus(caseId: id, status: status, note: note);
 
-      lastStatus = (data['status'] ?? status).toString();
+      lastStatus = status;
 
-      // stop tracking and CLEAR CASE (your requirement on disconnect is clear case;
-      // for final statuses we usually stop tracking; keep caseId if you want.
-      // If you want also clear case here, change clearCase:true.
-      await stopTracking(clearCase: false);
+      // ✅ IMPORTANT FIX: clear case so buttons disable after completion
+      await stopTracking(clearCase: true);
 
       statusUpdating = false;
       notifyListeners();
@@ -286,13 +272,13 @@ class DeviceSessionController extends ChangeNotifier {
       final msg = (resp is Map && resp['message'] != null)
           ? resp['message'].toString()
           : (e.message ?? 'Failed to update status.');
-      _setError(msg);
 
+      _setError(msg);
       statusUpdating = false;
       notifyListeners();
       return false;
     } catch (_) {
-      _setError('Something went wrong updating status.');
+      _setError('Failed to update status.');
       statusUpdating = false;
       notifyListeners();
       return false;
