@@ -422,7 +422,7 @@ class _SafetySectionState extends State<_SafetySection> {
 
       // Start strict periodic updates (every 2 seconds) until End
       _timer?.cancel();
-      _timer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      _timer = Timer.periodic(const Duration(seconds: 3), (_) async {
         if (!_tracking) return;
         if (_tickInFlight) return;
 
