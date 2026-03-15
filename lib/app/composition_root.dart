@@ -17,6 +17,7 @@ import 'package:skudyx/features/emergency/presentation/controllers/emergency_con
 import 'package:skudyx/features/emergency_contact/data/remote/emergency_contact_api.dart';
 import 'package:skudyx/features/profile/controllers/identity_verification_controller.dart';
 import 'package:skudyx/features/profile/controllers/profile_controller.dart';
+import 'package:skudyx/features/profile/data/remote/profile_api.dart';
 import 'package:skudyx/features/settings/presentation/controllers/notification_prefs_controller.dart';
 
 import '../core/config/app_config.dart';
@@ -102,6 +103,9 @@ class AppCompositionRoot extends StatelessWidget {
         ProxyProvider<Dio, EmergencyContactApi>(
           update: (_, dio, __) => EmergencyContactApi(dio: dio),
         ),
+        ProxyProvider<Dio, ProfileApi>(
+          update: (_, dio, __) => ProfileApi(dio: dio),
+        ),
 
         ChangeNotifierProvider<AppStatusController>(
           create: (c) => AppStatusController(prefs: c.read<AppPrefs>()),
@@ -118,8 +122,9 @@ class AppCompositionRoot extends StatelessWidget {
         ),
 
         ChangeNotifierProvider<ProfileController>(
-          create: (_) => ProfileController(),
+          create: (c) => ProfileController(api: c.read<ProfileApi>()),
         ),
+
         ChangeNotifierProvider<NotificationPrefsController>(
           create: (c) =>
               NotificationPrefsController(prefs: c.read<AppPrefs>())..init(),

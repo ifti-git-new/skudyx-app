@@ -8,7 +8,7 @@ import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:skudyx/features/profile/controllers/profile_controller.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   static const _bg = Color(0xFFF7F8FA);
@@ -16,15 +16,28 @@ class ProfileScreen extends StatelessWidget {
   static const _border = Color(0xFFE5E7EB);
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load profile after first frame so context is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProfileController>().loadProfile();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final p = context.watch<ProfileController>();
     final auth = context.read<AuthController>();
 
     return Scaffold(
-      backgroundColor: _bg,
-      // --- UPPER PORTION: APP BAR ---
+      backgroundColor: ProfileScreen._bg,
       appBar: AppBar(
-        backgroundColor: _bg,
+        backgroundColor: ProfileScreen._bg,
         elevation: 0,
         automaticallyImplyLeading: false,
         centerTitle: false,
@@ -48,7 +61,7 @@ class ProfileScreen extends StatelessWidget {
                   height: 40,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    border: Border.all(color: _border),
+                    border: Border.all(color: ProfileScreen._border),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -65,161 +78,210 @@ class ProfileScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // --- SCROLLABLE MIDDLE PORTION ---
             Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: Column(
-                  children: [
-                    // Avatar + warning badge
-                    Stack(
-                      clipBehavior: Clip.none,
-                      children: [
+              child: RefreshIndicator(
+                onRefresh: () =>
+                    context.read<ProfileController>().loadProfile(force: true),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Column(
+                    children: [
+                      if (p.isLoading) ...[
+                        const SizedBox(height: 8),
+                        const LinearProgressIndicator(),
+                        const SizedBox(height: 12),
+                      ],
+                      if (p.errorMessage != null) ...[
                         Container(
-                          width: 104,
-                          height: 104,
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
+                            color: Colors.red.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: const Color(0xFF0F172A),
-                              width: 2,
-                            ),
-                            image: const DecorationImage(
-                              fit: BoxFit.cover,
-                              image: NetworkImage('https://i.pravatar.cc/300'),
+                              color: Colors.red.withValues(alpha: 0.25),
                             ),
                           ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.red,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  p.errorMessage!,
+                                  style: const TextStyle(color: Colors.red),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => context
+                                    .read<ProfileController>()
+                                    .loadProfile(force: true),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
                         ),
-                        Positioned(
-                          right: -2,
-                          bottom: 6,
-                          child: Container(
-                            width: 30,
-                            height: 30,
+                        const SizedBox(height: 12),
+                      ],
+
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: 104,
+                            height: 104,
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: _border),
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.warning_rounded,
-                                color: Color(0xFFF59E0B),
-                                size: 18,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF0F172A),
+                                width: 2,
+                              ),
+                              image: const DecorationImage(
+                                fit: BoxFit.cover,
+                                image: NetworkImage(
+                                  'https://i.pravatar.cc/300',
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      p.fullName,
-                      style: AppTextStyles.h1.copyWith(
-                        fontSize: 22,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    RichText(
-                      text: TextSpan(
-                        style: AppTextStyles.body.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.text,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: 'Profile Setup: ',
-                            style: AppTextStyles.caption.copyWith(
-                              color: _muted,
-                            ),
-                          ),
-                          TextSpan(
-                            text: '${p.profilePercent}%',
-                            style: AppTextStyles.caption.copyWith(
-                              color: const Color(0xFFF59E0B),
+                          Positioned(
+                            right: -2,
+                            bottom: 6,
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: ProfileScreen._border,
+                                ),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.warning_rounded,
+                                  color: Color(0xFFF59E0B),
+                                  size: 18,
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 22),
-                    // Additional Information card
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Additional Information',
-                          style: AppTextStyles.h2light.copyWith(fontSize: 16),
-                        ),
-                        const SizedBox(height: 16),
+                      const SizedBox(height: 14),
 
-                        _Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 14),
-                                _InfoRow(
-                                  label: 'Phone Number',
-                                  value: p.phone,
-                                  badge: _Pill(
-                                    text: p.phoneVerified
-                                        ? 'Verified'
-                                        : 'Not verified',
-                                    bg: p.phoneVerified
-                                        ? const Color(0xFFDFF7DF)
-                                        : const Color(0xFFFFE9A6),
-                                    fg: p.phoneVerified
-                                        ? const Color(0xFF16A34A)
-                                        : const Color(0xFF92400E),
+                      Text(
+                        p.fullName,
+                        style: AppTextStyles.h1.copyWith(
+                          fontSize: 22,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+
+                      RichText(
+                        text: TextSpan(
+                          style: AppTextStyles.body.copyWith(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.text,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'Profile Setup: ',
+                              style: AppTextStyles.caption.copyWith(
+                                color: ProfileScreen._muted,
+                              ),
+                            ),
+                            TextSpan(
+                              text: '${p.profilePercent}%',
+                              style: AppTextStyles.caption.copyWith(
+                                color: const Color(0xFFF59E0B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 22),
+
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Additional Information',
+                            style: AppTextStyles.h2light.copyWith(fontSize: 16),
+                          ),
+                          const SizedBox(height: 16),
+
+                          _Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 14),
+                                  _InfoRow(
+                                    label: 'Phone Number',
+                                    value: p.phone,
+                                    badge: _Pill(
+                                      text: p.phoneVerified
+                                          ? 'Verified'
+                                          : 'Not verified',
+                                      bg: p.phoneVerified
+                                          ? const Color(0xFFDFF7DF)
+                                          : const Color(0xFFFFE9A6),
+                                      fg: p.phoneVerified
+                                          ? const Color(0xFF16A34A)
+                                          : const Color(0xFF92400E),
+                                    ),
+                                    underline: true,
                                   ),
-                                  underline: true,
-                                ),
-                                const SizedBox(height: 14),
-                                _InfoRow(
-                                  label: 'Email',
-                                  value: p.email,
-                                  badge: _Pill(
-                                    text: p.emailVerified
-                                        ? 'Verified'
-                                        : 'Not verified',
-                                    bg: p.emailVerified
-                                        ? const Color(0xFFDFF7DF)
-                                        : const Color(0xFFFFE9A6),
-                                    fg: p.emailVerified
-                                        ? const Color(0xFF16A34A)
-                                        : const Color(0xFF92400E),
+                                  const SizedBox(height: 14),
+                                  _InfoRow(
+                                    label: 'Email',
+                                    value: p.email,
+                                    badge: _Pill(
+                                      text: p.emailVerified
+                                          ? 'Verified'
+                                          : 'Not verified',
+                                      bg: p.emailVerified
+                                          ? const Color(0xFFDFF7DF)
+                                          : const Color(0xFFFFE9A6),
+                                      fg: p.emailVerified
+                                          ? const Color(0xFF16A34A)
+                                          : const Color(0xFF92400E),
+                                    ),
+                                    underline: true,
                                   ),
-                                  underline: true,
-                                ),
-                                const SizedBox(height: 14),
-                                _InfoRow(
-                                  label: 'Address',
-                                  value: p.addressLine1.isEmpty
-                                      ? '—'
-                                      : p.addressDisplay,
-                                  badge: null,
-                                  underline: false,
-                                ),
-                              ],
+                                  const SizedBox(height: 14),
+                                  _InfoRow(
+                                    label: 'Address',
+                                    value: p.addressDisplay,
+                                    badge: null,
+                                    underline: false,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
 
-            // --- FIXED BOTTOM PORTION ---
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 22),
               child: Column(
@@ -245,7 +307,10 @@ class ProfileScreen extends StatelessWidget {
                               : const Color(0xFF92400E),
                         ),
                         const SizedBox(width: 10),
-                        const Icon(Icons.chevron_right, color: _muted),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: ProfileScreen._muted,
+                        ),
                       ],
                     ),
                     onTap: () => context.push(AppRoutes.identityIntro),
@@ -269,14 +334,10 @@ class ProfileScreen extends StatelessWidget {
                         const SnackBar(content: Text('User Logged out')),
                       );
 
-                      // Optional tiny delay so snackbar renders before navigation
                       await Future<void>.delayed(
                         const Duration(milliseconds: 150),
                       );
-
-                      if (context.mounted) {
-                        context.go(AppRoutes.login);
-                      }
+                      if (context.mounted) context.go(AppRoutes.login);
                     },
                   ),
                 ],
@@ -362,7 +423,7 @@ class _InfoRow extends StatelessWidget {
             ],
           ),
         ),
-        ?badge,
+        if (badge != null) badge!,
       ],
     );
   }
