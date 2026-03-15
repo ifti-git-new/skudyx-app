@@ -13,6 +13,7 @@ import 'package:skudyx/features/auth/data/social/google_auth_provider.dart';
 import 'package:skudyx/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:skudyx/features/cases/data/remote/case_api.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
+import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
 import 'package:skudyx/features/emergency_contact/data/remote/emergency_contact_api.dart';
 import 'package:skudyx/features/profile/controllers/identity_verification_controller.dart';
@@ -110,8 +111,14 @@ class AppCompositionRoot extends StatelessWidget {
         ChangeNotifierProvider<AppStatusController>(
           create: (c) => AppStatusController(prefs: c.read<AppPrefs>()),
         ),
+
         ChangeNotifierProvider<DeviceScanController>(
           create: (_) => DeviceScanController(),
+        ),
+
+        // NEW: persistent device+case session
+        ChangeNotifierProvider<DeviceSessionController>(
+          create: (c) => DeviceSessionController(caseApi: c.read<CaseApi>()),
         ),
 
         ChangeNotifierProvider<EmergencyContactController>(

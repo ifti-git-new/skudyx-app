@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
 
 import '../controllers/device_scan_controller.dart';
-import '../../../../core/navigation/app_routes.dart';
+import '../controllers/device_session_controller.dart';
 
 class DeviceListScreen extends StatefulWidget {
   const DeviceListScreen({super.key});
@@ -22,15 +21,12 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // Start scan once when the screen is shown
     if (!_started) {
       _started = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final scan = context.read<DeviceScanController>();
-
-        // Start scan only if nothing is there yet
         if (scan.devices.isEmpty && !scan.scanning) {
-          scan.startMockScan(); // later replace with real BLE scan
+          scan.startMockScan();
         }
       });
     }
@@ -39,6 +35,10 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
   @override
   Widget build(BuildContext context) {
     final scan = context.watch<DeviceScanController>();
+    final session = context.watch<DeviceSessionController>();
+
+    // If already connected, the DeviceScreen hub won't show this screen.
+    if (session.isConnected) return const SizedBox.shrink();
 
     return Scaffold(
       backgroundColor: _bg,
@@ -50,22 +50,6 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  // InkWell(
-                  //   onTap: () => context.pop(),
-                  //   borderRadius: BorderRadius.circular(12),
-                  //   child: Container(
-                  //     width: 40,
-                  //     height: 40,
-                  //     decoration: BoxDecoration(
-                  //       color: const Color(0xFFF3F4F6),
-                  //       borderRadius: BorderRadius.circular(12),
-                  //     ),
-                  //     child: const Icon(
-                  //       Icons.arrow_back_ios_new_rounded,
-                  //       size: 18,
-                  //     ),
-                  //   ),
-                  // ),
                   const SizedBox(width: 10),
                   Text(
                     'Devices',
@@ -79,7 +63,6 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
             ),
             const SizedBox(height: 10),
 
-            // ✅ Loading / empty state
             if (scan.devices.isEmpty) ...[
               Expanded(
                 child: Center(
@@ -87,8 +70,8 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                       ? Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(),
-                            SizedBox(height: 12),
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 12),
                             Text(
                               'Searching for devices...',
                               style: AppTextStyles.body.copyWith(
@@ -121,7 +104,6 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                 ),
               ),
             ] else ...[
-              // ✅ List view (when devices exist)
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -133,12 +115,13 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                       name: d.name,
                       timeText: d.timeText,
                       onTap: () {
+                        context.read<DeviceSessionController>().connectDevice(
+                          d,
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Selected ${d.name}')),
                         );
-
-                        // Go to connected dashboard
-                        context.push(AppRoutes.deviceConnected);
+                        // No navigation needed; hub shows connected screen automatically
                       },
                     );
                   },
@@ -206,7 +189,7 @@ class _DeviceCard extends StatelessWidget {
                     timeText,
                     style: AppTextStyles.caption.copyWith(
                       fontSize: 13,
-                      color: Color(0xFF6B7280),
+                      color: const Color(0xFF6B7280),
                     ),
                   ),
                 ],
@@ -222,7 +205,7 @@ class _DeviceCard extends StatelessWidget {
                 'Available',
                 style: AppTextStyles.caption.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF16A34A),
+                  color: const Color(0xFF16A34A),
                 ),
               ),
             ),

@@ -5,34 +5,24 @@ import 'package:provider/provider.dart';
 import '../../../../core/controllers/app_status_controller.dart';
 import '../../../../core/navigation/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../presentation/controllers/device_session_controller.dart';
+import 'device_connected_screen.dart';
+import 'device_list_screen.dart';
 import 'widgets/device_on_the_way_view.dart';
 
-class DeviceScreen extends StatefulWidget {
+class DeviceScreen extends StatelessWidget {
   const DeviceScreen({super.key});
-
-  @override
-  State<DeviceScreen> createState() => _DeviceScreenState();
-}
-
-class _DeviceScreenState extends State<DeviceScreen> {
-  bool _redirected = false;
 
   @override
   Widget build(BuildContext context) {
     final status = context.watch<AppStatusController>();
+    final session = context.watch<DeviceSessionController>();
 
-    // ✅ if device arrived -> always stay in device list flow
+    // ✅ If device arrived -> show connected/list based on session
     if (status.deviceArrived) {
-      if (!_redirected) {
-        _redirected = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) context.go(AppRoutes.deviceList);
-        });
-      }
-      return const Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return session.isConnected
+          ? const DeviceConnectedScreen()
+          : const DeviceListScreen();
     }
 
     if (!status.isSubscribed) return const _NotPurchasedView();
@@ -79,6 +69,7 @@ class _NotPurchasedView extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    // ✅ Restore real navigation
                     onPressed: () => context.push(AppRoutes.subscription),
                     child: const Text(
                       'View Plans',
@@ -133,6 +124,7 @@ class _PurchasedNoDeliveryView extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    // ✅ Restore real navigation
                     onPressed: () => context.push(AppRoutes.deliveryDetails),
                     child: const Text(
                       'Add Delivery Address',

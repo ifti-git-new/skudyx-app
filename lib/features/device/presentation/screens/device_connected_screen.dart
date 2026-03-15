@@ -1,15 +1,9 @@
-import 'dart:async';
-
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
-import 'package:skudyx/features/cases/data/remote/case_api.dart';
+import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 
 class DeviceConnectedScreen extends StatefulWidget {
   const DeviceConnectedScreen({super.key});
@@ -34,9 +28,18 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final session = context.watch<DeviceSessionController>();
+
     final width = MediaQuery.of(context).size.width;
     final statusColor = isActiveMode ? _green : _orange;
     final statusSoftColor = isActiveMode ? _greenSoft : _orangeSoft;
+
+    if (!session.isConnected) {
+      return const Scaffold(
+        backgroundColor: _bg,
+        body: SafeArea(child: Center(child: Text('No device connected'))),
+      );
+    }
 
     return Scaffold(
       backgroundColor: _bg,
@@ -137,7 +140,7 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
       children: [
         InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => context.pop(),
+          onTap: () => Navigator.of(context).maybePop(),
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -236,6 +239,8 @@ class _BleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final session = context.read<DeviceSessionController>();
+
     return _ResponsiveCard(
       child: Column(
         children: [
@@ -252,7 +257,11 @@ class _BleCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   onTap: () async {
                     HapticFeedback.mediumImpact();
-                    context.go(AppRoutes.deviceList);
+                    await session.disconnectDevice();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Device disconnected')),
+                    );
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
@@ -296,200 +305,6 @@ class _SafetySection extends StatefulWidget {
 class _SafetySectionState extends State<_SafetySection> {
   bool _isExpanded = false;
 
-  bool _starting = false;
-  bool _tracking = false;
-
-  String? _caseId;
-  String? _caseName;
-
-  Timer? _timer;
-  bool _tickInFlight = false;
-
-  int _successUpdates = 0;
-  int _failedUpdates = 0;
-
-  bool _statusUpdating = false;
-
-  final List<Map<String, dynamic>> _allCoordinates = [];
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  Future<bool> _ensureLocationReady(BuildContext context) async {
-    final scaffold = ScaffoldMessenger.of(context);
-
-    final enabled = await Geolocator.isLocationServiceEnabled();
-    if (!enabled) {
-      scaffold.showSnackBar(
-        const SnackBar(content: Text('Location services are disabled.')),
-      );
-      return false;
-    }
-
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied) {
-      scaffold.showSnackBar(
-        const SnackBar(content: Text('Location permission denied.')),
-      );
-      return false;
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      scaffold.showSnackBar(
-        const SnackBar(
-          content: Text('Location permission permanently denied.'),
-        ),
-      );
-      return false;
-    }
-
-    return true;
-  }
-
-  Future<Position> _getCurrentPosition() {
-    return Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-      timeLimit: const Duration(seconds: 10),
-    );
-  }
-
-  Future<void> _startCaseAndTracking({
-    required BuildContext context,
-    required bool isTest,
-    required String caseName,
-  }) async {
-    if (_starting || _tracking) return;
-
-    final ok = await _ensureLocationReady(context);
-    if (!ok) return;
-
-    final scaffold = ScaffoldMessenger.of(context);
-    final caseApi = context.read<CaseApi>();
-
-    setState(() {
-      _starting = true;
-      _caseName = caseName;
-      _caseId = null;
-      _successUpdates = 0;
-      _failedUpdates = 0;
-      _allCoordinates.clear();
-    });
-
-    scaffold.showSnackBar(SnackBar(content: Text('Creating $caseName...')));
-
-    try {
-      final firstPos = await _getCurrentPosition();
-
-      final caseData = await caseApi.triggerCase(
-        latitude: firstPos.latitude,
-        longitude: firstPos.longitude,
-        isTest: isTest,
-      );
-
-      final createdCaseId = (caseData['case_id'] ?? '').toString();
-      if (createdCaseId.isEmpty) {
-        throw Exception('Missing case_id from backend response');
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _caseId = createdCaseId;
-        _tracking = true;
-        _starting = false;
-      });
-
-      scaffold.showSnackBar(
-        SnackBar(content: Text('$caseName started! Case ID: $createdCaseId')),
-      );
-
-      await _sendOneTick(caseApi);
-
-      _timer?.cancel();
-      _timer = Timer.periodic(const Duration(seconds: 2), (_) async {
-        if (!_tracking) return;
-        if (_tickInFlight) return;
-
-        _tickInFlight = true;
-        try {
-          await _sendOneTick(caseApi);
-        } finally {
-          _tickInFlight = false;
-        }
-      });
-    } on DioException catch (e) {
-      final String msg =
-          ((e.response?.data as Map?)?['message']?.toString()) ??
-          'Failed to start case.';
-      scaffold.showSnackBar(SnackBar(content: Text(msg)));
-
-      if (!mounted) return;
-      setState(() {
-        _starting = false;
-        _tracking = false;
-        _caseId = null;
-        _caseName = null;
-      });
-
-      _timer?.cancel();
-      _timer = null;
-    } catch (_) {
-      scaffold.showSnackBar(
-        const SnackBar(
-          content: Text('Something went wrong starting the case.'),
-        ),
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _starting = false;
-        _tracking = false;
-        _caseId = null;
-        _caseName = null;
-      });
-
-      _timer?.cancel();
-      _timer = null;
-    }
-  }
-
-  Future<void> _sendOneTick(CaseApi caseApi) async {
-    final id = _caseId;
-    if (id == null) return;
-
-    try {
-      final pos = await _getCurrentPosition();
-
-      _allCoordinates.add({
-        'latitude': pos.latitude,
-        'longitude': pos.longitude,
-        'timestamp': DateTime.now().toIso8601String(),
-      });
-
-      await caseApi.updateLocation(
-        caseId: id,
-        latitude: pos.latitude,
-        longitude: pos.longitude,
-      );
-
-      _successUpdates += 1;
-      if (mounted) setState(() {});
-    } catch (e) {
-      _failedUpdates += 1;
-      if (mounted) setState(() {});
-      if (kDebugMode) {
-        // ignore: avoid_print
-        print('Tick failed: $e');
-      }
-    }
-  }
-
   Future<String?> _askNote(BuildContext context, String status) async {
     final ctrl = TextEditingController(
       text: 'Do you want to mark $status from app test button?',
@@ -527,99 +342,13 @@ class _SafetySectionState extends State<_SafetySection> {
     return note;
   }
 
-  Future<void> _updateFinalStatus(BuildContext context, String status) async {
-    final id = _caseId;
-    if (id == null || id.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No case_id found. Start a case first.')),
-      );
-      return;
-    }
-    if (_statusUpdating) return;
-
-    final caseApi = context.read<CaseApi>();
-    final note = await _askNote(context, status);
-    if (!mounted) return;
-    if (note == null) return; // cancelled
-
-    setState(() => _statusUpdating = true);
-
-    try {
-      await caseApi.updateStatus(caseId: id, status: status, note: note);
-
-      // Stop tracking when final status is sent
-      _timer?.cancel();
-      _timer = null;
-
-      setState(() {
-        _tracking = false;
-        _starting = false;
-        _tickInFlight = false;
-        _statusUpdating = false;
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Case $id updated to $status')));
-    } on DioException catch (e) {
-      final String msg =
-          ((e.response?.data as Map?)?['message']?.toString()) ??
-          'Failed to update status.';
-      setState(() => _statusUpdating = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-    } catch (_) {
-      setState(() => _statusUpdating = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Something went wrong updating status.')),
-      );
-    }
-  }
-
-  Future<void> _endTracking(BuildContext context) async {
-    if (!_tracking && !_starting) return;
-
-    _timer?.cancel();
-    _timer = null;
-
-    final endedCaseId = _caseId;
-    final endedName = _caseName;
-    final total = _allCoordinates.length;
-
-    setState(() {
-      _tracking = false;
-      _starting = false;
-      _caseId = null;
-      _caseName = null;
-      _tickInFlight = false;
-    });
-
-    if (kDebugMode) {
-      // ignore: avoid_print
-      print('=== END CASE TRACKING ===');
-      // ignore: avoid_print
-      print(
-        'case_name=$endedName case_id=$endedCaseId total_points=$total '
-        'success=$_successUpdates failed=$_failedUpdates',
-      );
-      // ignore: avoid_print
-      print(_allCoordinates);
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Ended ${endedName ?? 'case'} (${endedCaseId ?? '-'}) '
-          '- points: $total (ok $_successUpdates / fail $_failedUpdates)',
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final statusText = _starting
+    final session = context.watch<DeviceSessionController>();
+
+    final statusText = session.starting
         ? 'Starting...'
-        : _tracking
+        : session.tracking
         ? 'Tracking ON'
         : 'Tracking OFF';
 
@@ -670,10 +399,10 @@ class _SafetySectionState extends State<_SafetySection> {
                       ),
                       child: Text(
                         '$statusText\n'
-                        'Case: ${_caseName ?? '-'}\n'
-                        'case_id: ${_caseId ?? (_starting ? '(creating...)' : '-')}\n'
-                        'Points: ${_allCoordinates.length}\n'
-                        'Updates: ok $_successUpdates / fail $_failedUpdates',
+                        'Case: ${session.caseName ?? '-'}\n'
+                        'case_id: ${session.caseId ?? (session.starting ? '(creating...)' : '-')}\n'
+                        'Points: ${session.coordinates.length}\n'
+                        'Updates: ok ${session.successUpdates} / fail ${session.failedUpdates}',
                         style: const TextStyle(fontSize: 13),
                       ),
                     ),
@@ -713,13 +442,32 @@ class _SafetySectionState extends State<_SafetySection> {
                     // ),
                     // const SizedBox(height: 12),
                     ElevatedButton(
-                      onPressed: (_tracking || _starting || _statusUpdating)
+                      onPressed:
+                          (session.tracking ||
+                              session.starting ||
+                              session.statusUpdating)
                           ? null
-                          : () => _startCaseAndTracking(
-                              context: context,
-                              isTest: false,
-                              caseName: 'Live Case',
-                            ),
+                          : () async {
+                              final ok = await context
+                                  .read<DeviceSessionController>()
+                                  .startCase(
+                                    isTest: false,
+                                    caseName: 'Live Case',
+                                  );
+
+                              if (!context.mounted) return;
+
+                              if (!ok) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      session.lastError ??
+                                          'Failed to start case',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color.fromARGB(
                           255,
@@ -760,14 +508,43 @@ class _SafetySectionState extends State<_SafetySection> {
                       children: [
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: (_caseId == null || _statusUpdating)
+                            onPressed:
+                                (session.caseId == null ||
+                                    session.statusUpdating)
                                 ? null
-                                : () => _updateFinalStatus(context, 'Resolved'),
+                                : () async {
+                                    final note = await _askNote(
+                                      context,
+                                      'Resolved',
+                                    );
+                                    if (!context.mounted || note == null)
+                                      return;
+
+                                    final ok = await context
+                                        .read<DeviceSessionController>()
+                                        .updateFinalStatus(
+                                          status: 'Resolved',
+                                          note: note,
+                                        );
+
+                                    if (!context.mounted) return;
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          ok
+                                              ? 'Case updated to Resolved'
+                                              : (session.lastError ??
+                                                    'Failed to update status'),
+                                        ),
+                                      ),
+                                    );
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF16A34A),
                               minimumSize: const Size(double.infinity, 44),
                             ),
-                            child: _statusUpdating
+                            child: session.statusUpdating
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
@@ -788,10 +565,38 @@ class _SafetySectionState extends State<_SafetySection> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: (_caseId == null || _statusUpdating)
+                            onPressed:
+                                (session.caseId == null ||
+                                    session.statusUpdating)
                                 ? null
-                                : () =>
-                                      _updateFinalStatus(context, 'Unresolved'),
+                                : () async {
+                                    final note = await _askNote(
+                                      context,
+                                      'Unresolved',
+                                    );
+                                    if (!context.mounted || note == null)
+                                      return;
+
+                                    final ok = await context
+                                        .read<DeviceSessionController>()
+                                        .updateFinalStatus(
+                                          status: 'Unresolved',
+                                          note: note,
+                                        );
+
+                                    if (!context.mounted) return;
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          ok
+                                              ? 'Case updated to Unresolved'
+                                              : (session.lastError ??
+                                                    'Failed to update status'),
+                                        ),
+                                      ),
+                                    );
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color.fromARGB(
                                 255,
@@ -816,9 +621,33 @@ class _SafetySectionState extends State<_SafetySection> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: (_caseId == null || _statusUpdating)
+                        onPressed:
+                            (session.caseId == null || session.statusUpdating)
                             ? null
-                            : () => _updateFinalStatus(context, 'False'),
+                            : () async {
+                                final note = await _askNote(context, 'False');
+                                if (!context.mounted || note == null) return;
+
+                                final ok = await context
+                                    .read<DeviceSessionController>()
+                                    .updateFinalStatus(
+                                      status: 'False',
+                                      note: note,
+                                    );
+
+                                if (!context.mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      ok
+                                          ? 'Case updated to False'
+                                          : (session.lastError ??
+                                                'Failed to update status'),
+                                    ),
+                                  ),
+                                );
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF6B7280),
                           minimumSize: const Size(double.infinity, 44),
@@ -832,6 +661,14 @@ class _SafetySectionState extends State<_SafetySection> {
                         ),
                       ),
                     ),
+
+                    if (session.lastError != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        session.lastError!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ],
                   ],
                 ),
               ),

@@ -17,16 +17,26 @@ class CaseApi {
 
     final body = res.data;
     if (body is! Map<String, dynamic> || body['success'] != true) {
-      final msg =
-          (body is Map ? body['message'] : null) ?? 'Case creation failed';
+      final msg = (body is Map && body['message'] != null)
+          ? body['message'].toString()
+          : 'Case creation failed';
       throw DioException(
         requestOptions: res.requestOptions,
         response: res,
-        error: msg.toString(),
+        error: msg,
       );
     }
 
-    return (body['data'] as Map<String, dynamic>);
+    final data = body['data'];
+    if (data is! Map<String, dynamic>) {
+      throw DioException(
+        requestOptions: res.requestOptions,
+        response: res,
+        error: 'Invalid response: missing data',
+      );
+    }
+
+    return data;
   }
 
   /// Backend expects PATCH (not POST)
@@ -43,18 +53,19 @@ class CaseApi {
 
     final body = res.data;
     if (body is! Map<String, dynamic> || body['success'] != true) {
-      final msg =
-          (body is Map ? body['message'] : null) ?? 'Location update failed';
+      final msg = (body is Map && body['message'] != null)
+          ? body['message'].toString()
+          : 'Location update failed';
       throw DioException(
         requestOptions: res.requestOptions,
         response: res,
-        error: msg.toString(),
+        error: msg,
       );
     }
   }
 
   /// Update case status
-  /// Expected statuses include: Resolved, Unresolved, False, In Progress, Escalated, Pending, Created
+  /// statuses: Created, Pending, In Progress, Escalated, Resolved, False, Unresolved
   Future<Map<String, dynamic>> updateStatus({
     required String caseId,
     required String status,
@@ -72,16 +83,20 @@ class CaseApi {
 
     final body = res.data;
     if (body is! Map<String, dynamic> || body['success'] != true) {
-      final msg =
-          (body is Map ? body['message'] : null) ?? 'Status update failed';
+      final msg = (body is Map && body['message'] != null)
+          ? body['message'].toString()
+          : 'Status update failed';
       throw DioException(
         requestOptions: res.requestOptions,
         response: res,
-        error: msg.toString(),
+        error: msg,
       );
     }
 
-    // body['data'] contains updated case info (based on your sample)
-    return (body['data'] as Map<String, dynamic>? ?? <String, dynamic>{});
+    final data = body['data'];
+    if (data is Map<String, dynamic>) return data;
+
+    // Sometimes backend may not return data—return empty map safely
+    return <String, dynamic>{};
   }
 }
