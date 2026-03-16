@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/core/config/app_config.dart';
 import 'package:skudyx/core/config/flavors.dart';
+import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 
@@ -15,15 +17,10 @@ class DeviceConnectedScreen extends StatefulWidget {
 
 class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
   static const Color _bg = Color(0xFFF7F8FA);
-  static const Color _border = Color(0xFFE5E7EB);
-
   static const Color _green = Color(0xFF22C55E);
   static const Color _greenSoft = Color(0xFFDFF7DF);
-
   static const Color _orange = Color(0xFFF59E0B);
   static const Color _orangeSoft = Color(0xFFFFEDD5);
-
-  static const Color _textMuted = Color(0xFF6B7280);
 
   bool isActiveMode = true;
 
@@ -31,15 +28,10 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
   Widget build(BuildContext context) {
     final session = context.watch<DeviceSessionController>();
 
-    // In release APK, kDebugMode is false.
-    // Use Flavor to show dev/QA UI in dev/staging builds.
     final config = context.read<AppConfig>();
     final showInternalTesting = config.flavor != Flavor.prod;
 
     final width = MediaQuery.of(context).size.width;
-
-    // IMPORTANT FIX:
-    // Avoid LayoutBuilder here to prevent first-frame "0 width" issues in release APKs.
     final circleSize = width * 0.38;
 
     final statusColor = isActiveMode ? _green : _orange;
@@ -302,60 +294,23 @@ class _BleCard extends StatelessWidget {
   }
 }
 
-class _SafetySection extends StatelessWidget {
+class _SafetySection extends StatefulWidget {
   final bool showInternalTesting;
   const _SafetySection({required this.showInternalTesting});
 
-  Future<String?> _askNote(BuildContext context, String status) async {
-    final ctrl = TextEditingController(
-      text: 'Do you want to mark $status from app test button?',
-    );
+  @override
+  State<_SafetySection> createState() => _SafetySectionState();
+}
 
-    final note = await showDialog<String>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text('Update Status: $status'),
-          content: TextField(
-            controller: ctrl,
-            decoration: const InputDecoration(
-              labelText: 'Note (optional)',
-              border: OutlineInputBorder(),
-            ),
-            minLines: 2,
-            maxLines: 4,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, ctrl.text),
-              child: const Text('Update'),
-            ),
-          ],
-        );
-      },
-    );
-
-    ctrl.dispose();
-    return note;
-  }
+class _SafetySectionState extends State<_SafetySection> {
+  bool _routingToTracking = false;
 
   @override
   Widget build(BuildContext context) {
     final session = context.watch<DeviceSessionController>();
 
-    final statusText = session.starting
-        ? 'Starting...'
-        : session.tracking
-        ? 'Tracking ON'
-        : 'Tracking OFF';
-
-    // ✅ Status buttons should only be enabled while a case is running
-    final bool enableStatusButtons =
-        session.tracking && session.caseId != null && !session.statusUpdating;
+    final bool isLoading =
+        _routingToTracking || session.starting; // show loader immediately
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,8 +335,7 @@ class _SafetySection extends StatelessWidget {
         const SizedBox(height: 12),
         const _SafetyTile(title: "Live Audio Sharing"),
 
-        // ✅ Internal testing shown in release APK for dev/staging flavors
-        if (showInternalTesting) ...[
+        if (widget.showInternalTesting) ...[
           const SizedBox(height: 24),
           const Text(
             'Internal Testing (Dev/QA Only)',
@@ -393,70 +347,23 @@ class _SafetySection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.04),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '$statusText\n'
-              'Case: ${session.caseName ?? '-'}\n'
-              'case_id: ${session.caseId ?? (session.starting ? '(creating...)' : '-')}\n'
-              'Points: ${session.coordinates.length}\n'
-              'Updates: ok ${session.successUpdates} / fail ${session.failedUpdates}',
-              style: const TextStyle(fontSize: 13),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          //--TEMPORARILY REMOVED - TEST BUTTONS FOR STARTING CASES AND TRACKING--//
-          // Existing start buttons (unchanged behavior)
-          // ElevatedButton(
-          //   onPressed: (_tracking || _starting || _statusUpdating)
-          //       ? null
-          //       : () => _startCaseAndTracking(
-          //           context: context,
-          //           isTest: true,
-          //           caseName: 'Test Case',
-          //         ),
-          //   style: ElevatedButton.styleFrom(
-          //     backgroundColor: Colors.blue,
-          //     minimumSize: const Size(double.infinity, 48),
-          //   ),
-          //   child: const Text('Start Test Case'),
-          // ),
-          // const SizedBox(height: 12),
-
-          // ElevatedButton(
-          //   onPressed: (_tracking || _starting || _statusUpdating)
-          //       ? null
-          //       : () => _startCaseAndTracking(
-          //           context: context,
-          //           isTest: false,
-          //           caseName: 'Basic Case',
-          //         ),
-          //   style: ElevatedButton.styleFrom(
-          //     backgroundColor: Colors.orange,
-          //     minimumSize: const Size(double.infinity, 48),
-          //   ),
-          //   child: const Text('Start Basic Case'),
-          // ),
-          // const SizedBox(height: 12),
           ElevatedButton(
             onPressed:
-                (session.tracking || session.starting || session.statusUpdating)
+                (isLoading ||
+                    session.tracking ||
+                    session.statusUpdating) // keep disabled while loading
                 ? null
                 : () async {
+                    setState(() => _routingToTracking = true);
+
                     final ok = await context
                         .read<DeviceSessionController>()
                         .startCase(isTest: false, caseName: 'Live Case');
 
-                    if (!context.mounted) return;
+                    if (!mounted) return;
 
                     if (!ok) {
+                      setState(() => _routingToTracking = false);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
@@ -464,158 +371,65 @@ class _SafetySection extends StatelessWidget {
                           ),
                         ),
                       );
+                      return;
+                    }
+
+                    // Start navigation. Keep loader until push is initiated.
+                    final pushFuture = context.push<String>(
+                      AppRoutes.liveCaseTracking,
+                    );
+
+                    // Once navigation is initiated, remove loader on this screen.
+                    if (mounted) setState(() => _routingToTracking = false);
+
+                    final result = await pushFuture;
+                    if (!mounted) return;
+
+                    if (result != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Case updated to $result')),
+                      );
                     }
                   },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 99, 197, 106),
+              backgroundColor: Color(0xFF10B981),
               minimumSize: const Size(double.infinity, 48),
             ),
-            child: const Text(
-              'Start Live Case',
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-          const Divider(),
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: enableStatusButtons
-                      ? () async {
-                          final note = await _askNote(context, 'Resolved');
-                          if (!context.mounted || note == null) return;
-
-                          final ok = await context
-                              .read<DeviceSessionController>()
-                              .updateFinalStatus(
-                                status: 'Resolved',
-                                note: note,
-                              );
-
-                          if (!context.mounted) return;
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                ok
-                                    ? 'Case updated to Resolved'
-                                    : (session.lastError ?? 'Failed'),
-                              ),
-                            ),
-                          );
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF16A34A),
-                    minimumSize: const Size(double.infinity, 44),
-                  ),
-                  child: session.statusUpdating
-                      ? const SizedBox(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: isLoading
+                  ? const Row(
+                      key: ValueKey('loading'),
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                            strokeWidth: 2.2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.black87,
+                            ),
                           ),
-                        )
-                      : const Text(
-                          'Resolved',
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Starting...',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Colors.black87,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: enableStatusButtons
-                      ? () async {
-                          final note = await _askNote(context, 'Unresolved');
-                          if (!context.mounted || note == null) return;
-
-                          final ok = await context
-                              .read<DeviceSessionController>()
-                              .updateFinalStatus(
-                                status: 'Unresolved',
-                                note: note,
-                              );
-
-                          if (!context.mounted) return;
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                ok
-                                    ? 'Case updated to Unresolved'
-                                    : (session.lastError ?? 'Failed'),
-                              ),
-                            ),
-                          );
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 179, 32, 32),
-                    minimumSize: const Size(double.infinity, 44),
-                  ),
-                  child: const Text(
-                    'Unresolved',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                      ],
+                    )
+                  : const Text(
+                      key: ValueKey('idle'),
+                      'Start Live Case',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: enableStatusButtons
-                  ? () async {
-                      final note = await _askNote(context, 'False');
-                      if (!context.mounted || note == null) return;
-
-                      final ok = await context
-                          .read<DeviceSessionController>()
-                          .updateFinalStatus(status: 'False', note: note);
-
-                      if (!context.mounted) return;
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            ok
-                                ? 'Case updated to False'
-                                : (session.lastError ?? 'Failed'),
-                          ),
-                        ),
-                      );
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6B7280),
-                minimumSize: const Size(double.infinity, 44),
-              ),
-              child: const Text(
-                'False',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
           ),
         ],

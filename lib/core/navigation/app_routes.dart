@@ -34,6 +34,9 @@ abstract class AppRoutes {
   static const deviceList = '/device/list';
   static const deviceConnected = '/device/connected';
 
+  // ✅ NEW: Live case tracking screen (NO bottom nav; we will register OUTSIDE shell)
+  static const liveCaseTracking = '/device/live-case-tracking';
+
   // Emergency contact (inside shell)
   static const emergencyContact = '/emergency-contact';
   static const emergencyContactEdit = '/emergency-contact/edit';

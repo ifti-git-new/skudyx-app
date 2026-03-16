@@ -43,6 +43,9 @@ import 'package:skudyx/features/settings/presentation/screens/terms_conditions_s
 import 'package:skudyx/features/cases/presentation/screens/case_details_screen.dart';
 import 'package:skudyx/features/profile/presentation/screens/cases/presentation/screens/case_history_screen.dart';
 
+// ✅ NEW SCREEN IMPORT
+import 'package:skudyx/features/device/presentation/screens/live_case_tracking_screen.dart';
+
 class AppRouter {
   final AuthController auth;
   AppRouter({required this.auth});
@@ -57,8 +60,6 @@ class AppRouter {
       final loggedIn = auth.state.isAuthenticated;
       final onboardingSeen = auth.state.onboardingSeen;
       final prefs = auth.prefs;
-      final isSubscribed = prefs.isSubscribed;
-      final promptShown = prefs.subscriptionPromptShown;
 
       final isAuthFlowRoute =
           loc == AppRoutes.login ||
@@ -70,11 +71,13 @@ class AppRouter {
       final isOnboardingRoute = loc.startsWith('/onboarding');
 
       if (!loggedIn && !isAuthFlowRoute) return AppRoutes.login;
-      if (loggedIn && !onboardingSeen && !isOnboardingRoute)
+      if (loggedIn && !onboardingSeen && !isOnboardingRoute) {
         return AppRoutes.instruction1;
+      }
 
-      if (loggedIn && onboardingSeen && isAuthFlowRoute)
+      if (loggedIn && onboardingSeen && isAuthFlowRoute) {
         return AppRoutes.device;
+      }
 
       return null;
     },
@@ -192,6 +195,12 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.emergencyContactEdit,
         builder: (_, _) => const EmergencyContactFormScreen(),
+      ),
+
+      // ✅ NEW: Live tracking screen OUTSIDE shell (no bottom nav + can block back)
+      GoRoute(
+        path: AppRoutes.liveCaseTracking,
+        builder: (_, _) => const LiveCaseTrackingScreen(),
       ),
 
       // --- SHELL ROUTES (WITH BOTTOM BAR) ---
