@@ -12,16 +12,28 @@ class LiveCaseTrackingScreen extends StatefulWidget {
 
 class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   bool _exiting = false;
+  DeviceSessionController? _session;
 
   void _safePop([String? result]) {
     if (_exiting) return;
     _exiting = true;
 
-    // Avoid Navigator lock during rebuild/notifyListeners
     Future.microtask(() {
       if (!mounted) return;
       context.pop(result);
     });
+  }
+
+  void _onSessionChanged() {
+    final s = _session;
+    if (s == null) return;
+
+    final remote = s.remotelyClosedStatus;
+    if (remote != null && !_exiting) {
+      // consume it so it doesn't trigger again
+      s.clearRemotelyClosedStatus();
+      _safePop(remote);
+    }
   }
 
   Future<String?> _askNote(BuildContext context, String status) async {
@@ -62,6 +74,24 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final newSession = context.read<DeviceSessionController>();
+
+    if (_session != newSession) {
+      _session?.removeListener(_onSessionChanged);
+      _session = newSession;
+      _session?.addListener(_onSessionChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    _session?.removeListener(_onSessionChanged);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final session = context.watch<DeviceSessionController>();
 
@@ -75,7 +105,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
         session.tracking && session.caseId != null && !session.statusUpdating;
 
     return PopScope(
-      canPop: false, // ✅ block back gesture/system back
+      canPop: false,
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8FA),
         body: SafeArea(
@@ -85,7 +115,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // (you said this text is just sample; keeping as-is)
                 const Text(
                   'Internal Testing (Dev/QA Only)',
                   style: TextStyle(
@@ -95,7 +124,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
@@ -112,13 +140,10 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                     style: const TextStyle(fontSize: 13),
                   ),
                 ),
-
                 const SizedBox(height: 20),
                 const Divider(),
                 const SizedBox(height: 12),
 
-                // Optional: if somehow opened without an active case, show message.
-                // (No back button exists; but this prevents a blank screen)
                 if (!session.tracking || session.caseId == null) ...[
                   const Text(
                     'No active case running.',

@@ -1,15 +1,18 @@
 import 'dart:async';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:skudyx/core/realtime/case_realtime_service.dart';
 import 'package:skudyx/features/cases/data/remote/case_api.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
 
 class DeviceSessionController extends ChangeNotifier {
   final CaseApi caseApi;
+  final CaseRealtimeService realtime;
 
-  DeviceSessionController({required this.caseApi});
+  DeviceSessionController({required this.caseApi, required this.realtime}) {
+    _rtSub = realtime.updates.listen(_onRealtimeUpdate);
+  }
 
   // -------------------------
   // Device connection state
@@ -23,7 +26,6 @@ class DeviceSessionController extends ChangeNotifier {
   }
 
   Future<void> disconnectDevice() async {
-    // ✅ Disconnect clears everything
     await stopTracking(clearCase: true);
     connectedDevice = null;
     notifyListeners();
@@ -35,10 +37,16 @@ class DeviceSessionController extends ChangeNotifier {
   bool starting = false;
   bool tracking = false;
 
-  String? caseId; // ✅ nullable
-  String? caseName; // ✅ nullable
-  String? lastError; // ✅ nullable
-  String? lastStatus; // ✅ nullable
+  String? caseId;
+  String? caseName;
+  String? lastError;
+  String? lastStatus;
+
+  // ✅ when admin closes case, we set this so UI can auto-exit
+  String? remotelyClosedStatus;
+  void clearRemotelyClosedStatus() {
+    remotelyClosedStatus = null;
+  }
 
   Timer? _timer;
   bool _tickInFlight = false;
@@ -49,6 +57,10 @@ class DeviceSessionController extends ChangeNotifier {
   bool statusUpdating = false;
 
   final List<Map<String, dynamic>> coordinates = [];
+
+  StreamSubscription<CaseUpdateEvent>? _rtSub;
+
+  static const _finalStatuses = {'Resolved', 'Unresolved', 'False'};
 
   void _setError(String msg) {
     lastError = msg;
@@ -110,6 +122,7 @@ class DeviceSessionController extends ChangeNotifier {
     this.caseName = caseName;
     caseId = null;
     lastStatus = null;
+    remotelyClosedStatus = null;
 
     successUpdates = 0;
     failedUpdates = 0;
@@ -137,6 +150,9 @@ class DeviceSessionController extends ChangeNotifier {
       starting = false;
       tracking = true;
       notifyListeners();
+
+      // ✅ Start listening to admin/web updates
+      await realtime.watchCase(createdCaseId);
 
       await _sendOneTick();
 
@@ -170,6 +186,8 @@ class DeviceSessionController extends ChangeNotifier {
       _timer?.cancel();
       _timer = null;
 
+      await realtime.unwatchCase();
+
       notifyListeners();
       return false;
     } catch (e) {
@@ -186,6 +204,8 @@ class DeviceSessionController extends ChangeNotifier {
 
       _timer?.cancel();
       _timer = null;
+
+      await realtime.unwatchCase();
 
       notifyListeners();
       return false;
@@ -227,6 +247,8 @@ class DeviceSessionController extends ChangeNotifier {
     starting = false;
     tracking = false;
 
+    await realtime.unwatchCase();
+
     if (clearCase) {
       caseId = null;
       caseName = null;
@@ -261,7 +283,6 @@ class DeviceSessionController extends ChangeNotifier {
 
       lastStatus = status;
 
-      // ✅ IMPORTANT FIX: clear case so buttons disable after completion
       await stopTracking(clearCase: true);
 
       statusUpdating = false;
@@ -283,5 +304,32 @@ class DeviceSessionController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  void _onRealtimeUpdate(CaseUpdateEvent event) async {
+    final id = caseId;
+    if (id == null) return;
+    if (event.caseId != id) return;
+
+    lastStatus = event.status;
+
+    // ✅ If admin/web closes case, auto-close locally
+    if (_finalStatuses.contains(event.status)) {
+      remotelyClosedStatus = event.status;
+
+      // stop tracking & clear case (but keep remotelyClosedStatus for UI to read)
+      await stopTracking(clearCase: true);
+      // stopTracking already notifies
+      return;
+    }
+
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _rtSub?.cancel();
+    _rtSub = null;
+    super.dispose();
   }
 }

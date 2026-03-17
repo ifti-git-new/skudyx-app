@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/core/controllers/app_status_controller.dart';
 import 'package:skudyx/core/network/dio_debug_interceptor.dart';
+import 'package:skudyx/core/realtime/case_realtime_service.dart';
 import 'package:skudyx/core/storage/app_prefs.dart';
 import 'package:skudyx/core/storage/auth_token_storage.dart';
 import 'package:skudyx/features/auth/data/remote/auth_api.dart';
@@ -116,9 +117,20 @@ class AppCompositionRoot extends StatelessWidget {
           create: (_) => DeviceScanController(),
         ),
 
+        Provider<CaseRealtimeService>(
+          create: (c) => CaseRealtimeService(
+            config: c.read<AppConfig>(),
+            tokenStorage: c.read<AuthTokenStorage>(),
+          ),
+          dispose: (_, svc) => svc.dispose(),
+        ),
+
         // NEW: persistent device+case session
         ChangeNotifierProvider<DeviceSessionController>(
-          create: (c) => DeviceSessionController(caseApi: c.read<CaseApi>()),
+          create: (c) => DeviceSessionController(
+            caseApi: c.read<CaseApi>(),
+            realtime: c.read<CaseRealtimeService>(),
+          ),
         ),
 
         ChangeNotifierProvider<EmergencyContactController>(

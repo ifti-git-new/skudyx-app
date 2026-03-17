@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
 
 import '../controllers/device_scan_controller.dart';
@@ -16,6 +18,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
   static const _bg = Color(0xFFF7F8FA);
 
   bool _started = false;
+  bool _redirecting = false;
 
   @override
   void didChangeDependencies() {
@@ -32,13 +35,34 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
     }
   }
 
+  void _redirectToConnectedIfNeeded(DeviceSessionController session) {
+    if (_redirecting) return;
+    if (!session.isConnected) return;
+
+    _redirecting = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.go(AppRoutes.deviceConnected);
+      _redirecting = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final scan = context.watch<DeviceScanController>();
     final session = context.watch<DeviceSessionController>();
 
-    // If already connected, the DeviceScreen hub won't show this screen.
-    if (session.isConnected) return const SizedBox.shrink();
+    // ✅ If this screen is opened as /device/list route and device becomes connected,
+    // redirect instead of returning SizedBox.shrink() (which causes blank screen).
+    _redirectToConnectedIfNeeded(session);
+
+    // While redirecting, show a lightweight loader (avoids white blank).
+    if (session.isConnected) {
+      return const Scaffold(
+        backgroundColor: _bg,
+        body: SafeArea(child: Center(child: CircularProgressIndicator())),
+      );
+    }
 
     return Scaffold(
       backgroundColor: _bg,
@@ -118,10 +142,13 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                         context.read<DeviceSessionController>().connectDevice(
                           d,
                         );
+
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Selected ${d.name}')),
                         );
-                        // No navigation needed; hub shows connected screen automatically
+
+                        // ✅ Explicit navigation fixes blank screen immediately.
+                        context.go(AppRoutes.deviceConnected);
                       },
                     );
                   },
