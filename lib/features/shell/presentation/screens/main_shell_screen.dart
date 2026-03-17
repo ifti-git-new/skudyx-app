@@ -53,7 +53,8 @@ class MainShellScreen extends StatelessWidget {
         context.go(AppRoutes.device);
         break;
       case 1:
-        context.go(AppRoutes.emergencyHome);
+        // ✅ FIX: Open Emergency Contact screen (auto switches between Why/Overview)
+        context.go(AppRoutes.emergencyContact);
         break;
       case 2:
         context.go(AppRoutes.settings);

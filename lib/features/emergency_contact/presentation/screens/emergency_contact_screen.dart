@@ -32,7 +32,7 @@ class _WhyWeNeedThisView extends StatelessWidget {
   const _WhyWeNeedThisView();
 
   static const _navy = Color(0xFF081B4A);
-  static const _sub = Color(0xFF6B7280);
+  static const _textGrey = Color(0xFF666666);
 
   @override
   Widget build(BuildContext context) {
@@ -45,43 +45,47 @@ class _WhyWeNeedThisView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 84,
-                  height: 84,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0B1220), Color(0xFF0077FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 34,
-                  ),
-                ),
-                const SizedBox(height: 18),
+                // Container(
+                //   width: 84,
+                //   height: 84,
+                //   decoration: BoxDecoration(
+                //     borderRadius: BorderRadius.circular(18),
+                //     gradient: const LinearGradient(
+                //       colors: [Color(0xFF0B1220), Color(0xFF0077FF)],
+                //       begin: Alignment.topLeft,
+                //       end: Alignment.bottomRight,
+                //     ),
+                //   ),
+                //   child: const Icon(
+                //     Icons.person,
+                //     color: Colors.white,
+                //     size: 34,
+                //   ),
+                // ),
+                Image.asset('assets/images/add_emergency_contact.png'),
+                const SizedBox(height: 32),
                 Text(
                   'Why we need this',
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.textfont.copyWith(
-                    fontWeight: FontWeight.w900,
-                    height: 1.1,
+                  style: AppTextStyles.h1.copyWith(
+                    fontSize: 35,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+
+                // 3. Description
                 Text(
-                  'Your emergency contact is the first person we\nnotify when you press the SkudyX button.\nAdding this now helps us reach someone you\ntrust as quickly as possible during an\nemergency.',
+                  'Your emergency contact is the first person we notify when you press the SkudyX button. Adding this now helps us reach someone you trust as quickly as possible during an emergency.',
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.textfont.copyWith(
-                    fontSize: 15,
-                    color: _sub,
-                    height: 1.35,
+                  style: AppTextStyles.h2light.copyWith(
+                    fontSize: 16,
+                    height: 1.5,
+                    color: _textGrey,
                   ),
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 30),
                 SizedBox(
                   height: 46,
                   child: ElevatedButton(
