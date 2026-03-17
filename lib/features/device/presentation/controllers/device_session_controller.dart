@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -11,7 +12,7 @@ class DeviceSessionController extends ChangeNotifier {
   final CaseRealtimeService realtime;
 
   DeviceSessionController({required this.caseApi, required this.realtime}) {
-    _rtSub = realtime.updates.listen(_onRealtimeUpdate);
+    _rtSub = realtime.stream.listen(_onRealtimeUpdate);
   }
 
   // -------------------------
@@ -26,6 +27,8 @@ class DeviceSessionController extends ChangeNotifier {
   }
 
   Future<void> disconnectDevice() async {
+    // ✅ Disconnect clears everything
+    remotelyClosedStatus = null;
     await stopTracking(clearCase: true);
     connectedDevice = null;
     notifyListeners();
@@ -42,8 +45,9 @@ class DeviceSessionController extends ChangeNotifier {
   String? lastError;
   String? lastStatus;
 
-  // ✅ when admin closes case, we set this so UI can auto-exit
+  /// ✅ Set when admin/web closes the case so UI can auto-exit
   String? remotelyClosedStatus;
+
   void clearRemotelyClosedStatus() {
     remotelyClosedStatus = null;
   }
@@ -151,7 +155,7 @@ class DeviceSessionController extends ChangeNotifier {
       tracking = true;
       notifyListeners();
 
-      // ✅ Start listening to admin/web updates
+      // ✅ Start listening for admin/web status updates
       await realtime.watchCase(createdCaseId);
 
       await _sendOneTick();
@@ -257,6 +261,7 @@ class DeviceSessionController extends ChangeNotifier {
       failedUpdates = 0;
       coordinates.clear();
       lastError = null;
+      // NOTE: we do NOT clear remotelyClosedStatus here (UI needs it to auto-pop)
     }
 
     notifyListeners();
@@ -282,6 +287,9 @@ class DeviceSessionController extends ChangeNotifier {
       await caseApi.updateStatus(caseId: id, status: status, note: note);
 
       lastStatus = status;
+
+      // ✅ This close was initiated by the app user, not remote admin
+      remotelyClosedStatus = null;
 
       await stopTracking(clearCase: true);
 
@@ -313,13 +321,13 @@ class DeviceSessionController extends ChangeNotifier {
 
     lastStatus = event.status;
 
-    // ✅ If admin/web closes case, auto-close locally
+    // If admin/web closes the case:
     if (_finalStatuses.contains(event.status)) {
+      // ✅ Set the status for UI to auto-exit
       remotelyClosedStatus = event.status;
 
-      // stop tracking & clear case (but keep remotelyClosedStatus for UI to read)
+      // Stop + clear case locally (do not call updateFinalStatus again)
       await stopTracking(clearCase: true);
-      // stopTracking already notifies
       return;
     }
 
@@ -329,7 +337,6 @@ class DeviceSessionController extends ChangeNotifier {
   @override
   void dispose() {
     _rtSub?.cancel();
-    _rtSub = null;
     super.dispose();
   }
 }

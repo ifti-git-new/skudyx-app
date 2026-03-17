@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:skudyx/core/config/app_config.dart';
 import 'package:skudyx/core/storage/auth_token_storage.dart';
@@ -6,14 +7,14 @@ import 'package:skudyx/core/storage/auth_token_storage.dart';
 class CaseUpdateEvent {
   final String caseId;
   final String status;
-  final String? role;
   final String? updatedBy;
+  final String? role;
 
   CaseUpdateEvent({
     required this.caseId,
     required this.status,
-    this.role,
     this.updatedBy,
+    this.role,
   });
 }
 
@@ -26,47 +27,43 @@ class CaseRealtimeService {
   IO.Socket? _socket;
   String? _watchingCaseId;
 
-  final _updates = StreamController<CaseUpdateEvent>.broadcast();
-  Stream<CaseUpdateEvent> get updates => _updates.stream;
+  final _controller = StreamController<CaseUpdateEvent>.broadcast();
+  Stream<CaseUpdateEvent> get stream => _controller.stream;
 
-  Future<void> _ensureConnected() async {
+  bool get isConnected => _socket?.connected == true;
+
+  Future<void> connectIfNeeded() async {
     if (_socket != null) return;
 
     final token = await tokenStorage.readAccessToken();
 
-    // NOTE:
-    // For socket_io_client you usually pass https://... (not wss://...).
-    // Make sure config.wsUrl is something like:
-    // https://skudyx-backend-c8do.onrender.com
+    // IMPORTANT:
+    // For socket.io client, URL should be like https://your-domain.com
+    // NOT wss://... (unless you have a dedicated websocket endpoint).
     final url = config.wsUrl;
 
-    final socket = IO.io(
-      url,
-      IO.OptionBuilder()
-          .setTransports(['websocket', 'polling'])
-          .enableForceNew()
-          .disableAutoConnect()
-          // send token in multiple common ways (backend can pick one)
-          .setAuth({'token': token})
-          .setQuery({'token': token})
-          .setExtraHeaders(
-            token == null ? {} : {'Authorization': 'Bearer $token'},
-          )
-          .build(),
-    );
+    final socket = IO.io(url, <String, dynamic>{
+      'transports': ['websocket', 'polling'],
+      'autoConnect': false,
+      'forceNew': true,
+
+      // Send token in case you add socket auth later
+      'auth': {'token': token},
+      'query': {'token': token},
+      'extraHeaders': token == null ? {} : {'Authorization': 'Bearer $token'},
+    });
 
     _socket = socket;
 
     socket.onConnect((_) {
-      // Re-join room after reconnect
-      final id = _watchingCaseId;
-      if (id != null) {
-        socket.emit('join_case', {'case_id': id});
+      final caseId = _watchingCaseId;
+      if (caseId != null) {
+        // server expects STRING
+        socket.emit('join_case', caseId);
       }
     });
 
     socket.onDisconnect((_) {});
-
     socket.onConnectError((e) {});
     socket.onError((e) {});
 
@@ -74,34 +71,32 @@ class CaseRealtimeService {
   }
 
   Future<void> watchCase(String caseId) async {
-    await _ensureConnected();
+    await connectIfNeeded();
 
-    // Unwatch old case
+    // unwatch previous case (if any)
     await unwatchCase();
 
     _watchingCaseId = caseId;
 
-    // Join room (server must handle this)
-    _socket?.emit('join_case', {'case_id': caseId});
+    // Join room: server expects a plain string
+    _socket?.emit('join_case', caseId);
 
-    // Listen to backend event: case_update_<caseId>
+    // Listen for case updates
     final eventName = 'case_update_$caseId';
+    _socket?.off(eventName); // prevent duplicates
     _socket?.on(eventName, (data) {
       if (data is Map) {
         final status = (data['status'] ?? '').toString();
-        final role = data['role']?.toString();
-        final updatedBy = data['updated_by']?.toString();
+        if (status.isEmpty) return;
 
-        if (status.isNotEmpty) {
-          _updates.add(
-            CaseUpdateEvent(
-              caseId: caseId,
-              status: status,
-              role: role,
-              updatedBy: updatedBy,
-            ),
-          );
-        }
+        _controller.add(
+          CaseUpdateEvent(
+            caseId: caseId,
+            status: status,
+            updatedBy: data['updated_by']?.toString(),
+            role: data['role']?.toString(),
+          ),
+        );
       }
     });
   }
@@ -110,12 +105,10 @@ class CaseRealtimeService {
     final old = _watchingCaseId;
     if (old == null) return;
 
-    // Leave room (optional, but good)
-    _socket?.emit('leave_case', {'case_id': old});
+    // Leave room: your backend doesn't implement leave_case currently, so skip safely
+    // _socket?.emit('leave_case', old);
 
-    // Remove event listener
     _socket?.off('case_update_$old');
-
     _watchingCaseId = null;
   }
 
@@ -123,6 +116,6 @@ class CaseRealtimeService {
     await unwatchCase();
     _socket?.dispose();
     _socket = null;
-    await _updates.close();
+    await _controller.close();
   }
 }

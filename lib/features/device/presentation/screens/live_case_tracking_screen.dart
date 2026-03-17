@@ -30,7 +30,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
 
     final remote = s.remotelyClosedStatus;
     if (remote != null && !_exiting) {
-      // consume it so it doesn't trigger again
+      // consume so it won't re-trigger
       s.clearRemotelyClosedStatus();
       _safePop(remote);
     }
@@ -189,10 +189,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                   }
                                 }
                               : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF16A34A),
-                            minimumSize: const Size(double.infinity, 44),
-                          ),
                           child: session.statusUpdating
                               ? const SizedBox(
                                   width: 18,
@@ -202,13 +198,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Text(
-                                  'Resolved',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                              : const Text('Resolved'),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -244,15 +234,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                   }
                                 }
                               : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(
-                              255,
-                              179,
-                              32,
-                              32,
-                            ),
-                            minimumSize: const Size(double.infinity, 44),
-                          ),
                           child: session.statusUpdating
                               ? const SizedBox(
                                   width: 18,
@@ -262,13 +243,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Text(
-                                  'Unresolved',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                              : const Text('Unresolved'),
                         ),
                       ),
                     ],
@@ -304,10 +279,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                               }
                             }
                           : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6B7280),
-                        minimumSize: const Size(double.infinity, 44),
-                      ),
                       child: session.statusUpdating
                           ? const SizedBox(
                               width: 18,
@@ -317,13 +288,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
-                              'False',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                          : const Text('False'),
                     ),
                   ),
                 ],

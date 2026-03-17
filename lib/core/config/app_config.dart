@@ -4,6 +4,8 @@ class AppConfig {
   final Flavor flavor;
   final String appName;
   final String apiBaseUrl;
+
+  /// Socket.IO base URL (must be http/https, not ws/wss)
   final String wsUrl;
 
   const AppConfig({
@@ -13,19 +15,25 @@ class AppConfig {
     required this.wsUrl,
   });
 
+  static String _normalizeSocketIoUrl(String url) {
+    // socket_io_client expects http/https base url.
+    // If someone sets ws:// or wss://, convert to http/https.
+    if (url.startsWith('ws://')) return url.replaceFirst('ws://', 'http://');
+    if (url.startsWith('wss://')) return url.replaceFirst('wss://', 'https://');
+    return url;
+  }
+
   factory AppConfig.fromEnv() {
     const flavorStr = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
 
-    // IMPORTANT: defaultValue changed to your real backend
+    // API base
     const apiBaseUrl = String.fromEnvironment(
       'API_BASE_URL',
       defaultValue: 'https://skudyx-backend-c8do.onrender.com',
     );
 
-    const wsUrl = String.fromEnvironment(
-      'WS_URL',
-      defaultValue: 'wss://ws.example.com',
-    );
+    // ✅ Default WS to same host as API (Socket.IO runs on same server)
+    const wsUrlRaw = String.fromEnvironment('WS_URL', defaultValue: apiBaseUrl);
 
     final flavor = flavorFromString(flavorStr);
 
@@ -37,7 +45,7 @@ class AppConfig {
         Flavor.prod => 'SkudyX',
       },
       apiBaseUrl: apiBaseUrl,
-      wsUrl: wsUrl,
+      wsUrl: _normalizeSocketIoUrl(wsUrlRaw),
     );
   }
 }
