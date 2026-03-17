@@ -20,6 +20,7 @@ import 'package:skudyx/features/emergency_contact/data/remote/emergency_contact_
 import 'package:skudyx/features/profile/controllers/identity_verification_controller.dart';
 import 'package:skudyx/features/profile/controllers/profile_controller.dart';
 import 'package:skudyx/features/profile/data/remote/profile_api.dart';
+import 'package:skudyx/features/profile/data/remote/profile_update_api.dart';
 import 'package:skudyx/features/settings/presentation/controllers/notification_prefs_controller.dart';
 
 import '../core/config/app_config.dart';
@@ -107,6 +108,10 @@ class AppCompositionRoot extends StatelessWidget {
         ),
         ProxyProvider<Dio, ProfileApi>(
           update: (_, dio, __) => ProfileApi(dio: dio),
+        ),
+
+        ProxyProvider<Dio, ProfileUpdateApi>(
+          update: (_, dio, __) => ProfileUpdateApi(dio: dio),
         ),
 
         ChangeNotifierProvider<AppStatusController>(
