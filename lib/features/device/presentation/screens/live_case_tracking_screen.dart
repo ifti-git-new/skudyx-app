@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/features/cases/presentation/controllers/live_case_call_controller.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 
 class LiveCaseTrackingScreen extends StatefulWidget {
@@ -30,7 +31,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
 
     final remote = s.remotelyClosedStatus;
     if (remote != null && !_exiting) {
-      // consume so it won't re-trigger
       s.clearRemotelyClosedStatus();
       _safePop(remote);
     }
@@ -91,9 +91,32 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
     super.dispose();
   }
 
+  Future<void> _finishCase(BuildContext context, String status) async {
+    final session = context.read<DeviceSessionController>();
+    final call = context.read<LiveCaseCallController>();
+
+    final note = await _askNote(context, status);
+    if (!mounted || note == null) return;
+
+    await call.endCallAndUpload();
+
+    final ok = await session.updateFinalStatus(status: status, note: note);
+
+    if (!mounted) return;
+
+    if (ok) {
+      _safePop(status);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(session.lastError ?? 'Failed')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = context.watch<DeviceSessionController>();
+    final call = context.watch<LiveCaseCallController>();
 
     final statusText = session.starting
         ? 'Starting...'
@@ -102,7 +125,10 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
         : 'Tracking OFF';
 
     final bool enableStatusButtons =
-        session.tracking && session.caseId != null && !session.statusUpdating;
+        session.tracking &&
+        session.caseId != null &&
+        !session.statusUpdating &&
+        !call.ending;
 
     return PopScope(
       canPop: false,
@@ -124,6 +150,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
+
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
@@ -136,10 +163,51 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                     'Case: ${session.caseName ?? '-'}\n'
                     'case_id: ${session.caseId ?? (session.starting ? '(creating...)' : '-')}\n'
                     'Points: ${session.coordinates.length}\n'
-                    'Updates: ok ${session.successUpdates} / fail ${session.failedUpdates}',
+                    'Updates: ok ${session.successUpdates} / fail ${session.failedUpdates}\n'
+                    'Audio active: ${session.audioActive}\n'
+                    'Audio error: ${session.lastAudioError ?? '-'}',
                     style: const TextStyle(fontSize: 13),
                   ),
                 ),
+
+                const SizedBox(height: 14),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.withOpacity(0.12)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Live Call Status',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Socket connected: ${call.connected}'),
+                      Text('In WebRTC call: ${call.inCall}'),
+                      Text('Recording local audio: ${call.recording}'),
+                      Text('Ending/uploading: ${call.ending}'),
+                      Text('Remote peer: ${call.remoteSocketId ?? '-'}'),
+                      Text('M3U8 URL: ${call.m3u8Url ?? '-'}'),
+                      if ((call.lastError ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          call.lastError!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
                 const SizedBox(height: 20),
                 const Divider(),
                 const SizedBox(height: 12),
@@ -150,46 +218,27 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    session.lastError ?? '',
-                    style: const TextStyle(color: Colors.red),
-                  ),
+                  if ((session.lastError ?? '').isNotEmpty)
+                    Text(
+                      session.lastError ?? '',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  if ((session.lastAudioError ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      session.lastAudioError ?? '',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ],
                 ] else ...[
                   Row(
                     children: [
                       Expanded(
                         child: ElevatedButton(
                           onPressed: enableStatusButtons
-                              ? () async {
-                                  final note = await _askNote(
-                                    context,
-                                    'Resolved',
-                                  );
-                                  if (!mounted || note == null) return;
-
-                                  final ok = await context
-                                      .read<DeviceSessionController>()
-                                      .updateFinalStatus(
-                                        status: 'Resolved',
-                                        note: note,
-                                      );
-
-                                  if (!mounted) return;
-
-                                  if (ok) {
-                                    _safePop('Resolved');
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          session.lastError ?? 'Failed',
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
+                              ? () => _finishCase(context, 'Resolved')
                               : null,
-                          child: session.statusUpdating
+                          child: session.statusUpdating || call.ending
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
@@ -205,36 +254,9 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: enableStatusButtons
-                              ? () async {
-                                  final note = await _askNote(
-                                    context,
-                                    'Unresolved',
-                                  );
-                                  if (!mounted || note == null) return;
-
-                                  final ok = await context
-                                      .read<DeviceSessionController>()
-                                      .updateFinalStatus(
-                                        status: 'Unresolved',
-                                        note: note,
-                                      );
-
-                                  if (!mounted) return;
-
-                                  if (ok) {
-                                    _safePop('Unresolved');
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          session.lastError ?? 'Failed',
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
+                              ? () => _finishCase(context, 'Unresolved')
                               : null,
-                          child: session.statusUpdating
+                          child: session.statusUpdating || call.ending
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
@@ -253,33 +275,9 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: enableStatusButtons
-                          ? () async {
-                              final note = await _askNote(context, 'False');
-                              if (!mounted || note == null) return;
-
-                              final ok = await context
-                                  .read<DeviceSessionController>()
-                                  .updateFinalStatus(
-                                    status: 'False',
-                                    note: note,
-                                  );
-
-                              if (!mounted) return;
-
-                              if (ok) {
-                                _safePop('False');
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      session.lastError ?? 'Failed',
-                                    ),
-                                  ),
-                                );
-                              }
-                            }
+                          ? () => _finishCase(context, 'False')
                           : null,
-                      child: session.statusUpdating
+                      child: session.statusUpdating || call.ending
                           ? const SizedBox(
                               width: 18,
                               height: 18,

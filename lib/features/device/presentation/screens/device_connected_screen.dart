@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/core/config/app_config.dart';
 import 'package:skudyx/core/config/flavors.dart';
-import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
+import 'package:skudyx/features/cases/presentation/controllers/live_case_call_controller.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
+import 'package:skudyx/features/device/presentation/screens/live_case_tracking_screen.dart';
 
 class DeviceConnectedScreen extends StatefulWidget {
   const DeviceConnectedScreen({super.key});
@@ -63,7 +63,6 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
               _buildHeader(context),
               const SizedBox(height: 26),
 
-              /// ✅ DEVICE CIRCLE (kept)
               Center(
                 child: Stack(
                   clipBehavior: Clip.none,
@@ -305,12 +304,60 @@ class _SafetySection extends StatefulWidget {
 class _SafetySectionState extends State<_SafetySection> {
   bool _routingToTracking = false;
 
+  Future<void> _startLiveCase(BuildContext context) async {
+    final session = context.read<DeviceSessionController>();
+
+    setState(() => _routingToTracking = true);
+
+    final ok = await session.startCase(isTest: false, caseName: 'Live Case');
+
+    if (!mounted) return;
+
+    if (!ok || session.caseId == null) {
+      setState(() => _routingToTracking = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(session.lastError ?? 'Failed to start case')),
+      );
+      return;
+    }
+
+    final liveCallController = LiveCaseCallController(
+      socketBaseUrl: 'http://YOUR_SERVER_IP:8081',
+      uploadBaseUrl: 'http://YOUR_SERVER_IP:8081',
+      uploadEndpoint: '/api/cases/upload-final-audio',
+      caseId: session.caseId.toString(),
+      isCaller: true,
+    );
+
+    await liveCallController.start();
+
+    if (!mounted) return;
+
+    setState(() => _routingToTracking = false);
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MultiProvider(
+          providers: [
+            ChangeNotifierProvider<DeviceSessionController>.value(
+              value: session,
+            ),
+            ChangeNotifierProvider<LiveCaseCallController>.value(
+              value: liveCallController,
+            ),
+          ],
+          child: const LiveCaseTrackingScreen(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = context.watch<DeviceSessionController>();
 
     final bool isLoading =
-        _routingToTracking || session.starting; // show loader immediately
+        _routingToTracking || session.starting || session.statusUpdating;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,7 +381,6 @@ class _SafetySectionState extends State<_SafetySection> {
         const _SafetyTile(title: "Live Movement Tracking"),
         const SizedBox(height: 12),
         const _SafetyTile(title: "Live Audio Sharing"),
-
         if (widget.showInternalTesting) ...[
           const SizedBox(height: 24),
           const Text(
@@ -346,53 +392,12 @@ class _SafetySectionState extends State<_SafetySection> {
             ),
           ),
           const SizedBox(height: 12),
-
           ElevatedButton(
-            onPressed:
-                (isLoading ||
-                    session.tracking ||
-                    session.statusUpdating) // keep disabled while loading
+            onPressed: (isLoading || session.tracking)
                 ? null
-                : () async {
-                    setState(() => _routingToTracking = true);
-
-                    final ok = await context
-                        .read<DeviceSessionController>()
-                        .startCase(isTest: false, caseName: 'Live Case');
-
-                    if (!mounted) return;
-
-                    if (!ok) {
-                      setState(() => _routingToTracking = false);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            session.lastError ?? 'Failed to start case',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-
-                    // Start navigation. Keep loader until push is initiated.
-                    final pushFuture = context.push<String>(
-                      AppRoutes.liveCaseTracking,
-                    );
-
-                    // Once navigation is initiated, remove loader on this screen.
-                    if (mounted) setState(() => _routingToTracking = false);
-
-                    final result = await pushFuture;
-                    if (!mounted) return;
-
-                    if (result != null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Case updated to $result')),
-                      );
-                    }
-                  },
+                : () => _startLiveCase(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF10B981),
+              backgroundColor: const Color(0xFF10B981),
               minimumSize: const Size(double.infinity, 48),
             ),
             child: AnimatedSwitcher(

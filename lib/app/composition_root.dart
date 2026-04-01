@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/core/controllers/app_status_controller.dart';
 import 'package:skudyx/core/network/dio_debug_interceptor.dart';
+import 'package:skudyx/core/realtime/case_audio_realtime_service.dart';
 import 'package:skudyx/core/realtime/case_realtime_service.dart';
 import 'package:skudyx/core/storage/app_prefs.dart';
 import 'package:skudyx/core/storage/auth_token_storage.dart';
@@ -12,7 +13,9 @@ import 'package:skudyx/features/auth/data/remote/auth_api.dart';
 import 'package:skudyx/features/auth/data/social/social/apple_auth_provider.dart';
 import 'package:skudyx/features/auth/data/social/google_auth_provider.dart';
 import 'package:skudyx/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:skudyx/features/cases/data/remote/audio_upload_api.dart';
 import 'package:skudyx/features/cases/data/remote/case_api.dart';
+import 'package:skudyx/features/cases/domain/services/live_audio_upload_service.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
@@ -48,6 +51,7 @@ class AppCompositionRoot extends StatelessWidget {
         Provider<FlutterSecureStorage>(
           create: (_) => const FlutterSecureStorage(),
         ),
+
         Provider<AuthTokenStorage>(
           create: (c) => AuthTokenStorage(c.read<FlutterSecureStorage>()),
         ),
@@ -102,10 +106,17 @@ class AppCompositionRoot extends StatelessWidget {
         ),
 
         ProxyProvider<Dio, AuthApi>(update: (_, dio, __) => AuthApi(dio: dio)),
+
         ProxyProvider<Dio, CaseApi>(update: (_, dio, __) => CaseApi(dio: dio)),
+
+        ProxyProvider<Dio, AudioUploadApi>(
+          update: (_, dio, __) => AudioUploadApi(dio: dio),
+        ),
+
         ProxyProvider<Dio, EmergencyContactApi>(
           update: (_, dio, __) => EmergencyContactApi(dio: dio),
         ),
+
         ProxyProvider<Dio, ProfileApi>(
           update: (_, dio, __) => ProfileApi(dio: dio),
         ),
@@ -130,11 +141,26 @@ class AppCompositionRoot extends StatelessWidget {
           dispose: (_, svc) => svc.dispose(),
         ),
 
-        // NEW: persistent device+case session
+        Provider<CaseAudioRealtimeService>(
+          create: (c) => CaseAudioRealtimeService(
+            config: c.read<AppConfig>(),
+            tokenStorage: c.read<AuthTokenStorage>(),
+          ),
+          dispose: (_, svc) => svc.dispose(),
+        ),
+
+        Provider<LiveAudioUploadService>(
+          create: (c) =>
+              LiveAudioUploadService(audioUploadApi: c.read<AudioUploadApi>()),
+          dispose: (_, svc) => svc.dispose(),
+        ),
+
         ChangeNotifierProvider<DeviceSessionController>(
           create: (c) => DeviceSessionController(
             caseApi: c.read<CaseApi>(),
             realtime: c.read<CaseRealtimeService>(),
+            audioRealtime: c.read<CaseAudioRealtimeService>(),
+            liveAudioUploadService: c.read<LiveAudioUploadService>(),
           ),
         ),
 
@@ -153,11 +179,13 @@ class AppCompositionRoot extends StatelessWidget {
           create: (c) =>
               NotificationPrefsController(prefs: c.read<AppPrefs>())..init(),
         ),
+
         ChangeNotifierProvider<IdentityVerificationController>(
           create: (_) => IdentityVerificationController(),
         ),
 
         Provider<GoogleAuthProvider>(create: (_) => GoogleAuthProvider()),
+
         Provider<AppleAuthProvider>(create: (_) => AppleAuthProvider()),
 
         ChangeNotifierProvider<AuthController>(

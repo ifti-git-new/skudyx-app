@@ -3,16 +3,27 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:skudyx/core/realtime/case_audio_realtime_service.dart';
 import 'package:skudyx/core/realtime/case_realtime_service.dart';
 import 'package:skudyx/features/cases/data/remote/case_api.dart';
+import 'package:skudyx/features/cases/domain/services/live_audio_upload_service.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
 
 class DeviceSessionController extends ChangeNotifier {
   final CaseApi caseApi;
   final CaseRealtimeService realtime;
+  final CaseAudioRealtimeService audioRealtime;
+  final LiveAudioUploadService liveAudioUploadService;
 
-  DeviceSessionController({required this.caseApi, required this.realtime}) {
+  DeviceSessionController({
+    required this.caseApi,
+    required this.realtime,
+    required this.audioRealtime,
+    required this.liveAudioUploadService,
+  }) {
     _rtSub = realtime.stream.listen(_onRealtimeUpdate);
+    _audioSignalSub = audioRealtime.emergencyStream.listen(_onAudioSignal);
+    _audioEndedSub = audioRealtime.endedStream.listen(_onAudioEnded);
   }
 
   // -------------------------
@@ -27,7 +38,6 @@ class DeviceSessionController extends ChangeNotifier {
   }
 
   Future<void> disconnectDevice() async {
-    // ✅ Disconnect clears everything
     remotelyClosedStatus = null;
     await stopTracking(clearCase: true);
     connectedDevice = null;
@@ -45,8 +55,10 @@ class DeviceSessionController extends ChangeNotifier {
   String? lastError;
   String? lastStatus;
 
-  /// ✅ Set when admin/web closes the case so UI can auto-exit
   String? remotelyClosedStatus;
+
+  bool audioActive = false;
+  String? lastAudioError;
 
   void clearRemotelyClosedStatus() {
     remotelyClosedStatus = null;
@@ -63,11 +75,18 @@ class DeviceSessionController extends ChangeNotifier {
   final List<Map<String, dynamic>> coordinates = [];
 
   StreamSubscription<CaseUpdateEvent>? _rtSub;
+  StreamSubscription<EmergencyAudioSignalEvent>? _audioSignalSub;
+  StreamSubscription<AudioStreamEndedEvent>? _audioEndedSub;
 
   static const _finalStatuses = {'Resolved', 'Unresolved', 'False'};
 
   void _setError(String msg) {
     lastError = msg;
+    notifyListeners();
+  }
+
+  void _setAudioError(String msg) {
+    lastAudioError = msg;
     notifyListeners();
   }
 
@@ -116,6 +135,8 @@ class DeviceSessionController extends ChangeNotifier {
     if (starting || tracking) return false;
 
     clearError();
+    lastAudioError = null;
+    audioActive = false;
 
     final ok = await _ensureLocationReady();
     if (!ok) return false;
@@ -148,6 +169,10 @@ class DeviceSessionController extends ChangeNotifier {
         throw Exception('Missing case_id');
       }
 
+      if (kDebugMode) {
+        print('[DeviceSession] case created => $createdCaseId');
+      }
+
       caseId = createdCaseId;
       lastStatus = (data['status'] ?? 'Pending').toString();
 
@@ -155,8 +180,32 @@ class DeviceSessionController extends ChangeNotifier {
       tracking = true;
       notifyListeners();
 
-      // ✅ Start listening for admin/web status updates
+      // await realtime.watchCase(createdCaseId);
+
+      // if (createdCaseId.startsWith('CL')) {
+      //   if (kDebugMode) {
+      //     print('[DeviceSession] CL case detected, watching audio realtime');
+      //   }
+      //   await audioRealtime.watchCase(createdCaseId);
+      // }
+
+      ///TEMPORARY WORKAROUND: Start watching realtime and audio immediately to ensure we receive backend signals for starting audio, even before the first location tick is sent. This is to address a potential
       await realtime.watchCase(createdCaseId);
+
+      if (createdCaseId.startsWith('CL')) {
+        if (kDebugMode) {
+          print('[DeviceSession] CL case detected, watching audio realtime');
+        }
+        await audioRealtime.watchCase(createdCaseId);
+
+        // TEMP TEST MODE:
+        // Force audio start even if backend emergency_response is not emitted.
+        if (kDebugMode) {
+          print('[DeviceSession] TEMP force-start audio for CL case');
+        }
+        await _startAudioIfNeeded(createdCaseId);
+      }
+      // END OF TEMPORARY WORKAROUND
 
       await _sendOneTick();
 
@@ -191,13 +240,14 @@ class DeviceSessionController extends ChangeNotifier {
       _timer = null;
 
       await realtime.unwatchCase();
+      await audioRealtime.unwatchCase();
+      await liveAudioUploadService.stop();
 
       notifyListeners();
       return false;
     } catch (e) {
       if (kDebugMode) {
-        // ignore: avoid_print
-        print('startCase error: $e');
+        print('[DeviceSession] startCase error => $e');
       }
       _setError('Failed to start case.');
 
@@ -210,6 +260,8 @@ class DeviceSessionController extends ChangeNotifier {
       _timer = null;
 
       await realtime.unwatchCase();
+      await audioRealtime.unwatchCase();
+      await liveAudioUploadService.stop();
 
       notifyListeners();
       return false;
@@ -237,10 +289,50 @@ class DeviceSessionController extends ChangeNotifier {
 
       successUpdates++;
       notifyListeners();
-    } catch (_) {
+    } catch (e) {
+      if (kDebugMode) {
+        print('[DeviceSession] location tick failed => $e');
+      }
       failedUpdates++;
       notifyListeners();
     }
+  }
+
+  Future<void> _startAudioIfNeeded(String id) async {
+    if (kDebugMode) {
+      print('[DeviceSession] _startAudioIfNeeded => $id');
+    }
+
+    if (!id.startsWith('CL')) return;
+    if (audioActive) return;
+
+    await liveAudioUploadService.start(
+      caseId: id,
+      onError: (msg) {
+        if (kDebugMode) {
+          print('[DeviceSession] audio error => $msg');
+        }
+        _setAudioError(msg);
+      },
+    );
+
+    audioActive = liveAudioUploadService.isRunning;
+
+    if (kDebugMode) {
+      print('[DeviceSession] audioActive => $audioActive');
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> _stopAudio() async {
+    if (kDebugMode) {
+      print('[DeviceSession] _stopAudio');
+    }
+
+    await liveAudioUploadService.stop();
+    audioActive = false;
+    notifyListeners();
   }
 
   Future<void> stopTracking({bool clearCase = false}) async {
@@ -252,6 +344,8 @@ class DeviceSessionController extends ChangeNotifier {
     tracking = false;
 
     await realtime.unwatchCase();
+    await audioRealtime.unwatchCase();
+    await _stopAudio();
 
     if (clearCase) {
       caseId = null;
@@ -261,7 +355,6 @@ class DeviceSessionController extends ChangeNotifier {
       failedUpdates = 0;
       coordinates.clear();
       lastError = null;
-      // NOTE: we do NOT clear remotelyClosedStatus here (UI needs it to auto-pop)
     }
 
     notifyListeners();
@@ -287,8 +380,6 @@ class DeviceSessionController extends ChangeNotifier {
       await caseApi.updateStatus(caseId: id, status: status, note: note);
 
       lastStatus = status;
-
-      // ✅ This close was initiated by the app user, not remote admin
       remotelyClosedStatus = null;
 
       await stopTracking(clearCase: true);
@@ -306,7 +397,10 @@ class DeviceSessionController extends ChangeNotifier {
       statusUpdating = false;
       notifyListeners();
       return false;
-    } catch (_) {
+    } catch (e) {
+      if (kDebugMode) {
+        print('[DeviceSession] updateFinalStatus error => $e');
+      }
       _setError('Failed to update status.');
       statusUpdating = false;
       notifyListeners();
@@ -319,14 +413,14 @@ class DeviceSessionController extends ChangeNotifier {
     if (id == null) return;
     if (event.caseId != id) return;
 
+    if (kDebugMode) {
+      print('[DeviceSession] case realtime update => ${event.status}');
+    }
+
     lastStatus = event.status;
 
-    // If admin/web closes the case:
     if (_finalStatuses.contains(event.status)) {
-      // ✅ Set the status for UI to auto-exit
       remotelyClosedStatus = event.status;
-
-      // Stop + clear case locally (do not call updateFinalStatus again)
       await stopTracking(clearCase: true);
       return;
     }
@@ -334,9 +428,47 @@ class DeviceSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _onAudioSignal(EmergencyAudioSignalEvent event) async {
+    final id = caseId;
+
+    if (kDebugMode) {
+      print(
+        '[DeviceSession] audio signal => currentCase=$id, '
+        'eventCase=${event.caseId}, shouldStart=${event.shouldStartAudio}',
+      );
+    }
+
+    if (id == null) return;
+    if (!id.startsWith('CL')) return;
+
+    if (event.caseId != null && event.caseId != id) return;
+
+    if (event.shouldStartAudio) {
+      await _startAudioIfNeeded(id);
+    }
+  }
+
+  void _onAudioEnded(AudioStreamEndedEvent event) async {
+    final id = caseId;
+
+    if (kDebugMode) {
+      print(
+        '[DeviceSession] audio ended => currentCase=$id, eventCase=${event.caseId}',
+      );
+    }
+
+    if (id == null) return;
+    if (event.caseId != null && event.caseId != id) return;
+
+    await _stopAudio();
+  }
+
   @override
   void dispose() {
     _rtSub?.cancel();
+    _audioSignalSub?.cancel();
+    _audioEndedSub?.cancel();
+    liveAudioUploadService.dispose();
     super.dispose();
   }
 }

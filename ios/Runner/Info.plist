@@ -6,6 +6,8 @@
 	<string>SkudyX needs camera access to scan your identity document for verification.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SkudyX needs microphone access for live emergency audio sharing.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Skudyx</string>
 	<key>CFBundleExecutable</key>
