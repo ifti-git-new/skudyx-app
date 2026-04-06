@@ -1,4 +1,3 @@
-// lib/features/cases/domain/services/live_media_webrtc_service.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -31,8 +30,11 @@ class LiveMediaWebRtcService {
   MediaStream? get localStream => _localStream;
   bool get hasLocalAudioTrack =>
       _localStream?.getAudioTracks().isNotEmpty == true;
-  bool get hasLocalVideoTrack =>
-      _localStream?.getVideoTracks().isNotEmpty == true;
+
+  // Video currently disabled
+  bool get hasLocalVideoTrack => false;
+  // bool get hasLocalVideoTrack =>
+  //     _localStream?.getVideoTracks().isNotEmpty == true;
 
   final Map<String, dynamic> _rtcConfig = {
     'iceServers': [
@@ -43,17 +45,24 @@ class LiveMediaWebRtcService {
 
   Future<bool> _ensurePermissions() async {
     final mic = await Permission.microphone.request();
-    final cam = await Permission.camera.request();
 
     micPermissionGranted = mic.isGranted;
-    cameraPermissionGranted = cam.isGranted;
+
+    // Video currently disabled
+    cameraPermissionGranted = false;
+
+    // final cam = await Permission.camera.request();
+    // cameraPermissionGranted = cam.isGranted;
 
     if (kDebugMode) {
       print('[WebRTC] mic permission => $mic');
-      print('[WebRTC] camera permission => $cam');
+      // print('[WebRTC] camera permission => $cam');
     }
 
-    return mic.isGranted && cam.isGranted;
+    return mic.isGranted;
+
+    // For audio + video later:
+    // return mic.isGranted && cam.isGranted;
   }
 
   Future<void> start({
@@ -84,7 +93,7 @@ class LiveMediaWebRtcService {
       onStateChanged?.call();
 
       if (!granted) {
-        lastError = 'Microphone/Camera permission denied.';
+        lastError = 'Microphone permission denied.';
         onError?.call(lastError!);
         _starting = false;
         onStateChanged?.call();
@@ -140,19 +149,30 @@ class LiveMediaWebRtcService {
 
       _localStream = await navigator.mediaDevices.getUserMedia({
         'audio': true,
-        'video': {'facingMode': 'user'},
+        'video': false,
+
+        // For audio + video later:
+        // 'video': {
+        //   'facingMode': 'user',
+        // },
       });
 
       localStreamAcquired = true;
       onStateChanged?.call();
 
       if (kDebugMode) {
-        print('[WebRTC] local media stream acquired');
+        print('[WebRTC] local audio stream acquired');
       }
 
-      for (final track in _localStream!.getTracks()) {
+      // Audio track only for now
+      for (final track in _localStream!.getAudioTracks()) {
         await _peerConnection!.addTrack(track, _localStream!);
       }
+
+      // For audio + video later:
+      // for (final track in _localStream!.getTracks()) {
+      //   await _peerConnection!.addTrack(track, _localStream!);
+      // }
 
       final offer = await _peerConnection!.createOffer({
         'offerToReceiveAudio': false,

@@ -1,6 +1,5 @@
-// lib/features/device/presentation/screens/live_case_tracking_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
+// import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
@@ -14,27 +13,29 @@ class LiveCaseTrackingScreen extends StatefulWidget {
 
 class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   bool _exiting = false;
-  bool _rendererReady = false;
   DeviceSessionController? _session;
-  final RTCVideoRenderer _renderer = RTCVideoRenderer();
+
+  // Video preview currently disabled
+  // bool _rendererReady = false;
+  // final RTCVideoRenderer _renderer = RTCVideoRenderer();
 
   @override
   void initState() {
     super.initState();
-    _initRenderer();
+    // _initRenderer();
   }
 
-  Future<void> _initRenderer() async {
-    await _renderer.initialize();
-    _rendererReady = true;
-
-    if (!mounted) return;
-
-    final session = context.read<DeviceSessionController>();
-    _renderer.srcObject = session.localPreviewStream;
-
-    setState(() {});
-  }
+  // Future<void> _initRenderer() async {
+  //   await _renderer.initialize();
+  //   _rendererReady = true;
+  //
+  //   if (!mounted) return;
+  //
+  //   final session = context.read<DeviceSessionController>();
+  //   _renderer.srcObject = session.localPreviewStream;
+  //
+  //   setState(() {});
+  // }
 
   void _safePop([String? result]) {
     if (_exiting) return;
@@ -50,9 +51,10 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
     final s = _session;
     if (s == null) return;
 
-    if (_rendererReady) {
-      _renderer.srcObject = s.localPreviewStream;
-    }
+    // Video preview currently disabled
+    // if (_rendererReady) {
+    //   _renderer.srcObject = s.localPreviewStream;
+    // }
 
     final remote = s.remotelyClosedStatus;
     if (remote != null && !_exiting) {
@@ -108,19 +110,23 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
       _session = newSession;
       _session?.addListener(_onSessionChanged);
 
-      if (_rendererReady) {
-        _renderer.srcObject = newSession.localPreviewStream;
-      }
+      // Video preview currently disabled
+      // if (_rendererReady) {
+      //   _renderer.srcObject = newSession.localPreviewStream;
+      // }
     }
   }
 
   @override
   void dispose() {
     _session?.removeListener(_onSessionChanged);
-    if (_rendererReady) {
-      _renderer.srcObject = null;
-      _renderer.dispose();
-    }
+
+    // Video preview currently disabled
+    // if (_rendererReady) {
+    //   _renderer.srcObject = null;
+    //   _renderer.dispose();
+    // }
+
     super.dispose();
   }
 
@@ -137,9 +143,10 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
     final bool enableStatusButtons =
         session.tracking && session.caseId != null && !session.statusUpdating;
 
-    if (_rendererReady) {
-      _renderer.srcObject = session.localPreviewStream;
-    }
+    // Video preview currently disabled
+    // if (_rendererReady) {
+    //   _renderer.srcObject = session.localPreviewStream;
+    // }
 
     return PopScope(
       canPop: false,
@@ -162,31 +169,40 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                Container(
-                  width: double.infinity,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: !_rendererReady
-                      ? const Center(child: CircularProgressIndicator())
-                      : session.localPreviewStream != null
-                      ? RTCVideoView(
-                          _renderer,
-                          objectFit:
-                              RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                          mirror: true,
-                        )
-                      : const Center(
-                          child: Text(
-                            'No local preview',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        ),
-                ),
+                // Container(
+                //   width: double.infinity,
+                //   height: 160,
+                //   decoration: BoxDecoration(
+                //     color: Colors.black,
+                //     borderRadius: BorderRadius.circular(12),
+                //   ),
+                //   clipBehavior: Clip.antiAlias,
+                //   child: const Center(
+                //     child: Text(
+                //       'Audio-only mode\nVideo preview disabled',
+                //       textAlign: TextAlign.center,
+                //       style: TextStyle(color: Colors.white70),
+                //     ),
+                //   ),
 
+                //   // For video preview later:
+                //   // child: !_rendererReady
+                //   //     ? const Center(
+                //   //         child: CircularProgressIndicator(),
+                //   //       )
+                //   //     : session.localPreviewStream != null
+                //   //         ? RTCVideoView(
+                //   //             _renderer,
+                //   //             objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                //   //             mirror: true,
+                //   //           )
+                //   //         : const Center(
+                //   //             child: Text(
+                //   //               'No local preview',
+                //   //               style: TextStyle(color: Colors.white70),
+                //   //             ),
+                //   //           ),
+                // ),
                 const SizedBox(height: 16),
 
                 Container(
