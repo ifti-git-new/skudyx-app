@@ -1,36 +1,87 @@
+// lib/features/device/presentation/controllers/device_session_controller.dart
 import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:skudyx/core/realtime/case_audio_realtime_service.dart';
 import 'package:skudyx/core/realtime/case_realtime_service.dart';
 import 'package:skudyx/features/cases/data/remote/case_api.dart';
-import 'package:skudyx/features/cases/domain/services/live_audio_upload_service.dart';
+import 'package:skudyx/features/cases/domain/services/live_media_webrtc_service.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
 
 class DeviceSessionController extends ChangeNotifier {
   final CaseApi caseApi;
   final CaseRealtimeService realtime;
   final CaseAudioRealtimeService audioRealtime;
-  final LiveAudioUploadService liveAudioUploadService;
+  final LiveMediaWebRtcService liveMediaWebRtcService;
 
   DeviceSessionController({
     required this.caseApi,
     required this.realtime,
     required this.audioRealtime,
-    required this.liveAudioUploadService,
+    required this.liveMediaWebRtcService,
   }) {
     _rtSub = realtime.stream.listen(_onRealtimeUpdate);
-    _audioSignalSub = audioRealtime.emergencyStream.listen(_onAudioSignal);
     _audioEndedSub = audioRealtime.endedStream.listen(_onAudioEnded);
+    _answerSub = audioRealtime.answerStream.listen(_onWebRtcAnswer);
+    _iceSub = audioRealtime.iceCandidateStream.listen(_onWebRtcIce);
   }
 
-  // -------------------------
-  // Device connection state
-  // -------------------------
   FoundDevice? connectedDevice;
   bool get isConnected => connectedDevice != null;
+
+  bool starting = false;
+  bool tracking = false;
+
+  String? caseId;
+  String? caseName;
+  String? lastError;
+  String? lastStatus;
+  String? remotelyClosedStatus;
+
+  bool audioActive = false;
+  String? lastAudioError;
+
+  Timer? _timer;
+  bool _tickInFlight = false;
+
+  int successUpdates = 0;
+  int failedUpdates = 0;
+
+  bool statusUpdating = false;
+
+  final List<Map<String, dynamic>> coordinates = [];
+
+  StreamSubscription<CaseUpdateEvent>? _rtSub;
+  StreamSubscription<AudioStreamEndedEvent>? _audioEndedSub;
+  StreamSubscription<WebRtcAnswerEvent>? _answerSub;
+  StreamSubscription<WebRtcIceCandidateEvent>? _iceSub;
+
+  static const _finalStatuses = {'Resolved', 'Unresolved', 'False'};
+
+  bool get webrtcMicPermissionGranted =>
+      liveMediaWebRtcService.micPermissionGranted;
+  bool get webrtcCameraPermissionGranted =>
+      liveMediaWebRtcService.cameraPermissionGranted;
+  bool get webrtcLocalStreamAcquired =>
+      liveMediaWebRtcService.localStreamAcquired;
+  bool get webrtcHasLocalAudioTrack =>
+      liveMediaWebRtcService.hasLocalAudioTrack;
+  bool get webrtcHasLocalVideoTrack =>
+      liveMediaWebRtcService.hasLocalVideoTrack;
+  bool get webrtcOfferSent => liveMediaWebRtcService.offerSent;
+  bool get webrtcAnswerReceived => liveMediaWebRtcService.answerReceived;
+  int get webrtcSentIceCandidates => liveMediaWebRtcService.sentIceCandidates;
+  int get webrtcReceivedIceCandidates =>
+      liveMediaWebRtcService.receivedIceCandidates;
+  String get webrtcSignalingState => liveMediaWebRtcService.signalingState;
+  String get webrtcIceConnectionState =>
+      liveMediaWebRtcService.iceConnectionState;
+  String get webrtcConnectionState => liveMediaWebRtcService.connectionState;
+  String? get webrtcLastError => liveMediaWebRtcService.lastError;
+  MediaStream? get localPreviewStream => liveMediaWebRtcService.localStream;
 
   void connectDevice(FoundDevice device) {
     connectedDevice = device;
@@ -44,48 +95,16 @@ class DeviceSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // -------------------------
-  // Case tracking state
-  // -------------------------
-  bool starting = false;
-  bool tracking = false;
-
-  String? caseId;
-  String? caseName;
-  String? lastError;
-  String? lastStatus;
-
-  String? remotelyClosedStatus;
-
-  bool audioActive = false;
-  String? lastAudioError;
-
   void clearRemotelyClosedStatus() {
     remotelyClosedStatus = null;
   }
-
-  Timer? _timer;
-  bool _tickInFlight = false;
-
-  int successUpdates = 0;
-  int failedUpdates = 0;
-
-  bool statusUpdating = false;
-
-  final List<Map<String, dynamic>> coordinates = [];
-
-  StreamSubscription<CaseUpdateEvent>? _rtSub;
-  StreamSubscription<EmergencyAudioSignalEvent>? _audioSignalSub;
-  StreamSubscription<AudioStreamEndedEvent>? _audioEndedSub;
-
-  static const _finalStatuses = {'Resolved', 'Unresolved', 'False'};
 
   void _setError(String msg) {
     lastError = msg;
     notifyListeners();
   }
 
-  void _setAudioError(String msg) {
+  void _setMediaError(String msg) {
     lastAudioError = msg;
     notifyListeners();
   }
@@ -180,32 +199,17 @@ class DeviceSessionController extends ChangeNotifier {
       tracking = true;
       notifyListeners();
 
-      // await realtime.watchCase(createdCaseId);
-
-      // if (createdCaseId.startsWith('CL')) {
-      //   if (kDebugMode) {
-      //     print('[DeviceSession] CL case detected, watching audio realtime');
-      //   }
-      //   await audioRealtime.watchCase(createdCaseId);
-      // }
-
-      ///TEMPORARY WORKAROUND: Start watching realtime and audio immediately to ensure we receive backend signals for starting audio, even before the first location tick is sent. This is to address a potential
       await realtime.watchCase(createdCaseId);
 
       if (createdCaseId.startsWith('CL')) {
         if (kDebugMode) {
-          print('[DeviceSession] CL case detected, watching audio realtime');
+          print('[DeviceSession] CL case detected, watching case room');
+          print('[DeviceSession] auto-start WebRTC media for CL case');
         }
-        await audioRealtime.watchCase(createdCaseId);
 
-        // TEMP TEST MODE:
-        // Force audio start even if backend emergency_response is not emitted.
-        if (kDebugMode) {
-          print('[DeviceSession] TEMP force-start audio for CL case');
-        }
-        await _startAudioIfNeeded(createdCaseId);
+        await audioRealtime.watchCase(createdCaseId);
+        await _startMediaIfNeeded(createdCaseId);
       }
-      // END OF TEMPORARY WORKAROUND
 
       await _sendOneTick();
 
@@ -241,7 +245,7 @@ class DeviceSessionController extends ChangeNotifier {
 
       await realtime.unwatchCase();
       await audioRealtime.unwatchCase();
-      await liveAudioUploadService.stop();
+      await liveMediaWebRtcService.stop(onStateChanged: notifyListeners);
 
       notifyListeners();
       return false;
@@ -249,6 +253,7 @@ class DeviceSessionController extends ChangeNotifier {
       if (kDebugMode) {
         print('[DeviceSession] startCase error => $e');
       }
+
       _setError('Failed to start case.');
 
       starting = false;
@@ -261,7 +266,7 @@ class DeviceSessionController extends ChangeNotifier {
 
       await realtime.unwatchCase();
       await audioRealtime.unwatchCase();
-      await liveAudioUploadService.stop();
+      await liveMediaWebRtcService.stop(onStateChanged: notifyListeners);
 
       notifyListeners();
       return false;
@@ -270,7 +275,7 @@ class DeviceSessionController extends ChangeNotifier {
 
   Future<void> _sendOneTick() async {
     final id = caseId;
-    if (id == null) return;
+    if (id == null || !tracking) return;
 
     try {
       final pos = await _getCurrentPosition();
@@ -298,28 +303,29 @@ class DeviceSessionController extends ChangeNotifier {
     }
   }
 
-  Future<void> _startAudioIfNeeded(String id) async {
+  Future<void> _startMediaIfNeeded(String id) async {
     if (kDebugMode) {
-      print('[DeviceSession] _startAudioIfNeeded => $id');
+      print('[DeviceSession] _startMediaIfNeeded => $id');
     }
 
     if (!id.startsWith('CL')) return;
     if (audioActive) return;
 
-    await liveAudioUploadService.start(
+    await liveMediaWebRtcService.start(
       caseId: id,
       onError: (msg) {
         if (kDebugMode) {
-          print('[DeviceSession] audio error => $msg');
+          print('[DeviceSession] media error => $msg');
         }
-        _setAudioError(msg);
+        _setMediaError(msg);
       },
+      onStateChanged: notifyListeners,
     );
 
-    audioActive = liveAudioUploadService.isRunning;
+    audioActive = liveMediaWebRtcService.isStarted;
 
     if (kDebugMode) {
-      print('[DeviceSession] audioActive => $audioActive');
+      print('[DeviceSession] media active => $audioActive');
     }
 
     notifyListeners();
@@ -330,7 +336,7 @@ class DeviceSessionController extends ChangeNotifier {
       print('[DeviceSession] _stopAudio');
     }
 
-    await liveAudioUploadService.stop();
+    await liveMediaWebRtcService.stop(onStateChanged: notifyListeners);
     audioActive = false;
     notifyListeners();
   }
@@ -428,26 +434,6 @@ class DeviceSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _onAudioSignal(EmergencyAudioSignalEvent event) async {
-    final id = caseId;
-
-    if (kDebugMode) {
-      print(
-        '[DeviceSession] audio signal => currentCase=$id, '
-        'eventCase=${event.caseId}, shouldStart=${event.shouldStartAudio}',
-      );
-    }
-
-    if (id == null) return;
-    if (!id.startsWith('CL')) return;
-
-    if (event.caseId != null && event.caseId != id) return;
-
-    if (event.shouldStartAudio) {
-      await _startAudioIfNeeded(id);
-    }
-  }
-
   void _onAudioEnded(AudioStreamEndedEvent event) async {
     final id = caseId;
 
@@ -463,12 +449,41 @@ class DeviceSessionController extends ChangeNotifier {
     await _stopAudio();
   }
 
+  void _onWebRtcAnswer(WebRtcAnswerEvent event) async {
+    final id = caseId;
+    if (id == null || event.caseId != id) return;
+
+    if (kDebugMode) {
+      print('[DeviceSession] received WebRTC answer');
+    }
+
+    await liveMediaWebRtcService.handleAnswer(
+      event.sdpOrAnswer,
+      onStateChanged: notifyListeners,
+    );
+  }
+
+  void _onWebRtcIce(WebRtcIceCandidateEvent event) async {
+    final id = caseId;
+    if (id == null || event.caseId != id) return;
+
+    if (kDebugMode) {
+      print('[DeviceSession] received remote ICE');
+    }
+
+    await liveMediaWebRtcService.handleRemoteIceCandidate(
+      event.candidate,
+      onStateChanged: notifyListeners,
+    );
+  }
+
   @override
   void dispose() {
     _rtSub?.cancel();
-    _audioSignalSub?.cancel();
     _audioEndedSub?.cancel();
-    liveAudioUploadService.dispose();
+    _answerSub?.cancel();
+    _iceSub?.cancel();
+    liveMediaWebRtcService.dispose();
     super.dispose();
   }
 }

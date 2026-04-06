@@ -1,7 +1,8 @@
+// lib/features/device/presentation/screens/live_case_tracking_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:skudyx/features/cases/presentation/controllers/live_case_call_controller.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 
 class LiveCaseTrackingScreen extends StatefulWidget {
@@ -13,7 +14,27 @@ class LiveCaseTrackingScreen extends StatefulWidget {
 
 class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   bool _exiting = false;
+  bool _rendererReady = false;
   DeviceSessionController? _session;
+  final RTCVideoRenderer _renderer = RTCVideoRenderer();
+
+  @override
+  void initState() {
+    super.initState();
+    _initRenderer();
+  }
+
+  Future<void> _initRenderer() async {
+    await _renderer.initialize();
+    _rendererReady = true;
+
+    if (!mounted) return;
+
+    final session = context.read<DeviceSessionController>();
+    _renderer.srcObject = session.localPreviewStream;
+
+    setState(() {});
+  }
 
   void _safePop([String? result]) {
     if (_exiting) return;
@@ -28,6 +49,10 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   void _onSessionChanged() {
     final s = _session;
     if (s == null) return;
+
+    if (_rendererReady) {
+      _renderer.srcObject = s.localPreviewStream;
+    }
 
     final remote = s.remotelyClosedStatus;
     if (remote != null && !_exiting) {
@@ -82,41 +107,26 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
       _session?.removeListener(_onSessionChanged);
       _session = newSession;
       _session?.addListener(_onSessionChanged);
+
+      if (_rendererReady) {
+        _renderer.srcObject = newSession.localPreviewStream;
+      }
     }
   }
 
   @override
   void dispose() {
     _session?.removeListener(_onSessionChanged);
-    super.dispose();
-  }
-
-  Future<void> _finishCase(BuildContext context, String status) async {
-    final session = context.read<DeviceSessionController>();
-    final call = context.read<LiveCaseCallController>();
-
-    final note = await _askNote(context, status);
-    if (!mounted || note == null) return;
-
-    await call.endCallAndUpload();
-
-    final ok = await session.updateFinalStatus(status: status, note: note);
-
-    if (!mounted) return;
-
-    if (ok) {
-      _safePop(status);
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(session.lastError ?? 'Failed')));
+    if (_rendererReady) {
+      _renderer.srcObject = null;
+      _renderer.dispose();
     }
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final session = context.watch<DeviceSessionController>();
-    final call = context.watch<LiveCaseCallController>();
 
     final statusText = session.starting
         ? 'Starting...'
@@ -125,10 +135,11 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
         : 'Tracking OFF';
 
     final bool enableStatusButtons =
-        session.tracking &&
-        session.caseId != null &&
-        !session.statusUpdating &&
-        !call.ending;
+        session.tracking && session.caseId != null && !session.statusUpdating;
+
+    if (_rendererReady) {
+      _renderer.srcObject = session.localPreviewStream;
+    }
 
     return PopScope(
       canPop: false,
@@ -153,6 +164,33 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
 
                 Container(
                   width: double.infinity,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: !_rendererReady
+                      ? const Center(child: CircularProgressIndicator())
+                      : session.localPreviewStream != null
+                      ? RTCVideoView(
+                          _renderer,
+                          objectFit:
+                              RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                          mirror: true,
+                        )
+                      : const Center(
+                          child: Text(
+                            'No local preview',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ),
+                ),
+
+                const SizedBox(height: 16),
+
+                Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.04),
@@ -164,13 +202,13 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                     'case_id: ${session.caseId ?? (session.starting ? '(creating...)' : '-')}\n'
                     'Points: ${session.coordinates.length}\n'
                     'Updates: ok ${session.successUpdates} / fail ${session.failedUpdates}\n'
-                    'Audio active: ${session.audioActive}\n'
-                    'Audio error: ${session.lastAudioError ?? '-'}',
+                    'Media active: ${session.audioActive}\n'
+                    'Media error: ${session.lastAudioError ?? '-'}',
                     style: const TextStyle(fontSize: 13),
                   ),
                 ),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
 
                 Container(
                   width: double.infinity,
@@ -178,33 +216,24 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                   decoration: BoxDecoration(
                     color: Colors.blue.withOpacity(0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.withOpacity(0.12)),
+                    border: Border.all(color: Colors.blue.withOpacity(0.2)),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Live Call Status',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text('Socket connected: ${call.connected}'),
-                      Text('In WebRTC call: ${call.inCall}'),
-                      Text('Recording local audio: ${call.recording}'),
-                      Text('Ending/uploading: ${call.ending}'),
-                      Text('Remote peer: ${call.remoteSocketId ?? '-'}'),
-                      Text('M3U8 URL: ${call.m3u8Url ?? '-'}'),
-                      if ((call.lastError ?? '').isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          call.lastError!,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      ],
-                    ],
+                  child: Text(
+                    'WebRTC Debug\n'
+                    'Mic permission: ${session.webrtcMicPermissionGranted}\n'
+                    'Camera permission: ${session.webrtcCameraPermissionGranted}\n'
+                    'Local stream acquired: ${session.webrtcLocalStreamAcquired}\n'
+                    'Local audio track: ${session.webrtcHasLocalAudioTrack}\n'
+                    'Local video track: ${session.webrtcHasLocalVideoTrack}\n'
+                    'Offer sent: ${session.webrtcOfferSent}\n'
+                    'Answer received: ${session.webrtcAnswerReceived}\n'
+                    'ICE sent: ${session.webrtcSentIceCandidates}\n'
+                    'ICE received: ${session.webrtcReceivedIceCandidates}\n'
+                    'Signaling state: ${session.webrtcSignalingState}\n'
+                    'ICE connection state: ${session.webrtcIceConnectionState}\n'
+                    'Peer connection state: ${session.webrtcConnectionState}\n'
+                    'Last WebRTC error: ${session.webrtcLastError ?? '-'}',
+                    style: const TextStyle(fontSize: 13),
                   ),
                 ),
 
@@ -236,9 +265,36 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: enableStatusButtons
-                              ? () => _finishCase(context, 'Resolved')
+                              ? () async {
+                                  final note = await _askNote(
+                                    context,
+                                    'Resolved',
+                                  );
+                                  if (!mounted || note == null) return;
+
+                                  final ok = await context
+                                      .read<DeviceSessionController>()
+                                      .updateFinalStatus(
+                                        status: 'Resolved',
+                                        note: note,
+                                      );
+
+                                  if (!mounted) return;
+
+                                  if (ok) {
+                                    _safePop('Resolved');
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          session.lastError ?? 'Failed',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
                               : null,
-                          child: session.statusUpdating || call.ending
+                          child: session.statusUpdating
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
@@ -254,9 +310,36 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: enableStatusButtons
-                              ? () => _finishCase(context, 'Unresolved')
+                              ? () async {
+                                  final note = await _askNote(
+                                    context,
+                                    'Unresolved',
+                                  );
+                                  if (!mounted || note == null) return;
+
+                                  final ok = await context
+                                      .read<DeviceSessionController>()
+                                      .updateFinalStatus(
+                                        status: 'Unresolved',
+                                        note: note,
+                                      );
+
+                                  if (!mounted) return;
+
+                                  if (ok) {
+                                    _safePop('Unresolved');
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          session.lastError ?? 'Failed',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
                               : null,
-                          child: session.statusUpdating || call.ending
+                          child: session.statusUpdating
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
@@ -275,9 +358,33 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: enableStatusButtons
-                          ? () => _finishCase(context, 'False')
+                          ? () async {
+                              final note = await _askNote(context, 'False');
+                              if (!mounted || note == null) return;
+
+                              final ok = await context
+                                  .read<DeviceSessionController>()
+                                  .updateFinalStatus(
+                                    status: 'False',
+                                    note: note,
+                                  );
+
+                              if (!mounted) return;
+
+                              if (ok) {
+                                _safePop('False');
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      session.lastError ?? 'Failed',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
                           : null,
-                      child: session.statusUpdating || call.ending
+                      child: session.statusUpdating
                           ? const SizedBox(
                               width: 18,
                               height: 18,
