@@ -8,46 +8,81 @@ class LiveMediaWebRtcService {
 
   LiveMediaWebRtcService({required this.audioRealtime});
 
-  RTCPeerConnection? _peerConnection;
-  MediaStream? _localStream;
+  // ✅ MAP of peer connections (one per web listener)
+  final Map<String, RTCPeerConnection> _peerConnections = {};
+  final Map<String, MediaStream> _localStreams = {};
 
   bool _starting = false;
-  bool _started = false;
 
-  // State tracking
+  // ✅ State tracking (global flags) - FIELDS ONLY, NO GETTERS
   bool micPermissionGranted = false;
   bool cameraPermissionGranted = false;
-  bool localStreamAcquired = false;
-  bool offerSent = false;
-  bool answerReceived = false;
-  int sentIceCandidates = 0;
-  int receivedIceCandidates = 0;
   String? lastError;
-  String signalingState = '-';
-  String iceConnectionState = '-';
-  String connectionState = '-';
 
-  // Routing IDs
-  String? _currentCaseId;
-  String? _webSocketId; // ✅ Web's socket ID
-  String? _mobileSocketId; // ✅ Mobile's socket ID
+  // ✅ Connection-specific state (aggregate for UI)
+  int _totalSentIceCandidates = 0;
+  int _totalReceivedIceCandidates = 0;
+  bool _anyOfferSent = false;
+  bool _anyAnswerReceived = false;
+  String _aggregateSignalingState = '-';
+  String _aggregateIceConnectionState = '-';
+  String _aggregateConnectionState = '-';
 
-  bool get isStarted => _started;
-  MediaStream? get localStream => _localStream;
-  bool get hasLocalAudioTrack =>
-      _localStream?.getAudioTracks().isNotEmpty == true;
-  bool get hasLocalVideoTrack => false;
+  // ✅ Getters for UI (DeviceSessionController) - ONLY FOR DERIVED VALUES
 
-  final Map<String, dynamic> _rtcConfig = {
-    'iceServers': [
-      {'urls': 'stun:stun.l.google.com:19302'},
-      {'urls': 'stun:stun1.l.google.com:19302'},
-    ],
-  };
+  // Local stream info (from first connection, or null)
+  MediaStream? get localStream {
+    if (_localStreams.isEmpty) return null;
+    return _localStreams.values.first;
+  }
+
+  bool get localStreamAcquired => _localStreams.isNotEmpty;
+
+  bool get hasLocalAudioTrack {
+    final stream = localStream;
+    return stream != null && stream.getAudioTracks().isNotEmpty;
+  }
+
+  bool get hasLocalVideoTrack {
+    final stream = localStream;
+    return stream != null && stream.getVideoTracks().isNotEmpty;
+  }
+
+  // Signaling state (aggregate from first connection)
+  bool get offerSent => _anyOfferSent;
+  bool get answerReceived => _anyAnswerReceived;
+
+  int get sentIceCandidates => _totalSentIceCandidates;
+  int get receivedIceCandidates => _totalReceivedIceCandidates;
+
+  String get signalingState => _aggregateSignalingState;
+  String get iceConnectionState => _aggregateIceConnectionState;
+  String get connectionState => _aggregateConnectionState;
+
+  // ✅ Note: lastError, micPermissionGranted, cameraPermissionGranted
+  // are already fields, so NO getter needed - Dart auto-generates them
+
+  // Connection count for multi-listener UI
+  int get connectionCount => _peerConnections.length;
 
   void _log(String message) {
     if (kDebugMode) print(message);
   }
+
+  // ✅ Update aggregate state from a specific connection
+  void _updateAggregateState(String webSocketId, RTCPeerConnection pc) {
+    _aggregateSignalingState = pc.signalingState?.toString() ?? '-';
+    _aggregateIceConnectionState = pc.iceConnectionState?.toString() ?? '-';
+    _aggregateConnectionState = pc.connectionState?.toString() ?? '-';
+  }
+
+  // ✅ Update ICE candidate counters
+  void _incrementSentIce() => _totalSentIceCandidates++;
+  void _incrementReceivedIce() => _totalReceivedIceCandidates++;
+
+  // ✅ Update offer/answer flags
+  void _markOfferSent() => _anyOfferSent = true;
+  void _markAnswerReceived() => _anyAnswerReceived = true;
 
   Future<bool> _ensurePermissions() async {
     _log('🔐 [WebRTC] Requesting microphone...');
@@ -57,149 +92,134 @@ class LiveMediaWebRtcService {
     return mic.isGranted;
   }
 
-  /// ✅ Start WebRTC - MATCHES WEB'S SIGNALLING PATTERN
-  Future<void> start({
+  /// ✅ START connection for a specific web user
+  Future<void> startConnection({
     required String caseId,
-    required String webSocketId, // ✅ Web's socket ID (from request_offer)
+    required String webSocketId,
     void Function(String error)? onError,
     VoidCallback? onStateChanged,
   }) async {
-    _log('\n🎥 [WebRTC] start() - case: $caseId, web: $webSocketId');
-
-    if (_starting || _started) {
-      _log('⚠️ [WebRTC] Already starting/started');
+    if (_peerConnections.containsKey(webSocketId)) {
+      _log('⚠️ [WebRTC] Already connected to $webSocketId');
       return;
     }
 
-    _starting = true;
-    _currentCaseId = caseId;
-    _webSocketId = webSocketId;
-    _mobileSocketId = audioRealtime.socketId;
-
-    offerSent = false;
-    answerReceived = false;
-    sentIceCandidates = 0;
-    receivedIceCandidates = 0;
-    localStreamAcquired = false;
-    lastError = null;
-    signalingState = '-';
-    iceConnectionState = '-';
-    connectionState = '-';
-    onStateChanged?.call();
+    _log('\n🎥 [WebRTC] startConnection() - case: $caseId, web: $webSocketId');
+    _log('🎥 [WebRTC] Active connections: ${_peerConnections.length}');
 
     try {
-      if (_webSocketId == null || _webSocketId!.isEmpty) {
-        lastError = 'Web socket ID required';
-        _log('❌ [WebRTC] $lastError');
-        onError?.call(lastError!);
-        _starting = false;
-        return;
+      if (!micPermissionGranted) {
+        final granted = await _ensurePermissions();
+        if (!granted) {
+          lastError = 'Microphone denied';
+          onError?.call(lastError!);
+          return;
+        }
       }
 
-      final granted = await _ensurePermissions();
-      onStateChanged?.call();
-      if (!granted) {
-        lastError = 'Microphone denied';
-        onError?.call(lastError!);
-        _starting = false;
-        return;
+      _log('🎥 [WebRTC] Creating peer connection for $webSocketId...');
+
+      final pc = await createPeerConnection({
+        'iceServers': [
+          {'urls': 'stun:stun.l.google.com:19302'},
+          {'urls': 'stun:stun1.l.google.com:19302'},
+        ],
+      });
+
+      _peerConnections[webSocketId] = pc;
+
+      MediaStream? localStream = _localStreams[webSocketId];
+      if (localStream == null) {
+        _log('🎙️ [WebRTC] Getting local stream...');
+        localStream = await navigator.mediaDevices.getUserMedia({
+          'audio': true,
+          'video': false,
+        });
+        _localStreams[webSocketId] = localStream!;
       }
 
-      _log('🎥 [WebRTC] Creating peer connection...');
-      _peerConnection = await createPeerConnection(_rtcConfig);
+      for (final track in localStream.getAudioTracks()) {
+        await pc.addTrack(track, localStream);
+      }
 
-      // ✅ ICE handler - send to web using webSocketId for routing
-      _peerConnection!.onIceCandidate = (candidate) {
+      pc.onIceCandidate = (candidate) {
         if (candidate.candidate == null || candidate.candidate!.isEmpty) return;
-        sentIceCandidates++;
-        _log('🧊 [WebRTC] ICE candidate: ${candidate.candidate}');
+        _incrementSentIce();
 
-        if (_webSocketId != null) {
-          audioRealtime.emitIceCandidate(
-            caseId: caseId,
-            candidate: {
-              'candidate': candidate.candidate,
-              'sdpMid': candidate.sdpMid,
-              'sdpMLineIndex': candidate.sdpMLineIndex,
-            },
-            webSocketId: _webSocketId!, // ✅ Route to web
+        _log('🧊 [WebRTC] ICE for $webSocketId: ${candidate.candidate}');
+
+        audioRealtime.emitIceCandidate(
+          caseId: caseId,
+          candidate: {
+            'candidate': candidate.candidate,
+            'sdpMid': candidate.sdpMid,
+            'sdpMLineIndex': candidate.sdpMLineIndex,
+          },
+          webSocketId: webSocketId,
+        );
+      };
+
+      pc.onConnectionState = (state) {
+        _updateAggregateState(webSocketId, pc);
+        _log('🔗 [WebRTC] Connection $webSocketId: $state');
+        if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+          _log(
+            '✅ [WebRTC] Connected to $webSocketId | Total: ${_peerConnections.length}',
           );
+        } else if (state ==
+                RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+            state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+          _removeConnection(webSocketId);
         }
         onStateChanged?.call();
       };
 
-      _peerConnection!.onConnectionState = (state) {
-        connectionState = state.toString();
-        _log('🔗 [WebRTC] Connection: $state');
+      pc.onIceConnectionState = (state) {
+        _updateAggregateState(webSocketId, pc);
         onStateChanged?.call();
       };
 
-      _peerConnection!.onIceConnectionState = (state) {
-        iceConnectionState = state.toString();
-        _log('🧊 [WebRTC] ICE: $state');
+      pc.onSignalingState = (state) {
+        _updateAggregateState(webSocketId, pc);
         onStateChanged?.call();
       };
 
-      _peerConnection!.onSignalingState = (state) {
-        signalingState = state.toString();
-        _log('📡 [WebRTC] Signaling: $state');
-        onStateChanged?.call();
-      };
-
-      _log('🎙️ [WebRTC] Getting local stream...');
-      _localStream = await navigator.mediaDevices.getUserMedia({
-        'audio': true,
-        'video': false,
-      });
-      localStreamAcquired = true;
-      onStateChanged?.call();
-
-      for (final track in _localStream!.getAudioTracks()) {
-        await _peerConnection!.addTrack(track, _localStream!);
-      }
-
-      _log('📝 [WebRTC] Creating offer...');
-      final offer = await _peerConnection!.createOffer({
+      _log('📝 [WebRTC] Creating offer for $webSocketId...');
+      final offer = await pc.createOffer({
         'offerToReceiveAudio': false,
         'offerToReceiveVideo': false,
       });
-      await _peerConnection!.setLocalDescription(offer);
+      await pc.setLocalDescription(offer);
+      _markOfferSent();
 
-      offerSent = true;
-      onStateChanged?.call();
-
-      _log('📤 [WebRTC] Sending offer to web...');
-      // ✅ Emit offer with webSocketId for routing (matches web's expectation)
+      _log('📤 [WebRTC] Sending offer to $webSocketId...');
       audioRealtime.emitOffer(
         caseId: caseId,
         offer: {'sdp': offer.sdp, 'type': offer.type},
-        webSocketId: _webSocketId!, // ✅ Web's socket ID for routing
+        webSocketId: webSocketId,
       );
 
-      _started = true;
+      _log('✅ [WebRTC] Connection started for $webSocketId');
       onStateChanged?.call();
-      _log('✅ [WebRTC] Started successfully');
     } catch (e) {
       lastError = 'WebRTC start failed: $e';
       _log('❌ [WebRTC] $lastError');
       onError?.call(lastError!);
-      await stop(onStateChanged: onStateChanged);
-    } finally {
-      _starting = false;
-      onStateChanged?.call();
+      await stopConnection(webSocketId: webSocketId);
     }
   }
 
-  /// ✅ Handle answer from Web
-  Future<void> handleAnswer(
-    dynamic sdpOrAnswer, {
+  /// ✅ Handle answer from specific web user
+  Future<void> handleAnswer({
+    required String webSocketId,
+    required dynamic sdpOrAnswer,
     VoidCallback? onStateChanged,
   }) async {
-    _log('\n📥 [WebRTC] handleAnswer()');
+    _log('\n📥 [WebRTC] handleAnswer() from $webSocketId');
 
-    final pc = _peerConnection;
+    final pc = _peerConnections[webSocketId];
     if (pc == null) {
-      _log('❌ [WebRTC] Peer connection not ready');
+      _log('❌ [WebRTC] No connection for $webSocketId');
       return;
     }
 
@@ -214,71 +234,122 @@ class LiveMediaWebRtcService {
     }
 
     if (sdp == null || sdp.isEmpty) {
-      lastError = 'Invalid answer';
-      _log('❌ [WebRTC] $lastError');
-      onStateChanged?.call();
+      _log('❌ [WebRTC] Invalid answer from $webSocketId');
       return;
     }
 
-    _log('📥 [WebRTC] Setting remote description...');
+    _log('📥 [WebRTC] Setting answer from $webSocketId...');
     await pc.setRemoteDescription(RTCSessionDescription(sdp, type));
-    answerReceived = true;
+    _markAnswerReceived();
+    _updateAggregateState(webSocketId, pc);
 
-    _log('✅ [WebRTC] Answer set');
+    _log('✅ [WebRTC] Answer set for $webSocketId');
     onStateChanged?.call();
   }
 
-  /// ✅ Handle ICE from Web
-  Future<void> handleRemoteIceCandidate(
-    Map<String, dynamic> data, {
+  /// ✅ Handle ICE from specific web user
+  Future<void> handleRemoteIceCandidate({
+    required String webSocketId,
+    required Map<String, dynamic> candidate,
     VoidCallback? onStateChanged,
   }) async {
-    _log('\n🧊 [WebRTC] handleRemoteIceCandidate()');
+    _log('\n🧊 [WebRTC] ICE from $webSocketId');
 
-    final pc = _peerConnection;
-    if (pc == null) return;
+    final pc = _peerConnections[webSocketId];
+    if (pc == null) {
+      _log('❌ [WebRTC] No connection for $webSocketId');
+      return;
+    }
 
-    final candidateStr = data['candidate']?.toString();
+    final candidateStr = candidate['candidate']?.toString();
     if (candidateStr == null || candidateStr.isEmpty) return;
 
-    final candidate = RTCIceCandidate(
+    final iceCandidate = RTCIceCandidate(
       candidateStr,
-      data['sdpMid']?.toString(),
-      data['sdpMLineIndex'] is int
-          ? data['sdpMLineIndex'] as int
-          : int.tryParse('${data['sdpMLineIndex']}'),
+      candidate['sdpMid']?.toString(),
+      candidate['sdpMLineIndex'] is int
+          ? candidate['sdpMLineIndex'] as int
+          : int.tryParse('${candidate['sdpMLineIndex']}'),
     );
 
-    receivedIceCandidates++;
-    _log('🧊 [WebRTC] Adding candidate: ${candidate.candidate}');
-
-    await pc.addCandidate(candidate);
+    _incrementReceivedIce();
+    _log('🧊 [WebRTC] Adding ICE for $webSocketId: ${iceCandidate.candidate}');
+    await pc.addCandidate(iceCandidate);
     onStateChanged?.call();
   }
 
-  Future<void> stop({VoidCallback? onStateChanged}) async {
-    _log('[WebRTC] stop()');
-    _started = false;
-    _starting = false;
+  /// ✅ Remove specific connection
+  void _removeConnection(String webSocketId) {
+    _log('🗑️ [WebRTC] Removing connection: $webSocketId');
 
-    try {
-      await _peerConnection?.close();
-    } catch (_) {}
-    try {
-      final stream = _localStream;
-      if (stream != null) {
-        for (final track in stream.getTracks()) track.stop();
-        await stream.dispose();
-      }
-    } catch (_) {}
+    final pc = _peerConnections.remove(webSocketId);
+    pc?.close();
 
-    _peerConnection = null;
-    _localStream = null;
-    localStreamAcquired = false;
-    onStateChanged?.call();
+    final stream = _localStreams.remove(webSocketId);
+    stream?.dispose();
+
+    _recalculateAggregates();
+
+    _log(
+      '🗑️ [WebRTC] Removed $webSocketId | Remaining: ${_peerConnections.length}',
+    );
+  }
+
+  /// ✅ Recalculate aggregate state from all active connections
+  void _recalculateAggregates() {
+    if (_peerConnections.isEmpty) {
+      _aggregateSignalingState = '-';
+      _aggregateIceConnectionState = '-';
+      _aggregateConnectionState = '-';
+      return;
+    }
+
+    final firstPc = _peerConnections.values.first;
+    _aggregateSignalingState = firstPc.signalingState?.toString() ?? '-';
+    _aggregateIceConnectionState =
+        firstPc.iceConnectionState?.toString() ?? '-';
+    _aggregateConnectionState = firstPc.connectionState?.toString() ?? '-';
+  }
+
+  /// ✅ Stop connection for specific web user
+  Future<void> stopConnection({required String webSocketId}) async {
+    _log('⏹️ [WebRTC] Stopping connection: $webSocketId');
+    _removeConnection(webSocketId);
+  }
+
+  /// ✅ Stop ALL connections
+  Future<void> stopAll() async {
+    _log('⏹️ [WebRTC] Stopping all connections...');
+
+    final webSocketIds = List<String>.from(_peerConnections.keys);
+    for (final id in webSocketIds) {
+      await stopConnection(webSocketId: id);
+    }
+
+    _totalSentIceCandidates = 0;
+    _totalReceivedIceCandidates = 0;
+    _anyOfferSent = false;
+    _anyAnswerReceived = false;
+    _aggregateSignalingState = '-';
+    _aggregateIceConnectionState = '-';
+    _aggregateConnectionState = '-';
+
+    _log('✅ [WebRTC] All connections stopped');
+  }
+
+  /// ✅ Get connection status for specific web user
+  bool isConnected(String webSocketId) {
+    return _peerConnections.containsKey(webSocketId);
+  }
+
+  /// ✅ Get all connected web users
+  List<String> getConnectedUsers() {
+    return _peerConnections.keys.toList();
+  }
+
+  Future<void> dispose() async {
+    await stopAll();
   }
 
   static bool shouldAutoStartMedia(String caseId) => caseId.startsWith('CL');
-
-  Future<void> dispose() async => await stop();
 }

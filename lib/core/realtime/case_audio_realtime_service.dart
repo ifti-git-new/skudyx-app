@@ -12,7 +12,7 @@ class AudioStreamEndedEvent {
 class WebRtcAnswerEvent {
   final String caseId;
   final dynamic sdpOrAnswer;
-  final String? senderId; // Mobile's socket ID (for reference)
+  final String? senderId; // ✅ Mobile's socket ID (for routing)
 
   WebRtcAnswerEvent({
     required this.caseId,
@@ -24,8 +24,13 @@ class WebRtcAnswerEvent {
 class WebRtcIceCandidateEvent {
   final String caseId;
   final Map<String, dynamic> candidate;
+  final String? senderId; // ✅ Web's socket ID (for routing) - ADDED
 
-  WebRtcIceCandidateEvent({required this.caseId, required this.candidate});
+  WebRtcIceCandidateEvent({
+    required this.caseId,
+    required this.candidate,
+    this.senderId, // ✅ ADDED
+  });
 }
 
 class WebRtcRequestOfferEvent {
@@ -43,7 +48,7 @@ class CaseAudioRealtimeService {
 
   IO.Socket? _socket;
   String? _watchingCaseId;
-  String? _currentSocketId; // ✅ Mobile's socket ID
+  String? _currentSocketId;
 
   final _endedController = StreamController<AudioStreamEndedEvent>.broadcast();
   final _answerController = StreamController<WebRtcAnswerEvent>.broadcast();
@@ -94,28 +99,22 @@ class CaseAudioRealtimeService {
       }
     });
 
-    // ✅ LOG ALL EVENTS
     socket.onAny((event, data) {
       _log('📥 [SOCKET] Event: $event | Data: $data');
     });
 
-    // ✅ Listen for request_offer from Web (matches web's emit pattern)
+    // ✅ Listen for request_offer from Web
     socket.on('request_offer', (data) {
       _log('\n📡 [WEB → MOBILE] request_offer');
       _log('📡 [WEB → MOBILE] Data: $data');
 
       if (data is Map) {
         final caseId = data['case_id']?.toString();
-        final webSocketId = data['requester_id']
-            ?.toString(); // ✅ Web's socket ID
+        final webSocketId = data['requester_id']?.toString();
 
         if (caseId != null && webSocketId != null) {
-          _log('📡 [WEB → MOBILE] Web Socket ID: $webSocketId');
           _requestOfferController.add(
-            WebRtcRequestOfferEvent(
-              caseId: caseId,
-              webSocketId: webSocketId, // ✅ Pass web's socket ID
-            ),
+            WebRtcRequestOfferEvent(caseId: caseId, webSocketId: webSocketId),
           );
         }
       }
@@ -129,8 +128,7 @@ class CaseAudioRealtimeService {
       if (data is Map) {
         final caseId = data['case_id']?.toString();
         final sdp = data['sdp'];
-        final senderId = data['sender_id']
-            ?.toString(); // ✅ Mobile's ID (preserved)
+        final senderId = data['sender_id']?.toString();
 
         if (caseId != null && sdp != null) {
           _answerController.add(
@@ -152,12 +150,14 @@ class CaseAudioRealtimeService {
       if (data is Map) {
         final caseId = data['case_id']?.toString();
         final candidate = data['candidate'];
+        final senderId = data['sender_id']?.toString(); // ✅ Extract sender_id
 
         if (caseId != null && candidate is Map) {
           _iceController.add(
             WebRtcIceCandidateEvent(
               caseId: caseId,
               candidate: Map<String, dynamic>.from(candidate),
+              senderId: senderId, // ✅ Pass senderId
             ),
           );
         }
@@ -192,11 +192,10 @@ class CaseAudioRealtimeService {
     _log('📤 [MOBILE] join_case: $caseId');
   }
 
-  /// ✅ Send offer to Web - MATCHES WEB'S EXPECTED FORMAT
   void emitOffer({
     required String caseId,
     required Map<String, dynamic> offer,
-    required String webSocketId, // ✅ Web's socket ID (for routing)
+    required String webSocketId,
   }) {
     final mobileSocketId = _currentSocketId;
 
@@ -208,16 +207,15 @@ class CaseAudioRealtimeService {
     _socket?.emit('webrtc_offer', {
       'case_id': caseId,
       'offer': offer,
-      'requester_id': webSocketId, // ✅ Route to web
-      'sender_id': mobileSocketId, // ✅ Mobile's ID for reference
+      'requester_id': webSocketId,
+      'sender_id': mobileSocketId,
     });
   }
 
-  /// ✅ Send ICE to Web - MATCHES WEB'S EXPECTED FORMAT
   void emitIceCandidate({
     required String caseId,
     required Map<String, dynamic> candidate,
-    required String webSocketId, // ✅ Web's socket ID (for routing)
+    required String webSocketId,
   }) {
     _log('\n📤 [MOBILE → WEB] webrtc_ice_candidate');
     _log('📤 [MOBILE → WEB] case_id: $caseId');
@@ -226,8 +224,8 @@ class CaseAudioRealtimeService {
     _socket?.emit('webrtc_ice_candidate', {
       'case_id': caseId,
       'candidate': candidate,
-      'requester_id': webSocketId, // ✅ Route to web
-      'sender_id': _currentSocketId, // ✅ Mobile's ID
+      'requester_id': webSocketId,
+      'sender_id': _currentSocketId,
     });
   }
 
@@ -247,241 +245,3 @@ class CaseAudioRealtimeService {
     await _requestOfferController.close();
   }
 }
-
-// for 5sec data send//
-// import 'dart:async';
-
-// import 'package:flutter/foundation.dart';
-// import 'package:socket_io_client/socket_io_client.dart' as IO;
-// import 'package:skudyx/core/config/app_config.dart';
-// import 'package:skudyx/core/storage/auth_token_storage.dart';
-
-// class AudioStreamEndedEvent {
-//   final String? caseId;
-
-//   AudioStreamEndedEvent({required this.caseId});
-// }
-
-// class WebRtcAnswerEvent {
-//   final String caseId;
-//   final dynamic sdpOrAnswer;
-
-//   WebRtcAnswerEvent({
-//     required this.caseId,
-//     required this.sdpOrAnswer,
-//   });
-// }
-
-// class WebRtcIceCandidateEvent {
-//   final String caseId;
-//   final Map<String, dynamic> candidate;
-
-//   WebRtcIceCandidateEvent({
-//     required this.caseId,
-//     required this.candidate,
-//   });
-// }
-
-// class CaseAudioRealtimeService {
-//   final AppConfig config;
-//   final AuthTokenStorage tokenStorage;
-
-//   CaseAudioRealtimeService({
-//     required this.config,
-//     required this.tokenStorage,
-//   });
-
-//   IO.Socket? _socket;
-//   String? _watchingCaseId;
-
-//   final _endedController = StreamController<AudioStreamEndedEvent>.broadcast();
-//   final _answerController = StreamController<WebRtcAnswerEvent>.broadcast();
-//   final _iceController = StreamController<WebRtcIceCandidateEvent>.broadcast();
-
-//   Stream<AudioStreamEndedEvent> get endedStream => _endedController.stream;
-//   Stream<WebRtcAnswerEvent> get answerStream => _answerController.stream;
-//   Stream<WebRtcIceCandidateEvent> get iceCandidateStream =>
-//       _iceController.stream;
-
-//   bool get isConnected => _socket?.connected == true;
-
-//   Future<void> connectIfNeeded() async {
-//     if (_socket != null) return;
-
-//     final token = await tokenStorage.readAccessToken();
-//     final url = config.wsUrl;
-
-//     final socket = IO.io(url, <String, dynamic>{
-//       'transports': ['websocket', 'polling'],
-//       'autoConnect': false,
-//       'forceNew': true,
-//       'auth': {'token': token},
-//       'query': {'token': token},
-//       'extraHeaders': token == null ? {} : {'Authorization': 'Bearer $token'},
-//     });
-
-//     _socket = socket;
-
-//     socket.onConnect((_) {
-//       if (kDebugMode) {
-//         print('[AudioSocket] connected');
-//       }
-
-//       if (_watchingCaseId != null) {
-//         socket.emit('join_case', _watchingCaseId);
-//         if (kDebugMode) {
-//           print('[AudioSocket] join_case => $_watchingCaseId');
-//         }
-//       }
-//     });
-
-//     socket.onAny((event, data) {
-//       if (kDebugMode) {
-//         print('[AudioSocket][ANY] event=$event data=$data');
-//       }
-//     });
-
-//     socket.on('webrtc_answer', (data) {
-//       if (kDebugMode) {
-//         print('[AudioSocket] webrtc_answer => $data');
-//       }
-
-//       if (data is Map) {
-//         final caseId = data['case_id']?.toString();
-//         final sdp = data['sdp'];
-
-//         if (caseId != null && sdp != null) {
-//           _answerController.add(
-//             WebRtcAnswerEvent(
-//               caseId: caseId,
-//               sdpOrAnswer: data,
-//             ),
-//           );
-//         }
-//       }
-//     });
-
-//     socket.on('webrtc_ice_candidate', (data) {
-//       if (kDebugMode) {
-//         print('[AudioSocket] webrtc_ice_candidate => $data');
-//       }
-
-//       if (data is Map) {
-//         final caseId = data['case_id']?.toString();
-//         final candidate = data['candidate'];
-
-//         if (caseId != null && candidate is Map) {
-//           _iceController.add(
-//             WebRtcIceCandidateEvent(
-//               caseId: caseId,
-//               candidate: Map<String, dynamic>.from(candidate),
-//             ),
-//           );
-//         }
-//       }
-//     });
-
-//     socket.on('audio_stream_ended', (data) {
-//       if (kDebugMode) {
-//         print('[AudioSocket] audio_stream_ended => $data');
-//       }
-
-//       if (data is Map) {
-//         _endedController.add(
-//           AudioStreamEndedEvent(
-//             caseId: data['case_id']?.toString(),
-//           ),
-//         );
-//       } else if (data is String) {
-//         _endedController.add(AudioStreamEndedEvent(caseId: data));
-//       } else {
-//         _endedController.add(
-//           AudioStreamEndedEvent(caseId: _watchingCaseId),
-//         );
-//       }
-//     });
-
-//     socket.onDisconnect((data) {
-//       if (kDebugMode) {
-//         print('[AudioSocket] disconnected => $data');
-//       }
-//     });
-
-//     socket.onConnectError((data) {
-//       if (kDebugMode) {
-//         print('[AudioSocket] connect_error => $data');
-//       }
-//     });
-
-//     socket.onError((data) {
-//       if (kDebugMode) {
-//         print('[AudioSocket] error => $data');
-//       }
-//     });
-
-//     socket.connect();
-//   }
-
-//   Future<void> watchCase(String caseId) async {
-//     await connectIfNeeded();
-//     _watchingCaseId = caseId;
-//     _socket?.emit('join_case', caseId);
-
-//     if (kDebugMode) {
-//       print('[AudioSocket] watchCase => $caseId');
-//     }
-//   }
-
-//   void rejoinCase(String caseId) {
-//     _watchingCaseId = caseId;
-//     _socket?.emit('join_case', caseId);
-
-//     if (kDebugMode) {
-//       print('[AudioSocket] rejoinCase => $caseId');
-//     }
-//   }
-
-//   void emitOffer({
-//     required String caseId,
-//     required Map<String, dynamic> offer,
-//   }) {
-//     _socket?.emit('webrtc_offer', {
-//       'case_id': caseId,
-//       'offer': offer,
-//     });
-
-//     if (kDebugMode) {
-//       print('[AudioSocket] emit webrtc_offer => $caseId');
-//     }
-//   }
-
-//   void emitIceCandidate({
-//     required String caseId,
-//     required Map<String, dynamic> candidate,
-//   }) {
-//     _socket?.emit('webrtc_ice_candidate', {
-//       'case_id': caseId,
-//       'candidate': candidate,
-//     });
-
-//     if (kDebugMode) {
-//       print('[AudioSocket] emit webrtc_ice_candidate => $caseId');
-//     }
-//   }
-
-//   Future<void> unwatchCase() async {
-//     if (kDebugMode) {
-//       print('[AudioSocket] unwatchCase => $_watchingCaseId');
-//     }
-//     _watchingCaseId = null;
-//   }
-
-//   Future<void> dispose() async {
-//     await unwatchCase();
-//     _socket?.dispose();
-//     _socket = null;
-//     await _endedController.close();
-//     await _answerController.close();
-//     await _iceController.close();
-//   }
-// }

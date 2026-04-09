@@ -14,8 +14,8 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   bool _exiting = false;
   DeviceSessionController? _session;
 
-  // ✅ NEW: Refresh controller
-  final RefreshController _refreshController = RefreshController();
+  // ✅ Pull-to-Refresh Controller
+  final _refreshController = RefreshController();
 
   void _safePop([String? result]) {
     if (_exiting) return;
@@ -36,16 +36,14 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
     }
   }
 
-  // ✅ NEW: Handle pull-to-refresh
+  // ✅ Handle Pull-to-Refresh
   Future<void> _onRefresh() async {
     if (!mounted) return;
 
     try {
-      // Add your reload logic here
-      // Example: Re-fetch case data, re-connect socket, etc.
       final session = context.read<DeviceSessionController>();
 
-      // If case is active, re-join rooms
+      // Re-join case rooms if case is active
       if (session.caseId != null && session.tracking) {
         await session.realtime.watchCase(session.caseId!);
         await session.audioRealtime.watchCase(session.caseId!);
@@ -64,7 +62,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
         ).showSnackBar(SnackBar(content: Text('❌ Refresh failed: $e')));
       }
     } finally {
-      // ✅ Always call refreshCompleted
       _refreshController.refreshCompleted();
     }
   }
@@ -83,18 +80,20 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   @override
   void dispose() {
     _session?.removeListener(_onSessionChanged);
-    _refreshController.dispose(); // ✅ Clean up
+    _refreshController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final session = context.watch<DeviceSessionController>();
+
     final statusText = session.starting
         ? 'Starting...'
         : session.tracking
         ? 'Tracking ON'
         : 'Tracking OFF';
+
     final bool enableStatusButtons =
         session.tracking && session.caseId != null && !session.statusUpdating;
 
@@ -102,7 +101,8 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
       canPop: false,
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8FA),
-        // ✅ WRAP body with RefreshIndicator
+
+        // ✅ Pull-to-Refresh Wrapper
         body: RefreshIndicator(
           onRefresh: _onRefresh,
           color: Theme.of(context).primaryColor,
@@ -123,6 +123,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // 🏷️ Header
                         const Text(
                           'Internal Testing (Dev/QA Only)',
                           style: TextStyle(
@@ -133,6 +134,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                         ),
                         const SizedBox(height: 12),
 
+                        // 📊 Case Info Card
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
@@ -154,6 +156,84 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
 
                         const SizedBox(height: 16),
 
+                        // 🔊 Active Listeners Card (NEW)
+                        if (session.tracking && session.caseId != null)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.green.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      '🔊 Active Listeners:',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        '${session.webUserCount}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (session.connectedWebUsers.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    session.connectedWebUsers
+                                        .map(
+                                          (id) =>
+                                              '• ${id.substring(0, id.length > 12 ? 12 : id.length)}...',
+                                        )
+                                        .join('\n'),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                ] else if (session.audioActive) ...[
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    '⏳ Waiting for listeners...',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+
+                        const SizedBox(height: 16),
+
+                        // 🔧 WebRTC Debug Card
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
@@ -167,10 +247,8 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                           child: Text(
                             'WebRTC Debug\n'
                             'Mic permission: ${session.webrtcMicPermissionGranted}\n'
-                            // 'Camera permission: ${session.webrtcCameraPermissionGranted}\n'
                             'Local stream acquired: ${session.webrtcLocalStreamAcquired}\n'
                             'Local audio track: ${session.webrtcHasLocalAudioTrack}\n'
-                            // 'Local video track: ${session.webrtcHasLocalVideoTrack}\n'
                             'Offer sent: ${session.webrtcOfferSent}\n'
                             'Answer received: ${session.webrtcAnswerReceived}\n'
                             'ICE sent: ${session.webrtcSentIceCandidates}\n'
@@ -187,6 +265,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                         const Divider(),
                         const SizedBox(height: 12),
 
+                        // ❌ No Active Case
                         if (!session.tracking || session.caseId == null) ...[
                           const Text(
                             'No active case running.',
@@ -205,9 +284,12 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                               style: const TextStyle(color: Colors.red),
                             ),
                           ],
-                        ] else ...[
+                        ]
+                        // ✅ Active Case - Status Buttons
+                        else ...[
                           Row(
                             children: [
+                              // Resolved Button
                               Expanded(
                                 child: ElevatedButton(
                                   onPressed: enableStatusButtons
@@ -239,6 +321,10 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                           }
                                         }
                                       : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                  ),
                                   child: session.statusUpdating
                                       ? const SizedBox(
                                           width: 18,
@@ -252,6 +338,8 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                 ),
                               ),
                               const SizedBox(width: 10),
+
+                              // Unresolved Button
                               Expanded(
                                 child: ElevatedButton(
                                   onPressed: enableStatusButtons
@@ -283,6 +371,10 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                           }
                                         }
                                       : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                  ),
                                   child: session.statusUpdating
                                       ? const SizedBox(
                                           width: 18,
@@ -298,6 +390,8 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                             ],
                           ),
                           const SizedBox(height: 10),
+
+                          // False Button (Full Width)
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -330,6 +424,10 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                       }
                                     }
                                   : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
                               child: session.statusUpdating
                                   ? const SizedBox(
                                       width: 18,
@@ -355,6 +453,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
     );
   }
 
+  // 📝 Show Note Dialog for Status Update
   Future<String?> _askNote(BuildContext context, String status) async {
     final ctrl = TextEditingController(
       text: 'Do you want to mark $status from app test button?',
@@ -391,7 +490,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   }
 }
 
-// ✅ Custom RefreshController class
+// ✅ Custom RefreshController for Pull-to-Refresh
 class RefreshController {
   final ScrollController scrollController = ScrollController();
   bool _isRefreshing = false;

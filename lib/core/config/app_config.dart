@@ -4,7 +4,7 @@ class AppConfig {
   final Flavor flavor;
   final String appName;
   final String apiBaseUrl;
-  final String wsUrl;
+  final String wsUrl; // Socket.IO URL (http/https, not ws/wss)
 
   const AppConfig({
     required this.flavor,
@@ -21,11 +21,10 @@ class AppConfig {
 
   factory AppConfig.fromEnv() {
     const flavorStr = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
-    const apiBaseUrl = String.fromEnvironment(
-      'API_BASE_URL',
-      defaultValue: 'https://skudyx-backend-thtu.onrender.com/',
-    );
-    const wsUrlRaw = String.fromEnvironment('WS_URL', defaultValue: apiBaseUrl);
+
+    // ✅ USE THE SAME URL FOR BOTH API AND WEBSOCKET
+    const baseUrl = 'https://skudyx-backend-thtu.onrender.com';
+
     final flavor = flavorFromString(flavorStr);
 
     return AppConfig(
@@ -35,8 +34,8 @@ class AppConfig {
         Flavor.staging => 'SkudyX (Staging)',
         Flavor.prod => 'SkudyX',
       },
-      apiBaseUrl: apiBaseUrl,
-      wsUrl: _normalizeSocketIoUrl(wsUrlRaw),
+      apiBaseUrl: baseUrl,
+      wsUrl: _normalizeSocketIoUrl(baseUrl), // ✅ Same as API
     );
   }
 }
