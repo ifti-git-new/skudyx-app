@@ -1,6 +1,4 @@
-// lib/features/device/presentation/controllers/device_session_controller.dart
 import 'dart:async';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -23,10 +21,19 @@ class DeviceSessionController extends ChangeNotifier {
     required this.audioRealtime,
     required this.liveMediaWebRtcService,
   }) {
+    _log('[DeviceSession] Constructor');
     _rtSub = realtime.stream.listen(_onRealtimeUpdate);
     _audioEndedSub = audioRealtime.endedStream.listen(_onAudioEnded);
     _answerSub = audioRealtime.answerStream.listen(_onWebRtcAnswer);
     _iceSub = audioRealtime.iceCandidateStream.listen(_onWebRtcIce);
+    // ✅ Listen for request_offer from Web
+    _requestOfferSub = audioRealtime.requestOfferStream.listen(
+      _onWebRtcRequestOffer,
+    );
+  }
+
+  void _log(String message) {
+    if (kDebugMode) print(message);
   }
 
   FoundDevice? connectedDevice;
@@ -34,7 +41,6 @@ class DeviceSessionController extends ChangeNotifier {
 
   bool starting = false;
   bool tracking = false;
-
   String? caseId;
   String? caseName;
   String? lastError;
@@ -46,18 +52,16 @@ class DeviceSessionController extends ChangeNotifier {
 
   Timer? _timer;
   bool _tickInFlight = false;
-
   int successUpdates = 0;
   int failedUpdates = 0;
-
   bool statusUpdating = false;
-
   final List<Map<String, dynamic>> coordinates = [];
 
   StreamSubscription<CaseUpdateEvent>? _rtSub;
   StreamSubscription<AudioStreamEndedEvent>? _audioEndedSub;
   StreamSubscription<WebRtcAnswerEvent>? _answerSub;
   StreamSubscription<WebRtcIceCandidateEvent>? _iceSub;
+  StreamSubscription<WebRtcRequestOfferEvent>? _requestOfferSub;
 
   static const _finalStatuses = {'Resolved', 'Unresolved', 'False'};
 
@@ -117,21 +121,18 @@ class DeviceSessionController extends ChangeNotifier {
   Future<bool> _ensureLocationReady() async {
     final enabled = await Geolocator.isLocationServiceEnabled();
     if (!enabled) {
-      _setError('Location services are disabled.');
+      _setError('Location disabled');
       return false;
     }
-
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      _setError('Location permission denied.');
+      _setError('Location denied');
       return false;
     }
-
     return true;
   }
 
@@ -146,11 +147,12 @@ class DeviceSessionController extends ChangeNotifier {
     required bool isTest,
     required String caseName,
   }) async {
+    _log('\n🚀 [DeviceSession] startCase()');
+
     if (!isConnected) {
-      _setError('No device connected.');
+      _setError('No device');
       return false;
     }
-
     if (starting || tracking) return false;
 
     clearError();
@@ -162,20 +164,18 @@ class DeviceSessionController extends ChangeNotifier {
 
     starting = true;
     tracking = false;
-
     this.caseName = caseName;
     caseId = null;
     lastStatus = null;
     remotelyClosedStatus = null;
-
     successUpdates = 0;
     failedUpdates = 0;
     coordinates.clear();
-
     notifyListeners();
 
     try {
       final firstPos = await _getCurrentPosition();
+      _log('📡 [DeviceSession] Creating case...');
 
       final data = await caseApi.triggerCase(
         latitude: firstPos.latitude,
@@ -184,14 +184,9 @@ class DeviceSessionController extends ChangeNotifier {
       );
 
       final createdCaseId = (data['case_id'] ?? '').toString();
-      if (createdCaseId.isEmpty) {
-        throw Exception('Missing case_id');
-      }
+      if (createdCaseId.isEmpty) throw Exception('Missing case_id');
 
-      if (kDebugMode) {
-        print('[DeviceSession] case created => $createdCaseId');
-      }
-
+      _log('✅ [DeviceSession] Case created: $createdCaseId');
       caseId = createdCaseId;
       lastStatus = (data['status'] ?? 'Pending').toString();
 
@@ -199,25 +194,32 @@ class DeviceSessionController extends ChangeNotifier {
       tracking = true;
       notifyListeners();
 
+      _log('📡 [DeviceSession] Watching case: $createdCaseId');
       await realtime.watchCase(createdCaseId);
 
-      if (createdCaseId.startsWith('CL')) {
-        if (kDebugMode) {
-          print('[DeviceSession] CL case detected, watching case room');
-          print('[DeviceSession] auto-start WebRTC media for CL case');
-        }
+      // ✅ For CL* cases: connect audio socket and WAIT for web's request_offer
+      if (LiveMediaWebRtcService.shouldAutoStartMedia(createdCaseId)) {
+        _log('\n🎯 [DeviceSession] CL case - setting up audio');
 
-        await audioRealtime.watchCase(createdCaseId);
-        await _startMediaIfNeeded(createdCaseId);
+        await audioRealtime.connectIfNeeded();
+
+        // Wait for socket
+        final connected = await _waitForSocket();
+        if (connected) {
+          _log('✅ [DeviceSession] Socket: ${audioRealtime.socketId}');
+          await audioRealtime.watchCase(createdCaseId);
+          _log('✅ [DeviceSession] Waiting for web request_offer...');
+        } else {
+          lastAudioError = 'Socket timeout';
+          _log('❌ [DeviceSession] Socket failed');
+          notifyListeners();
+        }
       }
 
       await _sendOneTick();
-
       _timer?.cancel();
       _timer = Timer.periodic(const Duration(seconds: 2), (_) async {
-        if (!tracking) return;
-        if (_tickInFlight) return;
-
+        if (!tracking || _tickInFlight) return;
         _tickInFlight = true;
         try {
           await _sendOneTick();
@@ -226,116 +228,128 @@ class DeviceSessionController extends ChangeNotifier {
         }
       });
 
+      _log('✅ [DeviceSession] startCase() done');
       return true;
     } on DioException catch (e) {
-      final resp = e.response?.data;
-      final msg = (resp is Map && resp['message'] != null)
-          ? resp['message'].toString()
-          : (e.message ?? 'Failed to start case.');
-
-      _setError(msg);
-
-      starting = false;
-      tracking = false;
-      caseId = null;
-      this.caseName = null;
-
-      _timer?.cancel();
-      _timer = null;
-
-      await realtime.unwatchCase();
-      await audioRealtime.unwatchCase();
-      await liveMediaWebRtcService.stop(onStateChanged: notifyListeners);
-
-      notifyListeners();
+      final msg =
+          (e.response?.data is Map && e.response?.data['message'] != null)
+          ? e.response?.data['message'].toString()
+          : (e.message ?? 'Failed');
+      _setError(msg!);
+      _cleanupOnError();
       return false;
     } catch (e) {
-      if (kDebugMode) {
-        print('[DeviceSession] startCase error => $e');
-      }
-
-      _setError('Failed to start case.');
-
-      starting = false;
-      tracking = false;
-      caseId = null;
-      this.caseName = null;
-
-      _timer?.cancel();
-      _timer = null;
-
-      await realtime.unwatchCase();
-      await audioRealtime.unwatchCase();
-      await liveMediaWebRtcService.stop(onStateChanged: notifyListeners);
-
-      notifyListeners();
+      _log('❌ [DeviceSession] Error: $e');
+      _setError('Failed');
+      _cleanupOnError();
       return false;
     }
+  }
+
+  Future<bool> _waitForSocket({int max = 20}) async {
+    for (int i = 0; i < max; i++) {
+      if (audioRealtime.isConnected && audioRealtime.socketId != null)
+        return true;
+      await Future.delayed(const Duration(milliseconds: 250));
+    }
+    return false;
+  }
+
+  void _cleanupOnError() {
+    starting = false;
+    tracking = false;
+    caseId = null;
+    caseName = null;
+    _timer?.cancel();
+    _timer = null;
+    realtime.unwatchCase();
+    audioRealtime.unwatchCase();
+    liveMediaWebRtcService.stop(onStateChanged: notifyListeners);
+    notifyListeners();
   }
 
   Future<void> _sendOneTick() async {
     final id = caseId;
     if (id == null || !tracking) return;
-
     try {
       final pos = await _getCurrentPosition();
-
       coordinates.add({
         'latitude': pos.latitude,
         'longitude': pos.longitude,
         'timestamp': DateTime.now().toIso8601String(),
       });
-
       await caseApi.updateLocation(
         caseId: id,
         latitude: pos.latitude,
         longitude: pos.longitude,
       );
-
       successUpdates++;
       notifyListeners();
     } catch (e) {
-      if (kDebugMode) {
-        print('[DeviceSession] location tick failed => $e');
-      }
+      if (kDebugMode) print('[DeviceSession] tick failed: $e');
       failedUpdates++;
       notifyListeners();
     }
   }
 
-  Future<void> _startMediaIfNeeded(String id) async {
-    if (kDebugMode) {
-      print('[DeviceSession] _startMediaIfNeeded => $id');
-    }
-
-    if (!id.startsWith('CL')) return;
-    if (audioActive) return;
-
-    await liveMediaWebRtcService.start(
-      caseId: id,
-      onError: (msg) {
-        if (kDebugMode) {
-          print('[DeviceSession] media error => $msg');
-        }
-        _setMediaError(msg);
-      },
-      onStateChanged: notifyListeners,
+  /// ✅ Handle request_offer from Web - START WEBRTC
+  Future<void> _onWebRtcRequestOffer(WebRtcRequestOfferEvent event) async {
+    _log('\n🎯 [DeviceSession] request_offer from web');
+    _log(
+      '🎯 [DeviceSession] case: ${event.caseId}, webSocket: ${event.webSocketId}',
     );
 
-    audioActive = liveMediaWebRtcService.isStarted;
-
-    if (kDebugMode) {
-      print('[DeviceSession] media active => $audioActive');
+    final id = caseId;
+    if (id == null || event.caseId != id) {
+      _log('⚠️ [DeviceSession] Case mismatch');
+      return;
     }
 
-    notifyListeners();
+    if (!audioActive) {
+      // Ensure socket ready
+      if (!audioRealtime.isConnected || audioRealtime.socketId == null) {
+        await audioRealtime.connectIfNeeded();
+        if (!await _waitForSocket()) {
+          lastAudioError = 'Socket failed';
+          notifyListeners();
+          return;
+        }
+      }
+
+      final mobileSocketId = audioRealtime.socketId;
+      if (mobileSocketId == null) {
+        lastAudioError = 'No socket ID';
+        notifyListeners();
+        return;
+      }
+
+      _log('✅ [DeviceSession] Starting WebRTC');
+      _log('✅ [DeviceSession] - Web: ${event.webSocketId}');
+      _log('✅ [DeviceSession] - Mobile: $mobileSocketId');
+
+      await liveMediaWebRtcService.start(
+        caseId: id,
+        webSocketId: event.webSocketId, // ✅ Pass web's socket ID
+        onError: (msg) {
+          _log('❌ [DeviceSession] WebRTC error: $msg');
+          _setMediaError(msg);
+        },
+        onStateChanged: notifyListeners,
+      );
+      audioActive = liveMediaWebRtcService.isStarted;
+      _log('✅ [DeviceSession] WebRTC active: $audioActive');
+      notifyListeners();
+    }
+  }
+
+  Future<void> _startMediaIfNeeded(String id) async {
+    if (!LiveMediaWebRtcService.shouldAutoStartMedia(id)) return;
+    if (audioActive) return;
+    _log('[DeviceSession] Waiting for web request_offer...');
   }
 
   Future<void> _stopAudio() async {
-    if (kDebugMode) {
-      print('[DeviceSession] _stopAudio');
-    }
-
+    _log('[DeviceSession] _stopAudio');
     await liveMediaWebRtcService.stop(onStateChanged: notifyListeners);
     audioActive = false;
     notifyListeners();
@@ -345,14 +359,11 @@ class DeviceSessionController extends ChangeNotifier {
     _timer?.cancel();
     _timer = null;
     _tickInFlight = false;
-
     starting = false;
     tracking = false;
-
     await realtime.unwatchCase();
     await audioRealtime.unwatchCase();
     await _stopAudio();
-
     if (clearCase) {
       caseId = null;
       caseName = null;
@@ -362,7 +373,6 @@ class DeviceSessionController extends ChangeNotifier {
       coordinates.clear();
       lastError = null;
     }
-
     notifyListeners();
   }
 
@@ -372,42 +382,33 @@ class DeviceSessionController extends ChangeNotifier {
   }) async {
     final id = caseId;
     if (id == null || id.isEmpty) {
-      _setError('No active case.');
+      _setError('No case');
       return false;
     }
-
     if (statusUpdating) return false;
-
     clearError();
     statusUpdating = true;
     notifyListeners();
-
     try {
       await caseApi.updateStatus(caseId: id, status: status, note: note);
-
       lastStatus = status;
       remotelyClosedStatus = null;
-
       await stopTracking(clearCase: true);
-
       statusUpdating = false;
       notifyListeners();
       return true;
     } on DioException catch (e) {
-      final resp = e.response?.data;
-      final msg = (resp is Map && resp['message'] != null)
-          ? resp['message'].toString()
-          : (e.message ?? 'Failed to update status.');
-
-      _setError(msg);
+      final msg =
+          (e.response?.data is Map && e.response?.data['message'] != null)
+          ? e.response?.data['message'].toString()
+          : (e.message ?? 'Failed');
+      _setError(msg!);
       statusUpdating = false;
       notifyListeners();
       return false;
     } catch (e) {
-      if (kDebugMode) {
-        print('[DeviceSession] updateFinalStatus error => $e');
-      }
-      _setError('Failed to update status.');
+      _log('[DeviceSession] update error: $e');
+      _setError('Failed');
       statusUpdating = false;
       notifyListeners();
       return false;
@@ -416,47 +417,27 @@ class DeviceSessionController extends ChangeNotifier {
 
   void _onRealtimeUpdate(CaseUpdateEvent event) async {
     final id = caseId;
-    if (id == null) return;
-    if (event.caseId != id) return;
-
-    if (kDebugMode) {
-      print('[DeviceSession] case realtime update => ${event.status}');
-    }
-
+    if (id == null || event.caseId != id) return;
     lastStatus = event.status;
-
     if (_finalStatuses.contains(event.status)) {
       remotelyClosedStatus = event.status;
       await stopTracking(clearCase: true);
       return;
     }
-
     notifyListeners();
   }
 
   void _onAudioEnded(AudioStreamEndedEvent event) async {
     final id = caseId;
-
-    if (kDebugMode) {
-      print(
-        '[DeviceSession] audio ended => currentCase=$id, eventCase=${event.caseId}',
-      );
-    }
-
     if (id == null) return;
     if (event.caseId != null && event.caseId != id) return;
-
     await _stopAudio();
   }
 
   void _onWebRtcAnswer(WebRtcAnswerEvent event) async {
     final id = caseId;
     if (id == null || event.caseId != id) return;
-
-    if (kDebugMode) {
-      print('[DeviceSession] received WebRTC answer');
-    }
-
+    _log('[DeviceSession] Received answer');
     await liveMediaWebRtcService.handleAnswer(
       event.sdpOrAnswer,
       onStateChanged: notifyListeners,
@@ -466,11 +447,7 @@ class DeviceSessionController extends ChangeNotifier {
   void _onWebRtcIce(WebRtcIceCandidateEvent event) async {
     final id = caseId;
     if (id == null || event.caseId != id) return;
-
-    if (kDebugMode) {
-      print('[DeviceSession] received remote ICE');
-    }
-
+    _log('[DeviceSession] Received ICE');
     await liveMediaWebRtcService.handleRemoteIceCandidate(
       event.candidate,
       onStateChanged: notifyListeners,
@@ -483,11 +460,11 @@ class DeviceSessionController extends ChangeNotifier {
     _audioEndedSub?.cancel();
     _answerSub?.cancel();
     _iceSub?.cancel();
+    _requestOfferSub?.cancel();
     liveMediaWebRtcService.dispose();
     super.dispose();
   }
 }
-
 
 //for 5sec data send//
 // import 'dart:async';

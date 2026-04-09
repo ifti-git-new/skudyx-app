@@ -213,11 +213,13 @@
 // }
 
 // lib/app/composition_root.dart
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/core/config/app_config.dart';
 import 'package:skudyx/core/controllers/app_status_controller.dart';
 import 'package:skudyx/core/network/dio_debug_interceptor.dart';
 import 'package:skudyx/core/realtime/case_audio_realtime_service.dart';
@@ -240,7 +242,6 @@ import 'package:skudyx/features/profile/data/remote/profile_api.dart';
 import 'package:skudyx/features/profile/data/remote/profile_update_api.dart';
 import 'package:skudyx/features/settings/presentation/controllers/notification_prefs_controller.dart';
 
-import '../core/config/app_config.dart';
 import 'router.dart';
 
 class AppCompositionRoot extends StatelessWidget {
@@ -261,19 +262,15 @@ class AppCompositionRoot extends StatelessWidget {
       providers: [
         Provider<AppConfig>.value(value: config),
         Provider<AppPrefs>.value(value: prefs),
-
         Provider<FlutterSecureStorage>(
           create: (_) => const FlutterSecureStorage(),
         ),
-
         Provider<AuthTokenStorage>(
           create: (c) => AuthTokenStorage(c.read<FlutterSecureStorage>()),
         ),
-
         Provider<Dio>(
           create: (c) {
             final cfg = c.read<AppConfig>();
-
             final dio = Dio(
               BaseOptions(
                 baseUrl: cfg.apiBaseUrl,
@@ -286,27 +283,22 @@ class AppCompositionRoot extends StatelessWidget {
                 },
               ),
             );
-
             dio.interceptors.add(
               InterceptorsWrapper(
                 onRequest: (options, handler) async {
                   final requiresAuth = options.extra['requiresAuth'] != false;
-
                   if (requiresAuth) {
                     final token = await c
                         .read<AuthTokenStorage>()
                         .readAccessToken();
-
                     if (token != null && token.isNotEmpty) {
                       options.headers['Authorization'] = 'Bearer $token';
                     }
                   }
-
                   handler.next(options);
                 },
               ),
             );
-
             if (kDebugMode) {
               dio.interceptors.add(
                 DioDebugInterceptor(
@@ -317,35 +309,26 @@ class AppCompositionRoot extends StatelessWidget {
                 ),
               );
             }
-
             return dio;
           },
         ),
-
         ProxyProvider<Dio, AuthApi>(update: (_, dio, __) => AuthApi(dio: dio)),
-
         ProxyProvider<Dio, CaseApi>(update: (_, dio, __) => CaseApi(dio: dio)),
-
         ProxyProvider<Dio, EmergencyContactApi>(
           update: (_, dio, __) => EmergencyContactApi(dio: dio),
         ),
-
         ProxyProvider<Dio, ProfileApi>(
           update: (_, dio, __) => ProfileApi(dio: dio),
         ),
-
         ProxyProvider<Dio, ProfileUpdateApi>(
           update: (_, dio, __) => ProfileUpdateApi(dio: dio),
         ),
-
         ChangeNotifierProvider<AppStatusController>(
           create: (c) => AppStatusController(prefs: c.read<AppPrefs>()),
         ),
-
         ChangeNotifierProvider<DeviceScanController>(
           create: (_) => DeviceScanController(),
         ),
-
         Provider<CaseRealtimeService>(
           create: (c) => CaseRealtimeService(
             config: c.read<AppConfig>(),
@@ -353,7 +336,6 @@ class AppCompositionRoot extends StatelessWidget {
           ),
           dispose: (_, svc) => svc.dispose(),
         ),
-
         Provider<CaseAudioRealtimeService>(
           create: (c) => CaseAudioRealtimeService(
             config: c.read<AppConfig>(),
@@ -361,14 +343,12 @@ class AppCompositionRoot extends StatelessWidget {
           ),
           dispose: (_, svc) => svc.dispose(),
         ),
-
         Provider<LiveMediaWebRtcService>(
           create: (c) => LiveMediaWebRtcService(
             audioRealtime: c.read<CaseAudioRealtimeService>(),
           ),
           dispose: (_, svc) => svc.dispose(),
         ),
-
         ChangeNotifierProvider<DeviceSessionController>(
           create: (c) => DeviceSessionController(
             caseApi: c.read<CaseApi>(),
@@ -377,31 +357,24 @@ class AppCompositionRoot extends StatelessWidget {
             liveMediaWebRtcService: c.read<LiveMediaWebRtcService>(),
           ),
         ),
-
         ChangeNotifierProvider<EmergencyContactController>(
           create: (c) => EmergencyContactController(
             prefs: c.read<AppPrefs>(),
             api: c.read<EmergencyContactApi>(),
           )..init(),
         ),
-
         ChangeNotifierProvider<ProfileController>(
           create: (c) => ProfileController(api: c.read<ProfileApi>()),
         ),
-
         ChangeNotifierProvider<NotificationPrefsController>(
           create: (c) =>
               NotificationPrefsController(prefs: c.read<AppPrefs>())..init(),
         ),
-
         ChangeNotifierProvider<IdentityVerificationController>(
           create: (_) => IdentityVerificationController(),
         ),
-
         Provider<GoogleAuthProvider>(create: (_) => GoogleAuthProvider()),
-
         Provider<AppleAuthProvider>(create: (_) => AppleAuthProvider()),
-
         ChangeNotifierProvider<AuthController>(
           create: (c) => AuthController(
             prefs: c.read<AppPrefs>(),
@@ -411,7 +384,6 @@ class AppCompositionRoot extends StatelessWidget {
             appleAuthProvider: c.read<AppleAuthProvider>(),
           )..init(),
         ),
-
         Provider<AppRouter>(
           create: (c) => AppRouter(auth: c.read<AuthController>()),
         ),
