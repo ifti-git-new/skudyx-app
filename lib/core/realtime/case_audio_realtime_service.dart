@@ -12,30 +12,32 @@ class AudioStreamEndedEvent {
 class WebRtcAnswerEvent {
   final String caseId;
   final dynamic sdpOrAnswer;
-  final String? senderId; // ✅ Mobile's socket ID (for routing)
+  final String? senderId;
+  final String? requesterId; // ✅ ADDED: Web's socket ID
 
   WebRtcAnswerEvent({
     required this.caseId,
     required this.sdpOrAnswer,
     this.senderId,
+    this.requesterId, // ✅ ADDED
   });
 }
 
 class WebRtcIceCandidateEvent {
   final String caseId;
   final Map<String, dynamic> candidate;
-  final String? senderId; // ✅ Web's socket ID (for routing) - ADDED
+  final String? senderId;
 
   WebRtcIceCandidateEvent({
     required this.caseId,
     required this.candidate,
-    this.senderId, // ✅ ADDED
+    this.senderId,
   });
 }
 
 class WebRtcRequestOfferEvent {
   final String caseId;
-  final String webSocketId; // ✅ Web's socket ID (from request_offer)
+  final String webSocketId;
 
   WebRtcRequestOfferEvent({required this.caseId, required this.webSocketId});
 }
@@ -120,25 +122,41 @@ class CaseAudioRealtimeService {
       }
     });
 
-    // ✅ Listen for webrtc_answer from Web
+    // ✅ Listen for webrtc_answer from Web - WITH requesterId
     socket.on('webrtc_answer', (data) {
       _log('\n📡 [WEB → MOBILE] webrtc_answer');
-      _log('📡 [WEB → MOBILE] Data: $data');
+      _log('📡 [WEB → MOBILE] Full  $data');
 
       if (data is Map) {
+        _log('📡 [WEB → MOBILE] All keys: ${data.keys.toList()}');
+        _log('📡 [WEB → MOBILE] case_id: ${data['case_id']}');
+        _log('📡 [WEB → MOBILE] sender_id: ${data['sender_id']}');
+        _log('📡 [WEB → MOBILE] requester_id: ${data['requester_id']}');
+
         final caseId = data['case_id']?.toString();
         final sdp = data['sdp'];
         final senderId = data['sender_id']?.toString();
+        final requesterId = data['requester_id']
+            ?.toString(); // ✅ Extract requester_id
 
         if (caseId != null && sdp != null) {
+          _log('📡 [WEB → MOBILE] ✅ Adding answer to stream');
           _answerController.add(
             WebRtcAnswerEvent(
               caseId: caseId,
               sdpOrAnswer: sdp,
               senderId: senderId,
+              requesterId: requesterId, // ✅ Pass requester_id
             ),
           );
+        } else {
+          _log('❌ [WEB → MOBILE] ❌ Missing required fields');
+          _log(
+            '❌ [WEB → MOBILE] caseId: $caseId, sdp: ${sdp != null}, senderId: $senderId, requesterId: $requesterId',
+          );
         }
+      } else {
+        _log('❌ [WEB → MOBILE] Data is not a Map: ${data.runtimeType}');
       }
     });
 
@@ -150,14 +168,14 @@ class CaseAudioRealtimeService {
       if (data is Map) {
         final caseId = data['case_id']?.toString();
         final candidate = data['candidate'];
-        final senderId = data['sender_id']?.toString(); // ✅ Extract sender_id
+        final senderId = data['sender_id']?.toString();
 
         if (caseId != null && candidate is Map) {
           _iceController.add(
             WebRtcIceCandidateEvent(
               caseId: caseId,
               candidate: Map<String, dynamic>.from(candidate),
-              senderId: senderId, // ✅ Pass senderId
+              senderId: senderId,
             ),
           );
         }

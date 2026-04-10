@@ -394,18 +394,34 @@ class DeviceSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ✅ Handle answer from specific web user
+  /// ✅ Handle answer from specific web user - WITH requesterId FIX
   void _onWebRtcAnswer(WebRtcAnswerEvent event) async {
-    _log('\n📥 [DeviceSession] _onWebRtcAnswer()');
-    _log('📥 [DeviceSession] caseId: ${event.caseId}');
-    _log('📥 [DeviceSession] webSocketId (senderId): ${event.senderId}');
+    _log('\n📥 [DeviceSession] ════════════════════════════');
+    _log('📥 [DeviceSession] _onWebRtcAnswer() CALLED');
+    _log('📥 [DeviceSession] event.caseId: ${event.caseId}');
+    _log('📥 [DeviceSession] event.senderId: ${event.senderId}');
+    _log('📥 [DeviceSession] event.requesterId: ${event.requesterId}');
+    _log('📥 [DeviceSession] this.caseId: $caseId');
+    _log(
+      '📥 [DeviceSession] sdpOrAnswer type: ${event.sdpOrAnswer.runtimeType}',
+    );
+    _log('📥 [DeviceSession] ════════════════════════════\n');
 
     final id = caseId;
-    if (id == null || event.caseId != id) return;
+    if (id == null || event.caseId != id) {
+      _log('⚠️ [DeviceSession] Case mismatch');
+      return;
+    }
 
-    final webSocketId = event.senderId;
+    // ✅ Use requesterId (web's ID) to find the connection
+    // Web sends: sender_id = mobile's ID, requester_id = web's ID
+    final webSocketId = event.requesterId ?? event.senderId;
+
     if (webSocketId == null || webSocketId.isEmpty) {
       _log('⚠️ [DeviceSession] Answer missing webSocketId');
+      _log(
+        '⚠️ [DeviceSession] Full event: senderId=${event.senderId}, requesterId=${event.requesterId}',
+      );
       return;
     }
 
@@ -415,6 +431,8 @@ class DeviceSessionController extends ChangeNotifier {
       sdpOrAnswer: event.sdpOrAnswer,
       onStateChanged: notifyListeners,
     );
+
+    _log('✅ [DeviceSession] Answer handled successfully');
   }
 
   /// ✅ Handle ICE from specific web user
