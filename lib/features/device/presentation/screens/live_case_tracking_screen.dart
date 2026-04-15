@@ -14,7 +14,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   bool _exiting = false;
   DeviceSessionController? _session;
 
-  // ✅ Pull-to-Refresh Controller
   final _refreshController = RefreshController();
 
   void _safePop([String? result]) {
@@ -36,20 +35,17 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
     }
   }
 
-  // ✅ Handle Pull-to-Refresh
   Future<void> _onRefresh() async {
     if (!mounted) return;
 
     try {
       final session = context.read<DeviceSessionController>();
 
-      // Re-join case rooms if case is active
       if (session.caseId != null && session.tracking) {
         await session.realtime.watchCase(session.caseId!);
         await session.audioRealtime.watchCase(session.caseId!);
       }
 
-      // Show success feedback
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -101,8 +97,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
       canPop: false,
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8FA),
-
-        // ✅ Pull-to-Refresh Wrapper
         body: RefreshIndicator(
           onRefresh: _onRefresh,
           color: Theme.of(context).primaryColor,
@@ -136,7 +130,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
 
                         // 📊 Case Info Card
                         Container(
-                          width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.04),
@@ -149,17 +142,69 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                             'Points: ${session.coordinates.length}\n'
                             'Updates: ok ${session.successUpdates} / fail ${session.failedUpdates}\n'
                             'Media active: ${session.audioActive}\n'
+                            'WebSocket streaming: ${session.isWebSocketStreaming}\n'
                             'Media error: ${session.lastAudioError ?? '-'}',
                             style: const TextStyle(fontSize: 13),
                           ),
                         ),
-
                         const SizedBox(height: 16),
 
-                        // 🔊 Active Listeners Card (NEW)
+                        // 🎙️ WebSocket Audio Status Card
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: session.isWebSocketStreaming
+                                ? Colors.green.withOpacity(0.08)
+                                : Colors.orange.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: session.isWebSocketStreaming
+                                  ? Colors.green.withOpacity(0.3)
+                                  : Colors.orange.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    session.isWebSocketStreaming
+                                        ? Icons.mic
+                                        : Icons.mic_off,
+                                    color: session.isWebSocketStreaming
+                                        ? Colors.green
+                                        : Colors.orange,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '🎙️ WebSocket Audio Streaming',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: session.isWebSocketStreaming
+                                          ? Colors.green
+                                          : Colors.orange,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Status: ${session.isWebSocketStreaming ? "✅ Streaming" : "⏸️ Not Active"}\n'
+                                'Case ID: ${session.streamingCaseId ?? "-"}\n'
+                                'Connection: ${session.isWebSocketStreaming ? "Connected" : "Disconnected"}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 🔊 Active Listeners Card
                         if (session.tracking && session.caseId != null)
                           Container(
-                            width: double.infinity,
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: Colors.green.withOpacity(0.08),
@@ -230,66 +275,21 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                               ],
                             ),
                           ),
-
-                        const SizedBox(height: 16),
-
-                        // 🔧 WebRTC Debug Card
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.06),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.blue.withOpacity(0.2),
-                            ),
-                          ),
-                          child: Text(
-                            'WebRTC Debug\n'
-                            'Mic permission: ${session.webrtcMicPermissionGranted}\n'
-                            'Local stream acquired: ${session.webrtcLocalStreamAcquired}\n'
-                            'Local audio track: ${session.webrtcHasLocalAudioTrack}\n'
-                            'Offer sent: ${session.webrtcOfferSent}\n'
-                            'Answer received: ${session.webrtcAnswerReceived}\n'
-                            'ICE sent: ${session.webrtcSentIceCandidates}\n'
-                            'ICE received: ${session.webrtcReceivedIceCandidates}\n'
-                            'Signaling state: ${session.webrtcSignalingState}\n'
-                            'ICE connection state: ${session.webrtcIceConnectionState}\n'
-                            'Peer connection state: ${session.webrtcConnectionState}\n'
-                            'Last WebRTC error: ${session.webrtcLastError ?? '-'}',
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-
                         const SizedBox(height: 20),
                         const Divider(),
                         const SizedBox(height: 12),
 
-                        // ❌ No Active Case
-                        if (!session.tracking || session.caseId == null) ...[
-                          const Text(
-                            'No active case running.',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 12),
-                          if ((session.lastError ?? '').isNotEmpty)
-                            Text(
-                              session.lastError ?? '',
-                              style: const TextStyle(color: Colors.red),
+                        // Status Buttons
+                        if (!session.tracking || session.caseId == null)
+                          const Center(
+                            child: Text(
+                              'No active case running.',
+                              style: TextStyle(fontWeight: FontWeight.w600),
                             ),
-                          if ((session.lastAudioError ?? '').isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              session.lastAudioError ?? '',
-                              style: const TextStyle(color: Colors.red),
-                            ),
-                          ],
-                        ]
-                        // ✅ Active Case - Status Buttons
+                          )
                         else ...[
                           Row(
                             children: [
-                              // Resolved Button
                               Expanded(
                                 child: ElevatedButton(
                                   onPressed: enableStatusButtons
@@ -338,8 +338,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                 ),
                               ),
                               const SizedBox(width: 10),
-
-                              // Unresolved Button
                               Expanded(
                                 child: ElevatedButton(
                                   onPressed: enableStatusButtons
@@ -390,8 +388,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                             ],
                           ),
                           const SizedBox(height: 10),
-
-                          // False Button (Full Width)
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -453,7 +449,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
     );
   }
 
-  // 📝 Show Note Dialog for Status Update
   Future<String?> _askNote(BuildContext context, String status) async {
     final ctrl = TextEditingController(
       text: 'Do you want to mark $status from app test button?',
@@ -490,7 +485,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   }
 }
 
-// ✅ Custom RefreshController for Pull-to-Refresh
 class RefreshController {
   final ScrollController scrollController = ScrollController();
   bool _isRefreshing = false;

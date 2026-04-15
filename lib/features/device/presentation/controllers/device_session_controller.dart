@@ -1,39 +1,31 @@
 import 'dart:async';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:skudyx/core/realtime/case_audio_realtime_service.dart';
 import 'package:skudyx/core/realtime/case_realtime_service.dart';
 import 'package:skudyx/features/cases/data/remote/case_api.dart';
-import 'package:skudyx/features/cases/domain/services/live_media_webrtc_service.dart';
+// import 'package:skudyx/core/audio/websocket_audio_stream_service.dart';
+import 'package:skudyx/features/cases/domain/services/websocket_audio_stream_service.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
 
 class DeviceSessionController extends ChangeNotifier {
-  // 📦 Dependencies
   final CaseApi caseApi;
   final CaseRealtimeService realtime;
   final CaseAudioRealtimeService audioRealtime;
-  final LiveMediaWebRtcService liveMediaWebRtcService;
+  final WebSocketAudioStreamService wsAudioService;
 
   DeviceSessionController({
     required this.caseApi,
     required this.realtime,
     required this.audioRealtime,
-    required this.liveMediaWebRtcService,
+    required this.wsAudioService,
   }) {
     _log('[DeviceSession] Constructor initialized');
     _rtSub = realtime.stream.listen(_onRealtimeUpdate);
     _audioEndedSub = audioRealtime.endedStream.listen(_onAudioEnded);
-    _answerSub = audioRealtime.answerStream.listen(_onWebRtcAnswer);
-    _iceSub = audioRealtime.iceCandidateStream.listen(_onWebRtcIce);
-    _requestOfferSub = audioRealtime.requestOfferStream.listen(
-      _onWebRtcRequestOffer,
-    );
   }
 
-  // 🔍 Debug Logger
   void _log(String message) {
     if (kDebugMode) print(message);
   }
@@ -68,34 +60,12 @@ class DeviceSessionController extends ChangeNotifier {
   // 📜 Stream Subscriptions
   StreamSubscription<CaseUpdateEvent>? _rtSub;
   StreamSubscription<AudioStreamEndedEvent>? _audioEndedSub;
-  StreamSubscription<WebRtcAnswerEvent>? _answerSub;
-  StreamSubscription<WebRtcIceCandidateEvent>? _iceSub;
-  StreamSubscription<WebRtcRequestOfferEvent>? _requestOfferSub;
 
   static const _finalStatuses = {'Resolved', 'Unresolved', 'False'};
 
-  // 🖥️ WebRTC UI Getters
-  bool get webrtcMicPermissionGranted =>
-      liveMediaWebRtcService.micPermissionGranted;
-  bool get webrtcCameraPermissionGranted =>
-      liveMediaWebRtcService.cameraPermissionGranted;
-  bool get webrtcLocalStreamAcquired =>
-      liveMediaWebRtcService.localStreamAcquired;
-  bool get webrtcHasLocalAudioTrack =>
-      liveMediaWebRtcService.hasLocalAudioTrack;
-  bool get webrtcHasLocalVideoTrack =>
-      liveMediaWebRtcService.hasLocalVideoTrack;
-  bool get webrtcOfferSent => liveMediaWebRtcService.offerSent;
-  bool get webrtcAnswerReceived => liveMediaWebRtcService.answerReceived;
-  int get webrtcSentIceCandidates => liveMediaWebRtcService.sentIceCandidates;
-  int get webrtcReceivedIceCandidates =>
-      liveMediaWebRtcService.receivedIceCandidates;
-  String get webrtcSignalingState => liveMediaWebRtcService.signalingState;
-  String get webrtcIceConnectionState =>
-      liveMediaWebRtcService.iceConnectionState;
-  String get webrtcConnectionState => liveMediaWebRtcService.connectionState;
-  String? get webrtcLastError => liveMediaWebRtcService.lastError;
-  MediaStream? get localPreviewStream => liveMediaWebRtcService.localStream;
+  // ✅ WebSocket Audio Getters
+  bool get isWebSocketStreaming => wsAudioService.isStreaming;
+  String? get streamingCaseId => wsAudioService.currentCaseId;
 
   // 🔌 Device Management
   void connectDevice(FoundDevice device) {
@@ -222,20 +192,20 @@ class DeviceSessionController extends ChangeNotifier {
       _log('📡 [DeviceSession] Joining case room via realtime service...');
       await realtime.watchCase(createdCaseId);
 
-      // 🎯 Handle CL* cases (Live Audio)
-      if (LiveMediaWebRtcService.shouldAutoStartMedia(createdCaseId)) {
-        _log('\n🎯 [DeviceSession] CL case detected - preparing audio socket');
+      // 🎯 Handle CL* cases (Live Audio via WebSocket)
+      if (createdCaseId.startsWith('CL')) {
+        _log(
+          '\n🎯 [DeviceSession] CL case detected - starting WebSocket audio streaming',
+        );
 
-        await audioRealtime.connectIfNeeded();
-
-        final socketConnected = await _waitForSocket();
-        if (socketConnected) {
-          _log('✅ [DeviceSession] Socket ready: ${audioRealtime.socketId}');
-          await audioRealtime.watchCase(createdCaseId);
-          _log('✅ [DeviceSession] Ready for web listeners...');
-        } else {
-          lastAudioError = 'Socket connection timeout';
-          _log('❌ [DeviceSession] Socket failed to connect');
+        // ✅ Start WebSocket audio streaming
+        try {
+          await wsAudioService.connect(caseId: createdCaseId);
+          audioActive = true;
+          _log('✅ [DeviceSession] WebSocket audio streaming started');
+        } catch (e) {
+          lastAudioError = 'WebSocket audio failed: $e';
+          _log('❌ [DeviceSession] WebSocket audio error: $e');
           notifyListeners();
         }
       }
@@ -272,19 +242,6 @@ class DeviceSessionController extends ChangeNotifier {
     }
   }
 
-  // ⏳ Wait for Socket
-  Future<bool> _waitForSocket({int maxAttempts = 20}) async {
-    for (int i = 0; i < maxAttempts; i++) {
-      if (audioRealtime.isConnected && audioRealtime.socketId != null) {
-        _log('✅ [DeviceSession] Socket connected after ${i + 1} attempts');
-        return true;
-      }
-      await Future.delayed(const Duration(milliseconds: 250));
-    }
-    _log('❌ [DeviceSession] Socket connection timed out');
-    return false;
-  }
-
   // 🧹 Cleanup
   void _cleanupOnError() {
     _log('[DeviceSession] _cleanupOnError() triggered');
@@ -296,7 +253,7 @@ class DeviceSessionController extends ChangeNotifier {
     _timer = null;
     realtime.unwatchCase();
     audioRealtime.unwatchCase();
-    liveMediaWebRtcService.stopAll();
+    wsAudioService.stop();
     _connectedWebUsers.clear();
     notifyListeners();
   }
@@ -324,138 +281,6 @@ class DeviceSessionController extends ChangeNotifier {
       failedUpdates++;
       notifyListeners();
     }
-  }
-
-  // 🎧 MULTI-LISTENER: Handle WebRTC Events
-
-  /// ✅ Handle incoming request_offer from Web
-  Future<void> _onWebRtcRequestOffer(WebRtcRequestOfferEvent event) async {
-    _log('\n🎯 [DeviceSession] ════════════════════════════');
-    _log('🎯 [DeviceSession] _onWebRtcRequestOffer() CALLED');
-    _log('🎯 [DeviceSession] event.caseId: ${event.caseId}');
-    _log('🎯 [DeviceSession] event.webSocketId: ${event.webSocketId}');
-    _log('🎯 [DeviceSession] this.caseId: $caseId');
-    _log('🎯 [DeviceSession] Current listeners: ${_connectedWebUsers.length}');
-    _log('🎯 [DeviceSession] ════════════════════════════\n');
-
-    final id = caseId;
-    if (id == null || event.caseId != id) {
-      _log('⚠️ [DeviceSession] Case mismatch, ignoring');
-      return;
-    }
-
-    // ✅ Prevent duplicate connections
-    if (_connectedWebUsers.contains(event.webSocketId)) {
-      _log('⚠️ [DeviceSession] Already connected to ${event.webSocketId}');
-      return;
-    }
-
-    // ✅ Ensure socket is ready
-    if (!audioRealtime.isConnected || audioRealtime.socketId == null) {
-      _log('⚠️ [DeviceSession] Socket not connected, reconnecting...');
-      await audioRealtime.connectIfNeeded();
-      if (!await _waitForSocket()) {
-        lastAudioError = 'Socket connection failed';
-        _log('❌ [DeviceSession] Socket failed');
-        notifyListeners();
-        return;
-      }
-    }
-
-    final mobileSocketId = audioRealtime.socketId;
-    if (mobileSocketId == null) {
-      lastAudioError = 'Socket ID unavailable';
-      _log('❌ [DeviceSession] No socket ID');
-      notifyListeners();
-      return;
-    }
-
-    _log('✅ [DeviceSession] Starting WebRTC for ${event.webSocketId}');
-
-    await liveMediaWebRtcService.startConnection(
-      caseId: id,
-      webSocketId: event.webSocketId,
-      onError: (msg) {
-        _log('❌ [DeviceSession] WebRTC error for ${event.webSocketId}: $msg');
-        _setMediaError(msg);
-      },
-      onStateChanged: notifyListeners,
-    );
-
-    // ✅ Track successful connection
-    if (liveMediaWebRtcService.isConnected(event.webSocketId)) {
-      _connectedWebUsers.add(event.webSocketId);
-      _log('✅ [DeviceSession] Connected to ${event.webSocketId}');
-      _log('✅ [DeviceSession] Total listeners: ${_connectedWebUsers.length}');
-      _log('✅ [DeviceSession] Active users: ${_connectedWebUsers.toList()}');
-    }
-
-    audioActive = liveMediaWebRtcService.connectionCount > 0;
-    notifyListeners();
-  }
-
-  /// ✅ Handle answer from specific web user - WITH requesterId FIX
-  void _onWebRtcAnswer(WebRtcAnswerEvent event) async {
-    _log('\n📥 [DeviceSession] ════════════════════════════');
-    _log('📥 [DeviceSession] _onWebRtcAnswer() CALLED');
-    _log('📥 [DeviceSession] event.caseId: ${event.caseId}');
-    _log('📥 [DeviceSession] event.senderId: ${event.senderId}');
-    _log('📥 [DeviceSession] event.requesterId: ${event.requesterId}');
-    _log('📥 [DeviceSession] this.caseId: $caseId');
-    _log(
-      '📥 [DeviceSession] sdpOrAnswer type: ${event.sdpOrAnswer.runtimeType}',
-    );
-    _log('📥 [DeviceSession] ════════════════════════════\n');
-
-    final id = caseId;
-    if (id == null || event.caseId != id) {
-      _log('⚠️ [DeviceSession] Case mismatch');
-      return;
-    }
-
-    // ✅ Use requesterId (web's ID) to find the connection
-    // Web sends: sender_id = mobile's ID, requester_id = web's ID
-    final webSocketId = event.requesterId ?? event.senderId;
-
-    if (webSocketId == null || webSocketId.isEmpty) {
-      _log('⚠️ [DeviceSession] Answer missing webSocketId');
-      _log(
-        '⚠️ [DeviceSession] Full event: senderId=${event.senderId}, requesterId=${event.requesterId}',
-      );
-      return;
-    }
-
-    _log('📥 [DeviceSession] Routing answer to $webSocketId');
-    await liveMediaWebRtcService.handleAnswer(
-      webSocketId: webSocketId,
-      sdpOrAnswer: event.sdpOrAnswer,
-      onStateChanged: notifyListeners,
-    );
-
-    _log('✅ [DeviceSession] Answer handled successfully');
-  }
-
-  /// ✅ Handle ICE from specific web user
-  void _onWebRtcIce(WebRtcIceCandidateEvent event) async {
-    _log('\n🧊 [DeviceSession] _onWebRtcIce()');
-    _log('🧊 [DeviceSession] caseId: ${event.caseId}');
-    _log('🧊 [DeviceSession] webSocketId (senderId): ${event.senderId}');
-
-    final id = caseId;
-    if (id == null || event.caseId != id) return;
-
-    final webSocketId = event.senderId;
-    if (webSocketId == null || webSocketId.isEmpty) {
-      _log('⚠️ [DeviceSession] ICE missing webSocketId');
-      return;
-    }
-
-    _log('🧊 [DeviceSession] Routing ICE to $webSocketId');
-    await liveMediaWebRtcService.handleRemoteIceCandidate(
-      webSocketId: webSocketId,
-      candidate: event.candidate,
-      onStateChanged: notifyListeners,
-    );
   }
 
   /// ✅ Handle realtime case updates
@@ -487,16 +312,16 @@ class DeviceSessionController extends ChangeNotifier {
   // 🛑 Stop Audio & Tracking
   Future<void> _stopAudio() async {
     _log('[DeviceSession] _stopAudio() called');
-    await liveMediaWebRtcService.stopAll();
+    await wsAudioService.stop();
     _connectedWebUsers.clear();
     audioActive = false;
     notifyListeners();
   }
 
   Future<void> _startMediaIfNeeded(String id) async {
-    if (!LiveMediaWebRtcService.shouldAutoStartMedia(id)) return;
+    if (!id.startsWith('CL')) return;
     if (audioActive) return;
-    _log('[DeviceSession] Waiting for web request_offer...');
+    _log('[DeviceSession] Waiting for web listeners (WebSocket)...');
   }
 
   Future<void> stopTracking({bool clearCase = false}) async {
@@ -570,10 +395,7 @@ class DeviceSessionController extends ChangeNotifier {
     _log('[DeviceSession] dispose() called');
     _rtSub?.cancel();
     _audioEndedSub?.cancel();
-    _answerSub?.cancel();
-    _iceSub?.cancel();
-    _requestOfferSub?.cancel();
-    liveMediaWebRtcService.dispose();
+    wsAudioService.stop();
     super.dispose();
   }
 }
