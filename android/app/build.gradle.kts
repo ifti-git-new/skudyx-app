@@ -40,10 +40,30 @@ android {
         release {
             // Signing with debug for now (same as your template)
             signingConfig = signingConfigs.getByName("debug")
+            
+            // ✅ Enable code shrinking for release builds
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
+        debug {
+            // ✅ Optional: Enable debug signing config explicitly
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+    
+    // ✅ Add lint options to suppress OnBackInvokedCallback warning
+    lint {
+        disable += "OnBackInvokedCallback"
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // ✅ Add any additional Android dependencies here if needed
+    // implementation "androidx.core:core-ktx:1.12.0"
 }

@@ -23,7 +23,9 @@ class AppConfig {
     const flavorStr = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
 
     // ✅ USE THE SAME URL FOR BOTH API AND WEBSOCKET
-    const baseUrl = 'https://skudyx-backend-thtu.onrender.com';
+    const baseUrl = 'https://skudyx-backend-c8do.onrender.com';
+    //dev base url
+    // const baseUrl = 'https://skudyx-backend-thtu.onrender.com';
 
     final flavor = flavorFromString(flavorStr);
 

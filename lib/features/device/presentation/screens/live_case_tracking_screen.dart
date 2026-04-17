@@ -202,79 +202,79 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // // 🔊 Active Listeners Card
-                        // if (session.tracking && session.caseId != null)
-                        //   Container(
-                        //     padding: const EdgeInsets.all(12),
-                        //     decoration: BoxDecoration(
-                        //       color: Colors.green.withOpacity(0.08),
-                        //       borderRadius: BorderRadius.circular(12),
-                        //       border: Border.all(
-                        //         color: Colors.green.withOpacity(0.3),
-                        //       ),
-                        //     ),
-                        //     child: Column(
-                        //       crossAxisAlignment: CrossAxisAlignment.start,
-                        //       children: [
-                        //         Row(
-                        //           children: [
-                        //             const Text(
-                        //               '🔊 Active Listeners:',
-                        //               style: TextStyle(
-                        //                 fontWeight: FontWeight.bold,
-                        //                 fontSize: 13,
-                        //               ),
-                        //             ),
-                        //             const SizedBox(width: 8),
-                        //             Container(
-                        //               padding: const EdgeInsets.symmetric(
-                        //                 horizontal: 8,
-                        //                 vertical: 2,
-                        //               ),
-                        //               decoration: BoxDecoration(
-                        //                 color: Colors.green,
-                        //                 borderRadius: BorderRadius.circular(10),
-                        //               ),
-                        //               child: Text(
-                        //                 '${session.webUserCount}',
-                        //                 style: const TextStyle(
-                        //                   color: Colors.white,
-                        //                   fontSize: 11,
-                        //                   fontWeight: FontWeight.bold,
-                        //                 ),
-                        //               ),
-                        //             ),
-                        //           ],
-                        //         ),
-                        //         if (session.connectedWebUsers.isNotEmpty) ...[
-                        //           const SizedBox(height: 6),
-                        //           Text(
-                        //             session.connectedWebUsers
-                        //                 .map(
-                        //                   (id) =>
-                        //                       '• ${id.substring(0, id.length > 12 ? 12 : id.length)}...',
-                        //                 )
-                        //                 .join('\n'),
-                        //             style: const TextStyle(
-                        //               fontSize: 11,
-                        //               color: Colors.grey,
-                        //               fontFamily: 'monospace',
-                        //             ),
-                        //           ),
-                        //         ] else if (session.audioActive) ...[
-                        //           const SizedBox(height: 6),
-                        //           const Text(
-                        //             '⏳ Waiting for listeners...',
-                        //             style: TextStyle(
-                        //               fontSize: 11,
-                        //               color: Colors.grey,
-                        //               fontStyle: FontStyle.italic,
-                        //             ),
-                        //           ),
-                        //         ],
-                        //       ],
-                        //     ),
-                        //   ),
+                        // 🔊 Active Listeners Card
+                        if (session.tracking && session.caseId != null)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.green.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      '🔊 Active Listeners:',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        '${session.webUserCount}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (session.connectedWebUsers.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    session.connectedWebUsers
+                                        .map(
+                                          (id) =>
+                                              '• ${id.substring(0, id.length > 12 ? 12 : id.length)}...',
+                                        )
+                                        .join('\n'),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                ] else if (session.audioActive) ...[
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    '⏳ Waiting for listeners...',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         const SizedBox(height: 20),
                         const Divider(),
                         const SizedBox(height: 12),

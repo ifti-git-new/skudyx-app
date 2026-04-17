@@ -92,13 +92,45 @@ class WebSocketAudioStreamService {
       },
       onError: (error) {
         _log('❌ WebSocket error: $error');
+        // Mark as disconnected but don't stop recording
+        _isConnected = false;
+        // Attempt reconnection after delay
+        Future.delayed(const Duration(seconds: 5), () {
+          if (_isRecording && _currentCaseId != null) {
+            reconnectIfNeeded();
+          }
+        });
       },
       onDone: () {
         _log('🔌 WebSocket connection closed');
         _isConnected = false;
+        // Attempt reconnection if still recording
+        if (_isRecording && _currentCaseId != null) {
+          Future.delayed(const Duration(seconds: 5), () {
+            reconnectIfNeeded();
+          });
+        }
       },
       cancelOnError: false,
     );
+  }
+
+  // Reconnect if needed
+  Future<void> reconnectIfNeeded() async {
+    if (_isConnected && _channel != null) {
+      // Already connected
+      return;
+    }
+
+    if (_currentCaseId != null && _isRecording) {
+      _log('🔄 [WebSocket Audio] Reconnecting after background...');
+      try {
+        await connect(caseId: _currentCaseId!);
+        _log('✅ [WebSocket Audio] Reconnected successfully');
+      } catch (e) {
+        _log('❌ [WebSocket Audio] Reconnection failed: $e');
+      }
+    }
   }
 
   // Start recording and streaming audio

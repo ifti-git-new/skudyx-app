@@ -1,19 +1,22 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:skudyx/core/realtime/case_audio_realtime_service.dart';
 import 'package:skudyx/core/realtime/case_realtime_service.dart';
 import 'package:skudyx/features/cases/data/remote/case_api.dart';
-// import 'package:skudyx/core/audio/websocket_audio_stream_service.dart';
 import 'package:skudyx/features/cases/domain/services/websocket_audio_stream_service.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
 
-class DeviceSessionController extends ChangeNotifier {
+class DeviceSessionController extends ChangeNotifier
+    with WidgetsBindingObserver {
   final CaseApi caseApi;
   final CaseRealtimeService realtime;
   final CaseAudioRealtimeService audioRealtime;
   final WebSocketAudioStreamService wsAudioService;
+
+  bool _isInBackground = false;
 
   DeviceSessionController({
     required this.caseApi,
@@ -21,9 +24,11 @@ class DeviceSessionController extends ChangeNotifier {
     required this.audioRealtime,
     required this.wsAudioService,
   }) {
+    WidgetsBinding.instance.addObserver(this);
     _log('[DeviceSession] Constructor initialized');
     _rtSub = realtime.stream.listen(_onRealtimeUpdate);
     _audioEndedSub = audioRealtime.endedStream.listen(_onAudioEnded);
+    _statusUpdateSub = realtime.statusUpdateStream.listen(_onStatusUpdate);
   }
 
   void _log(String message) {
@@ -60,6 +65,7 @@ class DeviceSessionController extends ChangeNotifier {
   // 📜 Stream Subscriptions
   StreamSubscription<CaseUpdateEvent>? _rtSub;
   StreamSubscription<AudioStreamEndedEvent>? _audioEndedSub;
+  StreamSubscription<CaseUpdateEvent>? _statusUpdateSub;
 
   static const _finalStatuses = {'Resolved', 'Unresolved', 'False'};
 
@@ -198,7 +204,6 @@ class DeviceSessionController extends ChangeNotifier {
           '\n🎯 [DeviceSession] CL case detected - starting WebSocket audio streaming',
         );
 
-        // ✅ Start WebSocket audio streaming
         try {
           await wsAudioService.connect(caseId: createdCaseId);
           audioActive = true;
@@ -240,6 +245,38 @@ class DeviceSessionController extends ChangeNotifier {
       _cleanupOnError();
       return false;
     }
+  }
+
+  // ✅ Handle app lifecycle changes for background execution
+  @override
+  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _isInBackground = true;
+      _log(
+        '📱 [DeviceSession] App paused - WebSocket audio continues streaming',
+      );
+    } else if (state == AppLifecycleState.resumed) {
+      _isInBackground = false;
+      _log('📱 [DeviceSession] App resumed - streaming continues');
+    }
+  }
+
+  // ✅ Handle real-time status updates from web
+  void _onStatusUpdate(CaseUpdateEvent event) {
+    _log('📡 [DeviceSession] Received status update: ${event.status}');
+
+    // Update local state
+    lastStatus = event.status;
+
+    // If case is resolved/unresolved/false, stop tracking
+    if (_finalStatuses.contains(event.status)) {
+      remotelyClosedStatus = event.status;
+      _log('🏁 [DeviceSession] Case closed remotely: ${event.status}');
+      stopTracking(clearCase: true);
+    }
+
+    notifyListeners();
   }
 
   // 🧹 Cleanup
@@ -326,6 +363,7 @@ class DeviceSessionController extends ChangeNotifier {
 
   Future<void> stopTracking({bool clearCase = false}) async {
     _log('[DeviceSession] stopTracking() called, clearCase: $clearCase');
+
     _timer?.cancel();
     _timer = null;
     _tickInFlight = false;
@@ -392,6 +430,8 @@ class DeviceSessionController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _statusUpdateSub?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _log('[DeviceSession] dispose() called');
     _rtSub?.cancel();
     _audioEndedSub?.cancel();

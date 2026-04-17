@@ -16,7 +16,6 @@ import 'package:skudyx/features/auth/data/social/google_auth_provider.dart';
 import 'package:skudyx/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:skudyx/features/cases/data/remote/case_api.dart';
 import 'package:skudyx/features/cases/domain/services/websocket_audio_stream_service.dart';
-// import 'package:skudyx/features/cases/domain/services/live_media_webrtc_service.dart'; // [WEBRTC] Commented out
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
@@ -26,7 +25,6 @@ import 'package:skudyx/features/profile/controllers/profile_controller.dart';
 import 'package:skudyx/features/profile/data/remote/profile_api.dart';
 import 'package:skudyx/features/profile/data/remote/profile_update_api.dart';
 import 'package:skudyx/features/settings/presentation/controllers/notification_prefs_controller.dart';
-// import 'package:skudyx/core/audio/websocket_audio_stream_service.dart'; // ✅ WebSocket Audio Service
 
 import 'router.dart';
 
@@ -115,13 +113,11 @@ class AppCompositionRoot extends StatelessWidget {
         ChangeNotifierProvider<DeviceScanController>(
           create: (_) => DeviceScanController(),
         ),
-        Provider<CaseRealtimeService>(
-          create: (c) => CaseRealtimeService(
-            config: c.read<AppConfig>(),
-            tokenStorage: c.read<AuthTokenStorage>(),
-          ),
-          dispose: (_, svc) => svc.dispose(),
-        ),
+
+        // ✅ CaseRealtimeService - no constructor parameters needed
+        Provider<CaseRealtimeService>(create: (_) => CaseRealtimeService()),
+
+        // ✅ CORRECT: Pass REQUIRED config and tokenStorage parameters
         Provider<CaseAudioRealtimeService>(
           create: (c) => CaseAudioRealtimeService(
             config: c.read<AppConfig>(),
@@ -129,30 +125,22 @@ class AppCompositionRoot extends StatelessWidget {
           ),
           dispose: (_, svc) => svc.dispose(),
         ),
-        // [WEBRTC] Provider<LiveMediaWebRtcService> commented out
-        /*
-        Provider<LiveMediaWebRtcService>(
-          create: (c) => LiveMediaWebRtcService(
-            audioRealtime: c.read<CaseAudioRealtimeService>(),
-          ),
-          dispose: (_, svc) => svc.dispose(),
-        ),
-        */
+
         // ✅ WebSocket Audio Service Provider
         Provider<WebSocketAudioStreamService>(
           create: (_) => WebSocketAudioStreamService(),
           dispose: (_, svc) => svc.stop(),
         ),
+
         ChangeNotifierProvider<DeviceSessionController>(
           create: (c) => DeviceSessionController(
             caseApi: c.read<CaseApi>(),
             realtime: c.read<CaseRealtimeService>(),
             audioRealtime: c.read<CaseAudioRealtimeService>(),
-            // liveMediaWebRtcService: c.read<LiveMediaWebRtcService>(), // [WEBRTC] Commented out
-            wsAudioService: c
-                .read<WebSocketAudioStreamService>(), // ✅ WebSocket service
+            wsAudioService: c.read<WebSocketAudioStreamService>(),
           ),
         ),
+
         ChangeNotifierProvider<EmergencyContactController>(
           create: (c) => EmergencyContactController(
             prefs: c.read<AppPrefs>(),

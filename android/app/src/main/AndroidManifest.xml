@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Internet permissions -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -18,18 +19,33 @@
     <!-- Camera permission -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-
-    <!-- audio permission -->
+    <!-- Audio permission -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <!-- Location permissions (needed for BLE scanning on many devices) -->
+    <!-- Location permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- ✅ Required for foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:label="skudyx"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true"
+        android:usesCleartextTraffic="true">
+
+        <!-- ✅ Foreground service declaration -->
+        <service
+            android:name="id.flutter.flutter_background_service.BackgroundService"
+            android:foregroundServiceType="location|microphone"
+            android:exported="false"
+            tools:replace="android:exported" />
 
         <activity
             android:name=".MainActivity"
