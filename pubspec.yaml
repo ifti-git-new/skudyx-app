@@ -58,6 +58,7 @@ dependencies:
   flutter_background_service_android: ^6.3.1
   flutter_background_service_ios: ^5.0.3
   background_fetch: ^1.6.1
+  pretty_dio_logger: ^1.4.0
 
 dev_dependencies:
   flutter_test:

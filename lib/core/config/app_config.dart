@@ -22,10 +22,8 @@ class AppConfig {
   factory AppConfig.fromEnv() {
     const flavorStr = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
 
-    // ✅ USE THE SAME URL FOR BOTH API AND WEBSOCKET
+    // ✅ FIXED: Use the correct backend URL from logs
     const baseUrl = 'https://skudyx-backend-c8do.onrender.com';
-    //dev base url
-    // const baseUrl = 'https://skudyx-backend-thtu.onrender.com';
 
     final flavor = flavorFromString(flavorStr);
 
@@ -37,7 +35,7 @@ class AppConfig {
         Flavor.prod => 'SkudyX',
       },
       apiBaseUrl: baseUrl,
-      wsUrl: _normalizeSocketIoUrl(baseUrl), // ✅ Same as API
+      wsUrl: _normalizeSocketIoUrl(baseUrl),
     );
   }
 }

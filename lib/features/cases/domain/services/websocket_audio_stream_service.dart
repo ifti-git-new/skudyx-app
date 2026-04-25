@@ -9,12 +9,16 @@ class WebSocketAudioStreamService {
   WebSocketChannel? _channel;
   AudioRecorder? _recorder;
   StreamSubscription<List<int>>? _audioStreamSub;
+  Timer? _reconnectTimer;
 
   bool _isRecording = false;
   bool _isConnected = false;
+  bool _isConnecting = false;
   String? _currentCaseId;
   int _chunkCount = 0;
   int _totalBytesSent = 0;
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 5;
 
   final _log = (String msg) {
     if (kDebugMode) print('🎙️ [WebSocket Audio] $msg');
@@ -29,21 +33,34 @@ class WebSocketAudioStreamService {
 
   // Connect to WebSocket audio server
   Future<void> connect({required String caseId}) async {
+    if (_isConnecting || _isConnected) {
+      _log('⚠️ Already connecting or connected');
+      return;
+    }
+
+    _isConnecting = true;
+    _currentCaseId = caseId;
+
     try {
       _log('🔌 Connecting to WebSocket audio stream...');
       _log(
-        '📡 WebSocket URL: wss://skudyx-backend-thtu.onrender.com/ws/audio-stream',
+        '📡 WebSocket URL: wss://skudyx-backend-c8do.onrender.com/ws/audio-stream',
       );
       _log('📋 Case ID: $caseId');
 
       _channel = WebSocketChannel.connect(
-        Uri.parse('wss://skudyx-backend-thtu.onrender.com/ws/audio-stream'),
+        Uri.parse('wss://skudyx-backend-c8do.onrender.com/ws/audio-stream'),
       );
 
-      // Wait for connection
-      await _channel!.ready;
+      // Wait for connection with timeout
+      await _channel!.ready.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw TimeoutException('WebSocket connection timeout'),
+      );
+
       _isConnected = true;
-      _currentCaseId = caseId;
+      _isConnecting = false;
+      _reconnectAttempts = 0;
 
       _log('✅ WebSocket connected successfully!');
       _log('📤 Sending join message as sender...');
@@ -58,9 +75,39 @@ class WebSocketAudioStreamService {
       // Listen for messages
       _listenToMessages();
     } catch (e, stackTrace) {
+      _isConnecting = false;
       _log('❌ Connection failed: $e');
       _log('❌ Stack trace: $stackTrace');
+      _handleConnectionError();
       rethrow;
+    }
+  }
+
+  // Handle connection errors with reconnection logic
+  void _handleConnectionError() {
+    _isConnected = false;
+
+    if (_reconnectAttempts < _maxReconnectAttempts &&
+        _currentCaseId != null &&
+        _isRecording) {
+      _reconnectAttempts++;
+      final delay = Duration(seconds: 2 * _reconnectAttempts);
+      _log(
+        '🔄 Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts/$_maxReconnectAttempts)...',
+      );
+
+      _reconnectTimer?.cancel();
+      _reconnectTimer = Timer(delay, () {
+        if (_isRecording && _currentCaseId != null) {
+          connect(caseId: _currentCaseId!).catchError((e) {
+            _log('❌ Reconnection failed: $e');
+            _handleConnectionError();
+          });
+        }
+      });
+    } else if (_reconnectAttempts >= _maxReconnectAttempts) {
+      _log('❌ Max reconnection attempts reached. Audio streaming stopped.');
+      _isRecording = false;
     }
   }
 
@@ -80,10 +127,15 @@ class WebSocketAudioStreamService {
 
           if (data['type'] == 'joined') {
             _log('✅ Joined case: ${data['caseId']}');
-            _log('🎬 Starting audio recording...');
-            _startRecording();
+            if (!_isRecording) {
+              _log('🎬 Starting audio recording...');
+              _startRecording();
+            }
           } else if (data['type'] == 'sender_left') {
             _log('⚠️ Sender left notification received');
+          } else if (data['type'] == 'listener_update') {
+            // Handle listener count updates if needed
+            _log('👥 Listener update: count=${data['count']}');
           }
         } catch (e) {
           _log('❌ Message parse error: $e');
@@ -92,45 +144,17 @@ class WebSocketAudioStreamService {
       },
       onError: (error) {
         _log('❌ WebSocket error: $error');
-        // Mark as disconnected but don't stop recording
-        _isConnected = false;
-        // Attempt reconnection after delay
-        Future.delayed(const Duration(seconds: 5), () {
-          if (_isRecording && _currentCaseId != null) {
-            reconnectIfNeeded();
-          }
-        });
+        _handleConnectionError();
       },
       onDone: () {
         _log('🔌 WebSocket connection closed');
         _isConnected = false;
-        // Attempt reconnection if still recording
         if (_isRecording && _currentCaseId != null) {
-          Future.delayed(const Duration(seconds: 5), () {
-            reconnectIfNeeded();
-          });
+          _handleConnectionError();
         }
       },
       cancelOnError: false,
     );
-  }
-
-  // Reconnect if needed
-  Future<void> reconnectIfNeeded() async {
-    if (_isConnected && _channel != null) {
-      // Already connected
-      return;
-    }
-
-    if (_currentCaseId != null && _isRecording) {
-      _log('🔄 [WebSocket Audio] Reconnecting after background...');
-      try {
-        await connect(caseId: _currentCaseId!);
-        _log('✅ [WebSocket Audio] Reconnected successfully');
-      } catch (e) {
-        _log('❌ [WebSocket Audio] Reconnection failed: $e');
-      }
-    }
   }
 
   // Start recording and streaming audio
@@ -225,11 +249,15 @@ class WebSocketAudioStreamService {
     _log('🛑 Stopping audio stream...');
 
     _isRecording = false;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
 
     // Stop recording
     try {
       _log('⏹️ Stopping recorder...');
-      await _recorder?.stop();
+      if (_recorder != null && await _recorder!.isRecording()) {
+        await _recorder!.stop();
+      }
       _log('✅ Recorder stopped');
     } catch (e) {
       _log('⚠️ Error stopping recorder: $e');
@@ -266,7 +294,14 @@ class WebSocketAudioStreamService {
     }
 
     _isConnected = false;
+    _isConnecting = false;
     _currentCaseId = null;
     _log('✅ Audio stream stopped completely');
+  }
+
+  // Cleanup resources
+  Future<void> dispose() async {
+    await stop();
+    _recorder?.dispose();
   }
 }

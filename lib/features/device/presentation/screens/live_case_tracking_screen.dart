@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -30,6 +32,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
     if (s == null) return;
     final remote = s.remotelyClosedStatus;
     if (remote != null && !_exiting) {
+      log('🏁 [LiveCaseTracking] Remote close detected: $remote');
       s.clearRemotelyClosedStatus();
       _safePop(remote);
     }
@@ -70,6 +73,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
       _session?.removeListener(_onSessionChanged);
       _session = newSession;
       _session?.addListener(_onSessionChanged);
+      log('📡 [LiveCaseTracking] Listening to session changes');
     }
   }
 
@@ -95,6 +99,9 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
 
     return PopScope(
       canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+      },
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8FA),
         body: RefreshIndicator(
@@ -117,7 +124,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 🏷️ Header
                         const Text(
                           'Internal Testing (Dev/QA Only)',
                           style: TextStyle(
@@ -127,8 +133,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-
-                        // 📊 Case Info Card
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -148,8 +152,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-
-                        // 🎙️ WebSocket Audio Status Card
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -201,8 +203,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-
-                        // 🔊 Active Listeners Card
                         if (session.tracking && session.caseId != null)
                           Container(
                             padding: const EdgeInsets.all(12),
@@ -278,8 +278,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                         const SizedBox(height: 20),
                         const Divider(),
                         const SizedBox(height: 12),
-
-                        // Status Buttons
                         if (!session.tracking || session.caseId == null)
                           const Center(
                             child: Text(
@@ -299,6 +297,21 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                             'Resolved',
                                           );
                                           if (!mounted || note == null) return;
+
+                                          // <--- YOUR SNIPPET HERE --->
+                                          if (session.caseId == null) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  '❌ No active case',
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
+
                                           final ok = await context
                                               .read<DeviceSessionController>()
                                               .updateFinalStatus(
@@ -347,6 +360,21 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                             'Unresolved',
                                           );
                                           if (!mounted || note == null) return;
+
+                                          // <--- YOUR SNIPPET HERE --->
+                                          if (session.caseId == null) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  '❌ No active case',
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
+
                                           final ok = await context
                                               .read<DeviceSessionController>()
                                               .updateFinalStatus(
@@ -398,6 +426,19 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                         'False',
                                       );
                                       if (!mounted || note == null) return;
+
+                                      // <--- YOUR SNIPPET HERE --->
+                                      if (session.caseId == null) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('❌ No active case'),
+                                          ),
+                                        );
+                                        return;
+                                      }
+
                                       final ok = await context
                                           .read<DeviceSessionController>()
                                           .updateFinalStatus(

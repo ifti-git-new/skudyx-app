@@ -304,52 +304,72 @@ class _SafetySection extends StatefulWidget {
 class _SafetySectionState extends State<_SafetySection> {
   bool _routingToTracking = false;
 
+  // In _SafetySectionState._startLiveCase():
+
   Future<void> _startLiveCase(BuildContext context) async {
     final session = context.read<DeviceSessionController>();
 
     setState(() => _routingToTracking = true);
 
-    final ok = await session.startCase(isTest: false, caseName: 'Live Case');
+    try {
+      final ok = await session.startCase(isTest: false, caseName: 'Live Case');
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (!ok || session.caseId == null) {
-      setState(() => _routingToTracking = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(session.lastError ?? 'Failed to start case')),
+      if (!ok || session.caseId == null) {
+        setState(() => _routingToTracking = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(session.lastError ?? 'Failed to start case'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // ✅ Use AppConfig for consistent URLs
+      final config = context.read<AppConfig>();
+
+      final liveCallController = LiveCaseCallController(
+        socketBaseUrl: config.wsUrl, // Use normalized URL from config
+        uploadBaseUrl: config.apiBaseUrl,
+        uploadEndpoint: '/api/v1/cases/upload-final-audio',
+        caseId: session.caseId.toString(),
+        isCaller: true,
       );
-      return;
-    }
 
-    final liveCallController = LiveCaseCallController(
-      socketBaseUrl: 'http://YOUR_SERVER_IP:8081',
-      uploadBaseUrl: 'http://YOUR_SERVER_IP:8081',
-      uploadEndpoint: '/api/cases/upload-final-audio',
-      caseId: session.caseId.toString(),
-      isCaller: true,
-    );
+      await liveCallController.start();
 
-    await liveCallController.start();
+      if (!mounted) return;
 
-    if (!mounted) return;
+      setState(() => _routingToTracking = false);
 
-    setState(() => _routingToTracking = false);
-
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => MultiProvider(
-          providers: [
-            ChangeNotifierProvider<DeviceSessionController>.value(
-              value: session,
-            ),
-            ChangeNotifierProvider<LiveCaseCallController>.value(
-              value: liveCallController,
-            ),
-          ],
-          child: const LiveCaseTrackingScreen(),
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => MultiProvider(
+            providers: [
+              ChangeNotifierProvider<DeviceSessionController>.value(
+                value: session,
+              ),
+              ChangeNotifierProvider<LiveCaseCallController>.value(
+                value: liveCallController,
+              ),
+            ],
+            child: const LiveCaseTrackingScreen(),
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _routingToTracking = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString().substring(0, 80)}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override

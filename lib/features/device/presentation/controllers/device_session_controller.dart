@@ -88,6 +88,7 @@ class DeviceSessionController extends ChangeNotifier
 
   void clearRemotelyClosedStatus() {
     remotelyClosedStatus = null;
+    notifyListeners();
   }
 
   void _setError(String msg) {
@@ -107,24 +108,29 @@ class DeviceSessionController extends ChangeNotifier
 
   // 📍 Location Helpers
   Future<bool> _ensureLocationReady() async {
-    final enabled = await Geolocator.isLocationServiceEnabled();
-    if (!enabled) {
-      _setError('Location services are disabled.');
+    try {
+      final enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) {
+        _setError('Location services are disabled.');
+        return false;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _setError('Location permission denied.');
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      _setError('Failed to check location: $e');
       return false;
     }
-
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      _setError('Location permission denied.');
-      return false;
-    }
-
-    return true;
   }
 
   Future<Position> _getCurrentPosition() {
@@ -163,7 +169,6 @@ class DeviceSessionController extends ChangeNotifier
 
     starting = true;
     tracking = false;
-
     this.caseName = caseName;
     caseId = null;
     lastStatus = null;
@@ -212,6 +217,7 @@ class DeviceSessionController extends ChangeNotifier
           lastAudioError = 'WebSocket audio failed: $e';
           _log('❌ [DeviceSession] WebSocket audio error: $e');
           notifyListeners();
+          // Continue even if audio fails - location tracking still works
         }
       }
 
@@ -241,7 +247,7 @@ class DeviceSessionController extends ChangeNotifier
       return false;
     } catch (e) {
       _log('❌ [DeviceSession] Unexpected error: $e');
-      _setError('Failed to start case.');
+      _setError('Failed to start case: $e');
       _cleanupOnError();
       return false;
     }
@@ -256,9 +262,19 @@ class DeviceSessionController extends ChangeNotifier
       _log(
         '📱 [DeviceSession] App paused - WebSocket audio continues streaming',
       );
+      // WebSocket should continue in background on most platforms
     } else if (state == AppLifecycleState.resumed) {
       _isInBackground = false;
-      _log('📱 [DeviceSession] App resumed - streaming continues');
+      _log('📱 [DeviceSession] App resumed - checking connection...');
+      // Reconnect WebSocket if needed
+      if (tracking &&
+          caseId?.startsWith('CL') == true &&
+          !wsAudioService.isConnected) {
+        _log('🔄 [DeviceSession] Reconnecting WebSocket after resume...');
+        wsAudioService.connect(caseId: caseId!).catchError((e) {
+          _log('❌ [DeviceSession] Reconnect failed: $e');
+        });
+      }
     }
   }
 
@@ -355,12 +371,6 @@ class DeviceSessionController extends ChangeNotifier
     notifyListeners();
   }
 
-  Future<void> _startMediaIfNeeded(String id) async {
-    if (!id.startsWith('CL')) return;
-    if (audioActive) return;
-    _log('[DeviceSession] Waiting for web listeners (WebSocket)...');
-  }
-
   Future<void> stopTracking({bool clearCase = false}) async {
     _log('[DeviceSession] stopTracking() called, clearCase: $clearCase');
 
@@ -421,7 +431,7 @@ class DeviceSessionController extends ChangeNotifier
       return false;
     } catch (e) {
       _log('[DeviceSession] updateFinalStatus error => $e');
-      _setError('Failed to update status.');
+      _setError('Failed to update status: $e');
       statusUpdating = false;
       notifyListeners();
       return false;
@@ -435,7 +445,7 @@ class DeviceSessionController extends ChangeNotifier
     _log('[DeviceSession] dispose() called');
     _rtSub?.cancel();
     _audioEndedSub?.cancel();
-    wsAudioService.stop();
+    wsAudioService.dispose();
     super.dispose();
   }
 }
