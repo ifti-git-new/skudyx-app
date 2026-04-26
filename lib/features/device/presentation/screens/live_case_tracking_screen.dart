@@ -21,9 +21,15 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   void _safePop([String? result]) {
     if (_exiting) return;
     _exiting = true;
-    Future.microtask(() {
+    // Use WidgetsBinding to ensure we're not in the middle of a build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.pop(result);
+      // Use GoRouter's pop which bypasses PopScope
+      if (context.mounted) {
+        context.go(
+          '/device/connected',
+        ); // ✅ Navigate directly to device connected screen
+      }
     });
   }
 
@@ -98,12 +104,14 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
         session.tracking && session.caseId != null && !session.statusUpdating;
 
     return PopScope(
-      canPop: false,
+      canPop: false, // ✅ Blocks system back button
       onPopInvoked: (didPop) {
         if (didPop) return;
+        // Optional: Show exit confirmation dialog here if needed
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8FA),
+        // ✅ NO AppBar = no back arrow button
         body: RefreshIndicator(
           onRefresh: _onRefresh,
           color: Theme.of(context).primaryColor,
@@ -298,7 +306,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                           );
                                           if (!mounted || note == null) return;
 
-                                          // <--- YOUR SNIPPET HERE --->
                                           if (session.caseId == null) {
                                             ScaffoldMessenger.of(
                                               context,
@@ -343,14 +350,17 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                           width: 18,
                                           height: 18,
                                           child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
+                                            strokeWidth: 2.2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
                                           ),
                                         )
                                       : const Text('Resolved'),
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: ElevatedButton(
                                   onPressed: enableStatusButtons
@@ -361,7 +371,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                           );
                                           if (!mounted || note == null) return;
 
-                                          // <--- YOUR SNIPPET HERE --->
                                           if (session.caseId == null) {
                                             ScaffoldMessenger.of(
                                               context,
@@ -406,76 +415,82 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                           width: 18,
                                           height: 18,
                                           child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
+                                            strokeWidth: 2.2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
                                           ),
                                         )
                                       : const Text('Unresolved'),
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: enableStatusButtons
-                                  ? () async {
-                                      final note = await _askNote(
-                                        context,
-                                        'False',
-                                      );
-                                      if (!mounted || note == null) return;
-
-                                      // <--- YOUR SNIPPET HERE --->
-                                      if (session.caseId == null) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('❌ No active case'),
-                                          ),
-                                        );
-                                        return;
-                                      }
-
-                                      final ok = await context
-                                          .read<DeviceSessionController>()
-                                          .updateFinalStatus(
-                                            status: 'False',
-                                            note: note,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: enableStatusButtons
+                                      ? () async {
+                                          final note = await _askNote(
+                                            context,
+                                            'False',
                                           );
-                                      if (!mounted) return;
-                                      if (ok) {
-                                        _safePop('False');
-                                      } else {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              session.lastError ?? 'Failed',
-                                            ),
+                                          if (!mounted || note == null) return;
+
+                                          if (session.caseId == null) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  '❌ No active case',
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
+
+                                          final ok = await context
+                                              .read<DeviceSessionController>()
+                                              .updateFinalStatus(
+                                                status: 'False',
+                                                note: note,
+                                              );
+                                          if (!mounted) return;
+                                          if (ok) {
+                                            _safePop('False');
+                                          } else {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  session.lastError ?? 'Failed',
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: session.statusUpdating
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
                                           ),
-                                        );
-                                      }
-                                    }
-                                  : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
+                                        )
+                                      : const Text('False'),
+                                ),
                               ),
-                              child: session.statusUpdating
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text('False'),
-                            ),
+                            ],
                           ),
                         ],
                       ],
@@ -491,50 +506,38 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   }
 
   Future<String?> _askNote(BuildContext context, String status) async {
-    final ctrl = TextEditingController(
-      text: 'Do you want to mark $status from app test button?',
-    );
-    final note = await showDialog<String>(
+    final controller = TextEditingController();
+    return showDialog<String>(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text('Update Status: $status'),
-          content: TextField(
-            controller: ctrl,
-            decoration: const InputDecoration(
-              labelText: 'Note (optional)',
-              border: OutlineInputBorder(),
-            ),
-            minLines: 2,
-            maxLines: 4,
+      builder: (_) => AlertDialog(
+        title: Text('Mark as $status'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Add a note (optional)',
+            border: OutlineInputBorder(),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, ctrl.text),
-              child: const Text('Update'),
-            ),
-          ],
-        );
-      },
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
     );
-    ctrl.dispose();
-    return note;
   }
 }
 
+// Helper class for refresh indicator
 class RefreshController {
-  final ScrollController scrollController = ScrollController();
+  final scrollController = ScrollController();
   bool _isRefreshing = false;
-
-  bool get isRefreshing => _isRefreshing;
-
-  void startRefresh() {
-    _isRefreshing = true;
-  }
 
   void refreshCompleted() {
     _isRefreshing = false;

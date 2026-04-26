@@ -197,7 +197,7 @@ class AppRouter {
         builder: (_, _) => const EmergencyContactFormScreen(),
       ),
 
-      // ✅ NEW: Live tracking screen OUTSIDE shell (no bottom nav + can block back)
+      // ✅ LiveCaseTracking OUTSIDE shell (no bottom nav)
       GoRoute(
         path: AppRoutes.liveCaseTracking,
         builder: (_, _) => const LiveCaseTrackingScreen(),

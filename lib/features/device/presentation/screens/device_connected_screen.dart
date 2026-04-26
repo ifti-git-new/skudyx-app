@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/core/config/app_config.dart';
 import 'package:skudyx/core/config/flavors.dart';
+import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/features/cases/presentation/controllers/live_case_call_controller.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
-import 'package:skudyx/features/device/presentation/screens/live_case_tracking_screen.dart';
 
 class DeviceConnectedScreen extends StatefulWidget {
   const DeviceConnectedScreen({super.key});
@@ -27,13 +28,10 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<DeviceSessionController>();
-
     final config = context.read<AppConfig>();
     final showInternalTesting = config.flavor != Flavor.prod;
-
     final width = MediaQuery.of(context).size.width;
     final circleSize = width * 0.38;
-
     final statusColor = isActiveMode ? _green : _orange;
     final statusSoftColor = isActiveMode ? _greenSoft : _orangeSoft;
 
@@ -62,7 +60,6 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
             children: [
               _buildHeader(context),
               const SizedBox(height: 26),
-
               Center(
                 child: Stack(
                   clipBehavior: Clip.none,
@@ -111,20 +108,14 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 26),
-
               _ModeSwitcher(
                 isActive: isActiveMode,
                 onChanged: (val) => setState(() => isActiveMode = val),
               ),
-
               const SizedBox(height: 28),
-
               _BleCard(statusColor: statusColor, softColor: statusSoftColor),
-
               const SizedBox(height: 28),
-
               _SafetySection(showInternalTesting: showInternalTesting),
             ],
           ),
@@ -304,8 +295,6 @@ class _SafetySection extends StatefulWidget {
 class _SafetySectionState extends State<_SafetySection> {
   bool _routingToTracking = false;
 
-  // In _SafetySectionState._startLiveCase():
-
   Future<void> _startLiveCase(BuildContext context) async {
     final session = context.read<DeviceSessionController>();
 
@@ -327,11 +316,10 @@ class _SafetySectionState extends State<_SafetySection> {
         return;
       }
 
-      // ✅ Use AppConfig for consistent URLs
+      // ✅ Initialize LiveCaseCallController and store in session controller
       final config = context.read<AppConfig>();
-
       final liveCallController = LiveCaseCallController(
-        socketBaseUrl: config.wsUrl, // Use normalized URL from config
+        socketBaseUrl: config.wsUrl,
         uploadBaseUrl: config.apiBaseUrl,
         uploadEndpoint: '/api/v1/cases/upload-final-audio',
         caseId: session.caseId.toString(),
@@ -340,25 +328,17 @@ class _SafetySectionState extends State<_SafetySection> {
 
       await liveCallController.start();
 
+      // ✅ Store controller in DeviceSessionController for persistence
+      session.setLiveCallController(liveCallController);
+
       if (!mounted) return;
 
       setState(() => _routingToTracking = false);
 
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => MultiProvider(
-            providers: [
-              ChangeNotifierProvider<DeviceSessionController>.value(
-                value: session,
-              ),
-              ChangeNotifierProvider<LiveCaseCallController>.value(
-                value: liveCallController,
-              ),
-            ],
-            child: const LiveCaseTrackingScreen(),
-          ),
-        ),
-      );
+      // ✅ USE GoRouter navigation (route is OUTSIDE ShellRoute → no bottom nav)
+      if (mounted) {
+        context.go(AppRoutes.liveCaseTracking);
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _routingToTracking = false);
