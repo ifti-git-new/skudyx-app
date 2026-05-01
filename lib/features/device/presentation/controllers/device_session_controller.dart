@@ -25,7 +25,6 @@ class DeviceSessionController extends ChangeNotifier
     notifyListeners();
   }
 
-  /// Clear the LiveCaseCallController when case ends
   void clearLiveCallController() {
     _liveCallController?.dispose();
     _liveCallController = null;
@@ -34,15 +33,16 @@ class DeviceSessionController extends ChangeNotifier
 
   bool _isInBackground = false;
 
-  // ✅ Configuration constants for timeouts & retries
   static const Duration _socketConnectTimeout = Duration(seconds: 12);
   static const Duration _apiTimeout = Duration(seconds: 15);
   static const Duration _locationTimeout = Duration(seconds: 12);
   static const int _maxRetries = 3;
   static const Duration _retryDelay = Duration(seconds: 2);
 
-  // ✅ Track service readiness to avoid re-initializing
   bool _servicesReady = false;
+
+  // ✅ Guard against double-close from both streams firing
+  bool _caseClosing = false;
 
   DeviceSessionController({
     required this.caseApi,
@@ -95,7 +95,6 @@ class DeviceSessionController extends ChangeNotifier
 
   static const _finalStatuses = {'Resolved', 'Unresolved', 'False'};
 
-  // ✅ WebSocket Audio Getters
   bool get isWebSocketStreaming => wsAudioService.isStreaming;
   String? get streamingCaseId => wsAudioService.currentCaseId;
 
@@ -132,12 +131,9 @@ class DeviceSessionController extends ChangeNotifier
     notifyListeners();
   }
 
-  // ✅ Ensure services are ready before startCase
   Future<bool> _ensureServicesReady() async {
     if (_servicesReady) return true;
-
     _log('🔧 [DeviceSession] Preparing services...');
-
     try {
       _servicesReady = true;
       _log('✅ [DeviceSession] Services ready');
@@ -149,7 +145,6 @@ class DeviceSessionController extends ChangeNotifier
     }
   }
 
-  // ✅ Connect socket with timeout wrapper
   Future<bool> _connectSocketWithTimeout({
     required Future<void> Function() connectFn,
     required Duration timeout,
@@ -177,7 +172,6 @@ class DeviceSessionController extends ChangeNotifier
     return await completer.future;
   }
 
-  // 📍 Location Helpers
   Future<bool> _ensureLocationReady() async {
     try {
       final enabled = await Geolocator.isLocationServiceEnabled();
@@ -204,7 +198,6 @@ class DeviceSessionController extends ChangeNotifier
     }
   }
 
-  // ✅ Location fetch with timeout
   Future<Position> _getCurrentPosition() {
     return Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
@@ -212,7 +205,6 @@ class DeviceSessionController extends ChangeNotifier
     );
   }
 
-  // ✅ Join realtime services with retry logic
   Future<bool> _joinRealtimeServicesWithRetry({required String caseId}) async {
     for (int attempt = 1; attempt <= _maxRetries; attempt++) {
       try {
@@ -256,7 +248,7 @@ class DeviceSessionController extends ChangeNotifier
     return false;
   }
 
-  // 🚀 Start Case - MAIN METHOD
+  // 🚀 Start Case
   Future<bool> startCase({
     required bool isTest,
     required String caseName,
@@ -279,11 +271,11 @@ class DeviceSessionController extends ChangeNotifier
     lastAudioError = null;
     audioActive = false;
     _connectedWebUsers.clear();
+    _caseClosing = false; // ✅ Reset closing guard on new case
 
     final ok = await _ensureLocationReady();
     if (!ok) return false;
 
-    // ✅ STEP 1: Ensure services are ready
     bool servicesOk = false;
     for (int attempt = 1; attempt <= _maxRetries; attempt++) {
       servicesOk = await _ensureServicesReady();
@@ -312,11 +304,9 @@ class DeviceSessionController extends ChangeNotifier
     notifyListeners();
 
     try {
-      // ✅ STEP 2: Get location
       _log('📍 [DeviceSession] Getting current position...');
       final firstPos = await _getCurrentPosition();
 
-      // ✅ STEP 3: Create case on server
       _log('📡 [DeviceSession] Creating case on server...');
       final data = await caseApi
           .triggerCase(
@@ -337,7 +327,6 @@ class DeviceSessionController extends ChangeNotifier
       tracking = true;
       notifyListeners();
 
-      // ✅ STEP 4: Join realtime services
       _log('📡 [DeviceSession] Joining case room via realtime service...');
       final joined = await _joinRealtimeServicesWithRetry(
         caseId: createdCaseId,
@@ -349,7 +338,6 @@ class DeviceSessionController extends ChangeNotifier
         );
       }
 
-      // 🎯 Handle CL* cases (Live Audio via WebSocket)
       if (createdCaseId.startsWith('CL')) {
         _log(
           '\n🎯 [DeviceSession] CL case detected - starting WebSocket audio streaming',
@@ -373,10 +361,8 @@ class DeviceSessionController extends ChangeNotifier
         }
       }
 
-      // ✅ STEP 6: Send initial location tick
       await _sendOneTick();
 
-      // ✅ STEP 7: Start periodic location polling - 1 SECOND INTERVAL FOR ALL CASES
       _timer?.cancel();
       _timer = Timer.periodic(const Duration(seconds: 1), (_) async {
         if (!tracking || _tickInFlight) return;
@@ -412,7 +398,6 @@ class DeviceSessionController extends ChangeNotifier
     }
   }
 
-  // ✅ Handle app lifecycle changes
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.paused ||
@@ -435,22 +420,73 @@ class DeviceSessionController extends ChangeNotifier
     }
   }
 
-  // ✅ Handle real-time status updates from web
+  // ✅ Handle status updates — guard against double-close
   void _onStatusUpdate(CaseUpdateEvent event) {
-    _log('📡 [DeviceSession] Received status update: ${event.status}');
+    _log('📡 [DeviceSession] _onStatusUpdate() - status: ${event.status}');
+    if (_caseClosing) {
+      _log('⚠️ [DeviceSession] Already closing, ignoring _onStatusUpdate');
+      return;
+    }
 
     lastStatus = event.status;
 
     if (_finalStatuses.contains(event.status)) {
-      remotelyClosedStatus = event.status;
-      _log('🏁 [DeviceSession] Case closed remotely: ${event.status}');
-      stopTracking(clearCase: true);
+      _log('🏁 [DeviceSession] Case closed via statusUpdate: ${event.status}');
+      _closeRemotely(event.status);
+      return;
     }
 
     notifyListeners();
   }
 
-  // 🧹 Cleanup on error
+  // ✅ Handle realtime updates — guard against double-close
+  void _onRealtimeUpdate(CaseUpdateEvent event) async {
+    _log('[DeviceSession] _onRealtimeUpdate() - status: ${event.status}');
+    final id = caseId;
+    if (id == null || event.caseId != id) return;
+    if (_caseClosing) {
+      _log('⚠️ [DeviceSession] Already closing, ignoring _onRealtimeUpdate');
+      return;
+    }
+
+    lastStatus = event.status;
+
+    if (_finalStatuses.contains(event.status)) {
+      _log(
+        '🏁 [DeviceSession] Case closed via realtimeUpdate: ${event.status}',
+      );
+      await _closeRemotely(event.status);
+      return;
+    }
+
+    notifyListeners();
+  }
+
+  // ✅ Single place to handle remote close — uploads audio then stops tracking
+  Future<void> _closeRemotely(String status) async {
+    if (_caseClosing) return;
+    _caseClosing = true;
+
+    _log('🏁 [DeviceSession] _closeRemotely() status: $status');
+
+    remotelyClosedStatus = status;
+    notifyListeners(); // ← screen reads remotelyClosedStatus here and navigates away
+
+    // ✅ Upload final audio before cleanup
+    try {
+      if (_liveCallController != null) {
+        _log('📤 [DeviceSession] Uploading final audio...');
+        await _liveCallController!.endCallAndUpload();
+        _log('✅ [DeviceSession] Final audio uploaded');
+      }
+    } catch (e) {
+      _log('⚠️ [DeviceSession] Audio upload failed: $e');
+    }
+
+    await stopTracking(clearCase: true);
+    _caseClosing = false;
+  }
+
   void _cleanupOnError() {
     _log('[DeviceSession] _cleanupOnError() triggered');
     starting = false;
@@ -463,10 +499,10 @@ class DeviceSessionController extends ChangeNotifier
     audioRealtime.unwatchCase();
     wsAudioService.stop();
     _connectedWebUsers.clear();
+    _caseClosing = false;
     notifyListeners();
   }
 
-  // 📍 Location Tick - with timeout handling
   Future<void> _sendOneTick() async {
     final id = caseId;
     if (id == null || !tracking) return;
@@ -478,7 +514,7 @@ class DeviceSessionController extends ChangeNotifier
         'timestamp': DateTime.now().toIso8601String(),
       });
 
-      await caseApi
+      final result = await caseApi
           .updateLocation(
             caseId: id,
             latitude: pos.latitude,
@@ -492,6 +528,16 @@ class DeviceSessionController extends ChangeNotifier
           '[DeviceSession] 📊 Location updates: $successUpdates successful, $failedUpdates failed',
         );
       }
+
+      // ✅ Check status from location update response
+      final status = result['status']?.toString();
+      _log('[DeviceSession] 📍 Tick status from server: $status');
+      if (status != null && _finalStatuses.contains(status) && !_caseClosing) {
+        _log('🏁 [DeviceSession] Final status detected in tick: $status');
+        await _closeRemotely(status);
+        return;
+      }
+
       notifyListeners();
     } catch (e) {
       if (kDebugMode) print('[DeviceSession] location tick failed => $e');
@@ -500,24 +546,6 @@ class DeviceSessionController extends ChangeNotifier
     }
   }
 
-  /// ✅ Handle realtime case updates
-  void _onRealtimeUpdate(CaseUpdateEvent event) async {
-    _log('[DeviceSession] _onRealtimeUpdate() - status: ${event.status}');
-    final id = caseId;
-    if (id == null || event.caseId != id) return;
-
-    lastStatus = event.status;
-
-    if (_finalStatuses.contains(event.status)) {
-      remotelyClosedStatus = event.status;
-      _log('🏁 [DeviceSession] Case closed: ${event.status}');
-      await stopTracking(clearCase: true);
-      return;
-    }
-    notifyListeners();
-  }
-
-  /// ✅ Handle audio stream ended
   void _onAudioEnded(AudioStreamEndedEvent event) async {
     _log('[DeviceSession] _onAudioEnded() - eventCase: ${event.caseId}');
     final id = caseId;
@@ -526,7 +554,6 @@ class DeviceSessionController extends ChangeNotifier
     await _stopAudio();
   }
 
-  // 🛑 Stop Audio & Tracking
   Future<void> _stopAudio() async {
     _log('[DeviceSession] _stopAudio() called');
     await wsAudioService.stop();
@@ -535,7 +562,6 @@ class DeviceSessionController extends ChangeNotifier
     notifyListeners();
   }
 
-  // 🛑 Stop Tracking
   Future<void> stopTracking({bool clearCase = false}) async {
     _log('[DeviceSession] stopTracking() called, clearCase: $clearCase');
 
@@ -566,7 +592,6 @@ class DeviceSessionController extends ChangeNotifier
     notifyListeners();
   }
 
-  // 🏁 Update Final Status
   Future<bool> updateFinalStatus({
     required String status,
     required String note,
@@ -589,6 +614,17 @@ class DeviceSessionController extends ChangeNotifier
 
       lastStatus = status;
       remotelyClosedStatus = null;
+
+      // ✅ Upload audio on manual close too
+      try {
+        if (_liveCallController != null) {
+          _log('📤 [DeviceSession] Uploading final audio on manual close...');
+          await _liveCallController!.endCallAndUpload();
+        }
+      } catch (e) {
+        _log('⚠️ [DeviceSession] Audio upload failed on manual close: $e');
+      }
+
       await stopTracking(clearCase: true);
       statusUpdating = false;
       notifyListeners();
@@ -611,7 +647,6 @@ class DeviceSessionController extends ChangeNotifier
     }
   }
 
-  // ✅ Dispose
   @override
   void dispose() {
     _statusUpdateSub?.cancel();

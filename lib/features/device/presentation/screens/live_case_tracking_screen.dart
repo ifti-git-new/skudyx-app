@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 
 class LiveCaseTrackingScreen extends StatefulWidget {
@@ -18,29 +19,26 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
 
   final _refreshController = RefreshController();
 
-  void _safePop([String? result]) {
+  // ✅ Navigate to DeviceConnectedScreen — triggered by tracking stop OR manual close
+  void _safePop() {
     if (_exiting) return;
     _exiting = true;
-    // Use WidgetsBinding to ensure we're not in the middle of a build
+    log('🏁 [LiveCaseTracking] _safePop() → navigating to deviceConnected');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // Use GoRouter's pop which bypasses PopScope
-      if (context.mounted) {
-        context.go(
-          '/device/connected',
-        ); // ✅ Navigate directly to device connected screen
-      }
+      context.go(AppRoutes.deviceConnected);
     });
   }
 
+  // ✅ Fires on every notifyListeners() from DeviceSessionController
   void _onSessionChanged() {
     final s = _session;
     if (s == null) return;
-    final remote = s.remotelyClosedStatus;
-    if (remote != null && !_exiting) {
-      log('🏁 [LiveCaseTracking] Remote close detected: $remote');
-      s.clearRemotelyClosedStatus();
-      _safePop(remote);
+
+    // ✅ Navigate away as soon as tracking stops (remote close OR manual close)
+    if (!s.tracking && !s.starting && !_exiting) {
+      log('🏁 [LiveCaseTracking] Tracking stopped — navigating back');
+      _safePop();
     }
   }
 
@@ -104,14 +102,12 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
         session.tracking && session.caseId != null && !session.statusUpdating;
 
     return PopScope(
-      canPop: false, // ✅ Blocks system back button
+      canPop: false,
       onPopInvoked: (didPop) {
         if (didPop) return;
-        // Optional: Show exit confirmation dialog here if needed
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8FA),
-        // ✅ NO AppBar = no back arrow button
         body: RefreshIndicator(
           onRefresh: _onRefresh,
           color: Theme.of(context).primaryColor,
@@ -305,7 +301,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                             'Resolved',
                                           );
                                           if (!mounted || note == null) return;
-
                                           if (session.caseId == null) {
                                             ScaffoldMessenger.of(
                                               context,
@@ -318,7 +313,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                             );
                                             return;
                                           }
-
                                           final ok = await context
                                               .read<DeviceSessionController>()
                                               .updateFinalStatus(
@@ -326,9 +320,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                                 note: note,
                                               );
                                           if (!mounted) return;
-                                          if (ok) {
-                                            _safePop('Resolved');
-                                          } else {
+                                          if (!ok) {
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
@@ -339,6 +331,8 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                               ),
                                             );
                                           }
+                                          // ✅ _onSessionChanged handles navigation
+                                          // when tracking becomes false
                                         }
                                       : null,
                                   style: ElevatedButton.styleFrom(
@@ -370,7 +364,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                             'Unresolved',
                                           );
                                           if (!mounted || note == null) return;
-
                                           if (session.caseId == null) {
                                             ScaffoldMessenger.of(
                                               context,
@@ -383,7 +376,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                             );
                                             return;
                                           }
-
                                           final ok = await context
                                               .read<DeviceSessionController>()
                                               .updateFinalStatus(
@@ -391,9 +383,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                                 note: note,
                                               );
                                           if (!mounted) return;
-                                          if (ok) {
-                                            _safePop('Unresolved');
-                                          } else {
+                                          if (!ok) {
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
@@ -404,6 +394,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                               ),
                                             );
                                           }
+                                          // ✅ _onSessionChanged handles navigation
                                         }
                                       : null,
                                   style: ElevatedButton.styleFrom(
@@ -435,7 +426,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                             'False',
                                           );
                                           if (!mounted || note == null) return;
-
                                           if (session.caseId == null) {
                                             ScaffoldMessenger.of(
                                               context,
@@ -448,7 +438,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                             );
                                             return;
                                           }
-
                                           final ok = await context
                                               .read<DeviceSessionController>()
                                               .updateFinalStatus(
@@ -456,9 +445,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                                 note: note,
                                               );
                                           if (!mounted) return;
-                                          if (ok) {
-                                            _safePop('False');
-                                          } else {
+                                          if (!ok) {
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
@@ -469,6 +456,7 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
                                               ),
                                             );
                                           }
+                                          // ✅ _onSessionChanged handles navigation
                                         }
                                       : null,
                                   style: ElevatedButton.styleFrom(
@@ -534,7 +522,6 @@ class _LiveCaseTrackingScreenState extends State<LiveCaseTrackingScreen> {
   }
 }
 
-// Helper class for refresh indicator
 class RefreshController {
   final scrollController = ScrollController();
   bool _isRefreshing = false;
