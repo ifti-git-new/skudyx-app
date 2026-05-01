@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:skudyx/core/services/audio_foreground_service.dart';
 
 import 'app/app.dart';
 import 'app/bootstrap.dart';
@@ -12,23 +13,25 @@ import 'core/services/background_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // AudioForegroundService.initialize();
+
   try {
     await Bootstrap.init();
 
     // ✅ Initialize background service early
-    final backgroundService = FlutterBackgroundService();
-    await backgroundService.configure(
-      androidConfiguration: AndroidConfiguration(
-        onStart: onStart, // ✅ Use the same top-level function
-        autoStart: false, // Don't auto-start, we'll start manually
-        isForegroundMode: true,
-      ),
-      iosConfiguration: IosConfiguration(
-        autoStart: false,
-        onForeground: onStart,
-        onBackground: onStart,
-      ),
-    );
+    // final backgroundService = FlutterBackgroundService();
+    // await backgroundService.configure(
+    //   androidConfiguration: AndroidConfiguration(
+    //     onStart: onStart, // ✅ Use the same top-level function
+    //     autoStart: false, // Don't auto-start, we'll start manually
+    //     isForegroundMode: true,
+    //   ),
+    //   iosConfiguration: IosConfiguration(
+    //     autoStart: false,
+    //     onForeground: onStart,
+    //     onBackground: onStart,
+    //   ),
+    // );
 
     final config = AppConfig.fromEnv();
     final prefs = await AppPrefs.create();

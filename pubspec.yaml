@@ -59,6 +59,8 @@ dependencies:
   flutter_background_service_ios: ^5.0.3
   background_fetch: ^1.6.1
   pretty_dio_logger: ^1.4.0
+  flutter_foreground_task: ^9.2.2
+  audio_session: ^0.2.3
 
 dev_dependencies:
   flutter_test:
