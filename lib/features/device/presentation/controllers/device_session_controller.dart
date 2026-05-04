@@ -34,6 +34,8 @@ class DeviceSessionController extends ChangeNotifier
   }
 
   bool _isInBackground = false;
+  bool _isScreenOff = false;
+
   static const Duration _socketConnectTimeout = Duration(seconds: 12);
   static const Duration _apiTimeout = Duration(seconds: 15);
   static const Duration _locationTimeout = Duration(seconds: 12);
@@ -51,6 +53,7 @@ class DeviceSessionController extends ChangeNotifier
   }) {
     WidgetsBinding.instance.addObserver(this);
     _log('[DeviceSession] Constructor initialized');
+
     _rtSub = realtime.stream.listen(_onRealtimeUpdate);
     _audioEndedSub = audioRealtime.endedStream.listen(_onAudioEnded);
     _statusUpdateSub = realtime.statusUpdateStream.listen(_onStatusUpdate);
@@ -63,6 +66,7 @@ class DeviceSessionController extends ChangeNotifier
   // 📡 Device & Case State
   FoundDevice? connectedDevice;
   bool get isConnected => connectedDevice != null;
+
   bool starting = false;
   bool tracking = false;
   String? caseId;
@@ -72,11 +76,13 @@ class DeviceSessionController extends ChangeNotifier
   String? remotelyClosedStatus;
   bool audioActive = false;
   String? lastAudioError;
+
   Timer? _timer;
   bool _tickInFlight = false;
   int successUpdates = 0;
   int failedUpdates = 0;
   bool statusUpdating = false;
+
   final List<Map<String, dynamic>> coordinates = [];
   final Set<String> _connectedWebUsers = {};
   Set<String> get connectedWebUsers => Set.unmodifiable(_connectedWebUsers);
@@ -85,6 +91,7 @@ class DeviceSessionController extends ChangeNotifier
   StreamSubscription<CaseUpdateEvent>? _rtSub;
   StreamSubscription<AudioStreamEndedEvent>? _audioEndedSub;
   StreamSubscription<CaseUpdateEvent>? _statusUpdateSub;
+
   static const _finalStatuses = {'Resolved', 'Unresolved', 'False'};
 
   bool get isWebSocketStreaming => wsAudioService.isStreaming;
@@ -138,10 +145,12 @@ class DeviceSessionController extends ChangeNotifier
         _setError('Location services are disabled.');
         return false;
       }
+
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
+
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
         _setError('Location permission denied.');
@@ -165,6 +174,7 @@ class DeviceSessionController extends ChangeNotifier
     for (int attempt = 1; attempt <= _maxRetries; attempt++) {
       try {
         _log('🔌 [Realtime] Join attempt $attempt/$_maxRetries for: $caseId');
+
         await realtime
             .watchCase(caseId)
             .timeout(
@@ -176,6 +186,7 @@ class DeviceSessionController extends ChangeNotifier
             .catchError((e) {
               _log('⚠️ [Realtime] Watch error (attempt $attempt): $e');
             });
+
         await audioRealtime
             .watchCase(caseId)
             .timeout(
@@ -215,6 +226,7 @@ class DeviceSessionController extends ChangeNotifier
       _setError('No device connected.');
       return false;
     }
+
     if (starting || tracking) {
       _log('⚠️ [DeviceSession] Already starting or tracking');
       return false;
@@ -257,8 +269,8 @@ class DeviceSessionController extends ChangeNotifier
     try {
       _log('📍 [DeviceSession] Getting current position...');
       final firstPos = await _getCurrentPosition();
-      _log('📡 [DeviceSession] Creating case on server...');
 
+      _log('📡 [DeviceSession] Creating case on server...');
       final data = await caseApi
           .triggerCase(
             latitude: firstPos.latitude,
@@ -273,6 +285,7 @@ class DeviceSessionController extends ChangeNotifier
       _log('✅ [DeviceSession] Case created: $createdCaseId');
       caseId = createdCaseId;
       lastStatus = (data['status'] ?? 'Pending').toString();
+
       starting = false;
       tracking = true;
       notifyListeners();
@@ -299,6 +312,7 @@ class DeviceSessionController extends ChangeNotifier
                   _log('⚠️ [WebSocket] Audio connect timeout');
                 },
               );
+
           audioActive = true;
           _log('✅ [DeviceSession] WebSocket audio streaming started');
 
@@ -312,6 +326,7 @@ class DeviceSessionController extends ChangeNotifier
       }
 
       await _sendOneTick();
+
       _timer?.cancel();
       _timer = Timer.periodic(const Duration(seconds: 1), (_) async {
         if (!tracking || _tickInFlight) return;
@@ -322,6 +337,7 @@ class DeviceSessionController extends ChangeNotifier
           _tickInFlight = false;
         }
       });
+
       _log('✅ [DeviceSession] Location polling started (1s interval)');
       _log('✅ [DeviceSession] startCase() completed successfully');
       return true;
@@ -346,32 +362,51 @@ class DeviceSessionController extends ChangeNotifier
     }
   }
 
-  // ✅ Handle app lifecycle — screen off, minimize, phone call// In device_session_controller.dart, update the didChangeAppLifecycleState method:
-
+  // ✅ Handle app lifecycle — screen off, minimize, phone call
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     _log('📱 [DeviceSession] Lifecycle state: $state');
 
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached ||
-        state == AppLifecycleState.inactive) {
-      _isInBackground = true;
-      _log(
-        '📱 [DeviceSession] App paused — foreground service keeping audio alive',
-      );
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.inactive:
+        _isInBackground = true;
+        _log(
+          '📱 [DeviceSession] App backgrounded — foreground service should keep audio alive',
+        );
 
-      // Ensure foreground service is running
-      if (tracking && caseId != null) {
-        await AudioForegroundService.start(caseId: caseId!);
-      }
-    } else if (state == AppLifecycleState.resumed) {
-      _isInBackground = false;
-      _log('📱 [DeviceSession] App resumed — checking audio connection...');
+        // Optional: Force a quick health check when going background
+        if (tracking && caseId != null && wsAudioService.isConnected) {
+          try {
+            // Send a ping to keep connection warm
+            // This is handled by WebSocket service's health check now
+          } catch (e) {
+            _log('⚠️ [DeviceSession] Background health check failed: $e');
+          }
+        }
+        break;
 
-      if (tracking && caseId != null) {
-        // Force reconnect WebSocket audio if dropped during background/call
-        await wsAudioService.resumeIfNeeded();
-      }
+      case AppLifecycleState.resumed:
+        _isInBackground = false;
+        _log('📱 [DeviceSession] App resumed — checking audio connection...');
+
+        if (tracking && caseId != null) {
+          // ✅ Force reconnection check after resume/call
+          // This handles: screen on, app foreground, post-call recovery
+          await wsAudioService.resumeIfNeeded();
+
+          // Also refresh foreground service notification
+          if (caseId != null) {
+            await AudioForegroundService.updateCaseId(caseId!);
+          }
+        }
+        break;
+
+      case AppLifecycleState.hidden:
+        // Android-specific: app is hidden but not necessarily paused
+        _log('📱 [DeviceSession] App hidden');
+        break;
     }
   }
 
@@ -414,8 +449,10 @@ class DeviceSessionController extends ChangeNotifier
     if (_caseClosing) return;
     _caseClosing = true;
     _log('🏁 [DeviceSession] _closeRemotely() status: $status');
+
     remotelyClosedStatus = status;
     notifyListeners();
+
     try {
       if (_liveCallController != null) {
         _log('📤 [DeviceSession] Uploading final audio...');
@@ -425,6 +462,7 @@ class DeviceSessionController extends ChangeNotifier
     } catch (e) {
       _log('⚠️ [DeviceSession] Audio upload failed: $e');
     }
+
     await stopTracking(clearCase: true);
     _caseClosing = false;
   }
@@ -449,13 +487,16 @@ class DeviceSessionController extends ChangeNotifier
   Future<void> _sendOneTick() async {
     final id = caseId;
     if (id == null || !tracking) return;
+
     try {
       final pos = await _getCurrentPosition();
+
       coordinates.add({
         'latitude': pos.latitude,
         'longitude': pos.longitude,
         'timestamp': DateTime.now().toIso8601String(),
       });
+
       final result = await caseApi
           .updateLocation(
             caseId: id,
@@ -474,11 +515,13 @@ class DeviceSessionController extends ChangeNotifier
       // ✅ Check status from location update response as HTTP fallback
       final status = result['status']?.toString();
       _log('[DeviceSession] 📍 Tick status from server: $status');
+
       if (status != null && _finalStatuses.contains(status) && !_caseClosing) {
         _log('🏁 [DeviceSession] Final status detected in tick: $status');
         await _closeRemotely(status);
         return;
       }
+
       notifyListeners();
     } catch (e) {
       if (kDebugMode) print('[DeviceSession] location tick failed => $e');
@@ -505,19 +548,24 @@ class DeviceSessionController extends ChangeNotifier
 
   Future<void> stopTracking({bool clearCase = false}) async {
     _log('[DeviceSession] stopTracking() called, clearCase: $clearCase');
+
     // ✅ Stop foreground service first
     await AudioForegroundService.stop();
+
     _timer?.cancel();
     _timer = null;
     _tickInFlight = false;
     starting = false;
     tracking = false;
+
     await realtime.unwatchCase();
     await audioRealtime.unwatchCase();
     await _stopAudio();
+
     if (clearCase) {
       clearLiveCallController();
     }
+
     if (clearCase) {
       caseId = null;
       caseName = null;
@@ -528,6 +576,7 @@ class DeviceSessionController extends ChangeNotifier
       lastError = null;
       _servicesReady = false;
     }
+
     notifyListeners();
   }
 
@@ -541,15 +590,19 @@ class DeviceSessionController extends ChangeNotifier
       return false;
     }
     if (statusUpdating) return false;
+
     clearError();
     statusUpdating = true;
     notifyListeners();
+
     try {
       await caseApi
           .updateStatus(caseId: id, status: status, note: note)
           .timeout(_apiTimeout);
+
       lastStatus = status;
       remotelyClosedStatus = null;
+
       // ✅ Upload audio on manual close
       try {
         if (_liveCallController != null) {
@@ -559,6 +612,7 @@ class DeviceSessionController extends ChangeNotifier
       } catch (e) {
         _log('⚠️ [DeviceSession] Audio upload failed on manual close: $e');
       }
+
       await stopTracking(clearCase: true);
       statusUpdating = false;
       notifyListeners();
@@ -586,11 +640,14 @@ class DeviceSessionController extends ChangeNotifier
     _statusUpdateSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _log('[DeviceSession] dispose() called');
+
     _rtSub?.cancel();
     _audioEndedSub?.cancel();
+
     wsAudioService.dispose();
     AudioForegroundService.stop();
     clearLiveCallController();
+
     super.dispose();
   }
 }

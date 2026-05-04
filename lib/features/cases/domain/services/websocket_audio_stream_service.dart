@@ -1,29 +1,42 @@
-// lib/features/cases/domain/services/websocket_audio_stream_service.dart
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:record/record.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class WebSocketAudioStreamService {
   WebSocketChannel? _channel;
   AudioRecorder? _recorder;
   StreamSubscription<List<int>>? _audioStreamSub;
+  StreamSubscription<AudioInterruptionEvent>? _interruptionSub;
   Timer? _reconnectTimer;
   Timer? _healthCheckTimer;
-  Timer? _pingTimer; // Add ping timer
+  Timer? _connectionWatchdogTimer;
+
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  bool _waitingForNetwork = false;
+
   bool _isRecording = false;
   bool _isConnected = false;
   bool _isConnecting = false;
   bool _intentionallyStopped = false;
+  bool _wasDisconnectedBySystem = false;
+
   String? _currentCaseId;
   int _chunkCount = 0;
   int _totalBytesSent = 0;
   int _reconnectAttempts = 0;
-  static const int _maxReconnectAttempts = 10;
+
+  static const int _maxReconnectAttempts = 15;
   static const String _wsUrl =
       'wss://skudyx-backend-c8do.onrender.com/ws/audio-stream';
+
+  static const int _sampleRate = 44100;
+  static const int _bitRate = 128000;
+  static const int _numChannels = 1;
 
   final _log = (String msg) {
     if (kDebugMode) print('🎙️ [WebSocket Audio] $msg');
@@ -35,6 +48,9 @@ class WebSocketAudioStreamService {
   int get totalBytesSent => _totalBytesSent;
   bool get isConnected => _isConnected;
 
+  // --------------------------------------------------------------
+  // PUBLIC API
+  // --------------------------------------------------------------
   Future<void> connect({required String caseId}) async {
     if (_isConnecting || _isConnected) {
       _log('⚠️ Already connecting or connected');
@@ -42,8 +58,11 @@ class WebSocketAudioStreamService {
     }
 
     _intentionallyStopped = false;
+    _wasDisconnectedBySystem = false;
     _isConnecting = true;
     _currentCaseId = caseId;
+
+    _startConnectivityListener();
 
     try {
       _log('🔌 Connecting to WebSocket audio stream...');
@@ -60,19 +79,17 @@ class WebSocketAudioStreamService {
       _isConnected = true;
       _isConnecting = false;
       _reconnectAttempts = 0;
+      _waitingForNetwork = false;
 
       _log('✅ WebSocket connected successfully!');
-      _log('📤 Sending join message as sender...');
 
-      _channel!.sink.add(
-        jsonEncode({'type': 'join', 'caseId': caseId, 'isSender': true}),
-      );
-
-      _log('✅ Join message sent');
-
+      _sendJoinMessage(caseId);
       _listenToMessages();
       _startHealthCheck();
-      _startPing(); // Start ping to keep connection alive
+      _startConnectionWatchdog();
+
+      // Immediately restart recording pipeline for this new connection.
+      await _restartRecording();
     } catch (e, stack) {
       _isConnecting = false;
       _log('❌ Connection failed: $e');
@@ -82,66 +99,143 @@ class WebSocketAudioStreamService {
     }
   }
 
-  // Add ping to keep connection alive
-  void _startPing() {
-    _pingTimer?.cancel();
-    _pingTimer = Timer.periodic(const Duration(seconds: 25), (_) {
-      if (_isConnected && _channel != null && !_intentionallyStopped) {
-        try {
-          _channel!.sink.add(jsonEncode({'type': 'ping'}));
-          _log('🏓 Sent ping');
-        } catch (e) {
-          _log('❌ Ping failed: $e');
-        }
-      }
-    });
+  Future<void> resumeIfNeeded() async {
+    if (_intentionallyStopped) return;
+
+    final caseId = _currentCaseId;
+    if (caseId == null) return;
+
+    _log('🔄 [Resume] Checking connection state...');
+    _log(
+      '🔄 [Resume] isConnected: $_isConnected, isConnecting: $_isConnecting',
+    );
+    _log('🔄 [Resume] wasDisconnectedBySystem: $_wasDisconnectedBySystem');
+
+    if (!_isConnected && !_isConnecting) {
+      _log('🔄 [Resume] Reconnecting after resume...');
+      _reconnectAttempts = 0;
+      _reconnectTimer?.cancel();
+      await _cleanupConnection(keepRecorder: true);
+      _isConnecting = false;
+      await connect(caseId: caseId);
+    } else if (_wasDisconnectedBySystem) {
+      _log('🔄 [Resume] System disconnection detected - refreshing connection');
+      _wasDisconnectedBySystem = false;
+      _reconnectAttempts = 0;
+      await _cleanupConnection(keepRecorder: true);
+      await Future.delayed(const Duration(milliseconds: 500));
+      _isConnecting = false;
+      await connect(caseId: caseId);
+    } else {
+      _log('✅ [Resume] Already connected — no action needed');
+    }
+  }
+
+  Future<void> stop() async {
+    _log('🛑 Stopping audio stream...');
+    _intentionallyStopped = true;
+
+    _cancelTimers();
+    _disposeConnectivityListener();
+    _cancelInterruptionListener();
+
+    await _cleanupConnection(keepRecorder: false);
+    await _disposeRecorder();
+
+    _currentCaseId = null;
+    _log('✅ Audio stream stopped completely');
+  }
+
+  Future<void> dispose() async {
+    await stop();
+  }
+
+  // --------------------------------------------------------------
+  // PRIVATE HELPERS
+  // --------------------------------------------------------------
+  void _sendJoinMessage(String caseId) {
+    try {
+      final message = jsonEncode({
+        'type': 'join',
+        'caseId': caseId,
+        'isSender': true,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+      _channel?.sink.add(message);
+      _log('✅ Join message sent');
+    } catch (e) {
+      _log('❌ Failed to send join message: $e');
+    }
   }
 
   void _startHealthCheck() {
     _healthCheckTimer?.cancel();
     _healthCheckTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (_intentionallyStopped) return;
+      if (_isConnected && _currentCaseId != null) {
+        try {
+          _channel?.sink.add(
+            jsonEncode({
+              'type': 'ping',
+              'timestamp': DateTime.now().millisecondsSinceEpoch,
+            }),
+          );
+        } catch (e) {
+          _log('⚠️ Health check ping failed: $e');
+          _handleConnectionError();
+        }
+      }
+    });
+  }
 
-      if (!_isConnected && _currentCaseId != null) {
-        _log('🩺 [HealthCheck] Connection lost — triggering reconnect');
-        _handleConnectionError();
+  void _startConnectionWatchdog() {
+    _connectionWatchdogTimer?.cancel();
+    _connectionWatchdogTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (_intentionallyStopped) return;
+      if (_isConnected && _chunkCount > 0) {
+        _log('🐕 [Watchdog] Connection active, chunks sent: $_chunkCount');
       }
     });
   }
 
   void _handleConnectionError() {
-    _isConnected = false;
-
     if (_intentionallyStopped) return;
+    _isConnected = false;
+    _wasDisconnectedBySystem = true;
+
+    if (_waitingForNetwork) {
+      _log('📶 Waiting for network, not scheduling retry timer');
+      return;
+    }
 
     if (_reconnectAttempts < _maxReconnectAttempts && _currentCaseId != null) {
       _reconnectAttempts++;
-      final delaySecs = (_reconnectAttempts * 2).clamp(2, 15);
-      final delay = Duration(seconds: delaySecs);
-
+      final delaySecs = (_reconnectAttempts * 2).clamp(2, 20);
       _log(
-        '🔄 Reconnecting in ${delay.inSeconds}s '
-        '(attempt $_reconnectAttempts/$_maxReconnectAttempts)...',
+        '🔄 Reconnecting in ${delaySecs}s (attempt $_reconnectAttempts/$_maxReconnectAttempts)...',
       );
 
       _reconnectTimer?.cancel();
-      _reconnectTimer = Timer(delay, () async {
-        if (_intentionallyStopped || _currentCaseId == null) return;
-
-        _log('🔄 Attempting reconnect...');
-        try {
-          await _channel?.sink.close();
-          _channel = null;
-          _isConnecting = false;
-          await connect(caseId: _currentCaseId!);
-        } catch (e) {
-          _log('❌ Reconnection failed: $e');
-          _handleConnectionError();
-        }
+      _reconnectTimer = Timer(Duration(seconds: delaySecs), () {
+        _attemptReconnect();
       });
     } else if (_reconnectAttempts >= _maxReconnectAttempts) {
       _log('❌ Max reconnection attempts reached. Streaming stopped.');
       _isRecording = false;
+      _disposeRecorder();
+    }
+  }
+
+  Future<void> _attemptReconnect() async {
+    if (_intentionallyStopped || _currentCaseId == null) return;
+    _log('🔄 Attempting reconnect...');
+    try {
+      await _cleanupConnection(keepRecorder: true);
+      _isConnecting = false;
+      await connect(caseId: _currentCaseId!);
+    } catch (e) {
+      _log('❌ Reconnection failed: $e');
+      _handleConnectionError();
     }
   }
 
@@ -151,27 +245,26 @@ class WebSocketAudioStreamService {
     _channel!.stream.listen(
       (message) {
         try {
-          _log(
-            '📥 Received message: ${message.toString().substring(0, message.toString().length > 100 ? 100 : message.toString().length)}...',
-          );
-
           final data = jsonDecode(message);
-          _log('📨 Message type: ${data['type']}');
+          final type = data['type'] as String?;
+          _log('📨 Message type: $type');
 
-          if (data['type'] == 'joined') {
-            _log('✅ Joined case: ${data['caseId']}');
-            if (!_isRecording) {
-              _log('🎬 Starting audio recording...');
-              _startRecording();
-            } else {
-              _log('🎙️ Already recording — reconnected, continuing stream');
-            }
-          } else if (data['type'] == 'listener_update') {
-            _log('👥 Listener update: count=${data['count']}');
-          } else if (data['type'] == 'sender_left') {
-            _log('⚠️ Sender left notification received');
-          } else if (data['type'] == 'pong') {
-            _log('🏓 Received pong');
+          switch (type) {
+            case 'joined':
+              _log('✅ Joined case: ${data['caseId']}');
+              _ensureRecordingActive();
+              break;
+            case 'pong':
+              _log('🏓 Received pong from server');
+              break;
+            case 'listener_update':
+              _log('👥 Listener update: count=${data['count']}');
+              break;
+            case 'sender_left':
+              _log('⚠️ Sender left notification received');
+              break;
+            default:
+              _log('📨 Unknown message type: $type');
           }
         } catch (e) {
           _log('❌ Message parse error: $e');
@@ -187,6 +280,7 @@ class WebSocketAudioStreamService {
         _log('🔌 WebSocket connection closed');
         _isConnected = false;
         if (!_intentionallyStopped && _currentCaseId != null) {
+          _wasDisconnectedBySystem = true;
           _handleConnectionError();
         }
       },
@@ -194,10 +288,43 @@ class WebSocketAudioStreamService {
     );
   }
 
+  Future<void> _ensureRecordingActive() async {
+    if (_recorder == null || !await _recorder!.isRecording()) {
+      _log('🎬 Recorder not active — restarting recording...');
+      _isRecording = false;
+      await _restartRecording();
+    } else {
+      _log('🎙️ Recorder already active');
+    }
+  }
+
+  Future<void> _restartRecording() async {
+    _log('🔄 Restarting recording pipeline...');
+    try {
+      if (_recorder != null) {
+        if (await _recorder!.isRecording()) {
+          await _recorder!.stop();
+        }
+        await _recorder!.dispose();
+        _recorder = null;
+      }
+    } catch (e) {
+      _log('⚠️ Error disposing old recorder: $e');
+    }
+    await _audioStreamSub?.cancel();
+    _isRecording = false;
+    await _startRecording();
+  }
+
   Future<void> _startRecording() async {
-    if (_isRecording) {
-      _log('⚠️ Already recording, skipping...');
+    if (_recorder != null && await _recorder!.isRecording()) {
+      _log('⚠️ Recorder already active, skipping start');
+      _isRecording = true;
       return;
+    }
+
+    if (_recorder != null) {
+      await _recorder!.dispose();
     }
 
     _log('🎤 Initializing AudioRecorder...');
@@ -215,19 +342,16 @@ class WebSocketAudioStreamService {
     _log('🎙️ Starting audio recording...');
     _log('📊 Audio config:');
     _log('   - Encoder: PCM16');
-    _log('   - Sample Rate: 44100 Hz');
-    _log('   - Bit Rate: 128000');
-    _log('   - Channels: 1 (Mono)');
+    _log('   - Sample Rate: $_sampleRate Hz');
+    _log('   - Bit Rate: $_bitRate');
+    _log('   - Channels: $_numChannels (Mono)');
 
     final stream = await _recorder!.startStream(
       const RecordConfig(
         encoder: AudioEncoder.pcm16bits,
-        bitRate: 128000,
-        sampleRate: 44100,
-        numChannels: 1,
-        autoGain: true,
-        echoCancel: true,
-        noiseSuppress: true,
+        bitRate: _bitRate,
+        sampleRate: _sampleRate,
+        numChannels: _numChannels,
       ),
     );
 
@@ -235,18 +359,21 @@ class WebSocketAudioStreamService {
     _chunkCount = 0;
     _totalBytesSent = 0;
 
+    _cancelInterruptionListener();
+    final session = await AudioSession.instance;
+    _interruptionSub = session.interruptionEventStream.listen(
+      _handleInterruption,
+    );
+
     _log('✅ Recording started successfully!');
-    _log('📡 Starting to stream audio chunks to WebSocket...');
 
     _audioStreamSub = stream.listen(
       (data) {
-        // Always send if recording, even if temporarily disconnected
-        if (_channel != null) {
+        if (_isConnected && _channel != null) {
           _chunkCount++;
           _totalBytesSent += data.length;
 
           final chunkBase64 = base64Encode(Uint8List.fromList(data));
-
           try {
             _channel!.sink.add(
               jsonEncode({
@@ -254,6 +381,7 @@ class WebSocketAudioStreamService {
                 'chunk': chunkBase64,
                 'timestamp': DateTime.now().millisecondsSinceEpoch,
                 'chunkIndex': _chunkCount,
+                'caseId': _currentCaseId,
               }),
             );
 
@@ -273,83 +401,50 @@ class WebSocketAudioStreamService {
       },
       onDone: () {
         _log('🏁 Audio stream completed');
-        _log('📊 Final stats:');
-        _log('   - Total chunks: $_chunkCount');
-        _log('   - Total bytes sent: $_totalBytesSent');
+        _log('📊 Final stats: chunks: $_chunkCount, bytes: $_totalBytesSent');
       },
     );
-
-    _log('✅ Recording and streaming active!');
   }
 
-  // Enhanced resume method
-  Future<void> resumeIfNeeded() async {
-    if (_intentionallyStopped) return;
-
-    final caseId = _currentCaseId;
-    if (caseId == null) return;
-
-    _log('🔄 [Resume] Checking connection state...');
-
-    // Force reconnection if not connected
-    if (!_isConnected && !_isConnecting) {
-      _log('🔄 [Resume] Forcing WebSocket & Audio reconnection...');
-      _reconnectAttempts = 0;
-      _reconnectTimer?.cancel();
-
-      try {
-        // Clean up old connection
-        await _channel?.sink.close();
-        _channel = null;
-        _isConnecting = false;
-
-        // Stop recording if active
-        if (_isRecording) {
-          await _recorder?.stop();
-          _isRecording = false;
-        }
-
-        // Reconnect
-        await connect(caseId: caseId);
-      } catch (e) {
-        _log('❌ [Resume] Reconnect failed: $e');
-      }
+  void _handleInterruption(AudioInterruptionEvent event) {
+    _log('🔇 Audio interruption: begin=${event.begin}, type=${event.type}');
+    if (event.begin) {
+      _isConnected = false;
+      _log('⏸️ Audio interrupted – pausing stream');
     } else {
-      _log('✅ [Resume] Already connected — no action needed');
+      _log('▶️ Audio interruption ended – resuming stream');
+      _isConnected = false;
+      _wasDisconnectedBySystem = true;
+      resumeIfNeeded();
     }
   }
 
-  Future<void> stop() async {
-    _log('🛑 Stopping audio stream...');
-    _intentionallyStopped = true;
-    _isRecording = false;
+  // --------------------------------------------------------------
+  // 🔧 FIXED: _cleanupConnection no longer hangs on sink.close()
+  // --------------------------------------------------------------
+  Future<void> _cleanupConnection({bool keepRecorder = false}) async {
+    _log('🧹 [Cleanup] Cleaning up connection...');
 
-    _reconnectTimer?.cancel();
-    _reconnectTimer = null;
-    _healthCheckTimer?.cancel();
-    _healthCheckTimer = null;
-    _pingTimer?.cancel();
-    _pingTimer = null;
-
-    try {
-      _log('⏹️ Stopping recorder...');
-      if (_recorder != null && await _recorder!.isRecording()) {
-        await _recorder!.stop();
+    if (!keepRecorder) {
+      try {
+        if (_recorder != null && await _recorder!.isRecording()) {
+          await _recorder!.stop();
+          _log('✅ Recorder stopped');
+        }
+      } catch (e) {
+        _log('⚠️ Error stopping recorder: $e');
       }
-      _log('✅ Recorder stopped');
-    } catch (e) {
-      _log('⚠️ Error stopping recorder: $e');
     }
 
     try {
-      _log('⏹️ Cancelling audio stream subscription...');
       await _audioStreamSub?.cancel();
       _log('✅ Audio stream subscription cancelled');
     } catch (e) {
       _log('⚠️ Error cancelling subscription: $e');
     }
 
-    if (_channel != null && _currentCaseId != null) {
+    // Send leave message only if we believe we are still connected
+    if (_channel != null && _currentCaseId != null && _isConnected) {
       try {
         _log('📤 Sending leave message...');
         _channel!.sink.add(
@@ -359,25 +454,96 @@ class WebSocketAudioStreamService {
       } catch (e) {
         _log('⚠️ Error sending leave message: $e');
       }
+    }
 
+    // ✅ Close the WebSocket without waiting indefinitely
+    if (_channel != null) {
       try {
         _log('🔌 Closing WebSocket connection...');
-        await _channel?.sink.close();
-        _log('✅ WebSocket closed');
+        // Fire-and-forget: just initiate the close and move on
+        _channel!.sink.close().timeout(
+          const Duration(milliseconds: 800),
+          onTimeout: () {
+            _log('⚠️ WebSocket close timed out – continuing anyway');
+          },
+        );
+        // Immediately discard the reference to avoid any further usage
+        _channel = null;
+        _log('✅ WebSocket close initiated');
       } catch (e) {
-        _log('⚠️ Error closing WebSocket: $e');
+        _log('⚠️ WebSocket close error (ignored): $e');
+        _channel = null;
       }
     }
 
     _isConnected = false;
     _isConnecting = false;
-    _currentCaseId = null;
-
-    _log('✅ Audio stream stopped completely');
+    if (!keepRecorder) {
+      _isRecording = false;
+    }
+    _log('✅ Connection cleanup complete');
   }
 
-  Future<void> dispose() async {
-    await stop();
-    _recorder?.dispose();
+  Future<void> _disposeRecorder() async {
+    try {
+      await _recorder?.dispose();
+      _recorder = null;
+      _log('✅ Recorder disposed');
+    } catch (e) {
+      _log('⚠️ Error disposing recorder: $e');
+    }
+    _cancelInterruptionListener();
+  }
+
+  void _cancelTimers() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _healthCheckTimer?.cancel();
+    _healthCheckTimer = null;
+    _connectionWatchdogTimer?.cancel();
+    _connectionWatchdogTimer = null;
+  }
+
+  void _cancelInterruptionListener() {
+    _interruptionSub?.cancel();
+    _interruptionSub = null;
+  }
+
+  // ---------- connectivity handling ----------
+  void _startConnectivityListener() {
+    _connectivitySub?.cancel();
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((
+      List<ConnectivityResult> results,
+    ) {
+      final online =
+          results.isNotEmpty &&
+          results.any((r) => r != ConnectivityResult.none);
+      _handleConnectivityChange(online);
+    });
+  }
+
+  void _disposeConnectivityListener() {
+    _connectivitySub?.cancel();
+    _connectivitySub = null;
+  }
+
+  void _handleConnectivityChange(bool online) {
+    _log('📶 Connectivity changed: ${online ? "online" : "offline"}');
+
+    if (_intentionallyStopped || _currentCaseId == null) return;
+
+    if (!online) {
+      _waitingForNetwork = true;
+      _reconnectTimer?.cancel();
+      _log('🔴 Network offline – pausing reconnection attempts');
+    } else {
+      _log('🟢 Network online – starting reconnection');
+      _waitingForNetwork = false;
+      if (!_isConnected && !_isConnecting) {
+        _reconnectAttempts = 0;
+        _reconnectTimer?.cancel();
+        _handleConnectionError();
+      }
+    }
   }
 }

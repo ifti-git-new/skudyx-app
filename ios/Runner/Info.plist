@@ -2,12 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>NSCameraUsageDescription</key>
-    <string>SkudyX needs camera access to scan your identity document for verification.</string>
+    <!-- ✅ App Identity -->
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>SkudyX needs microphone access for live emergency audio sharing.</string>
     <key>CFBundleDisplayName</key>
     <string>Skudyx</string>
     <key>CFBundleExecutable</key>
@@ -26,6 +23,8 @@
     <string>????</string>
     <key>CFBundleVersion</key>
     <string>$(FLUTTER_BUILD_NUMBER)</string>
+    
+    <!-- ✅ iOS Requirements -->
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>UILaunchStoryboardName</key>
@@ -50,15 +49,44 @@
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     
-    <!-- ✅ ADD THESE FOR BACKGROUND MODES -->
+    <!-- ✅ Privacy Permissions -->
+    
+    <!-- Camera: Identity document verification -->
+    <key>NSCameraUsageDescription</key>
+    <string>SkudyX needs camera access to scan your identity document for verification.</string>
+    
+    <!-- Microphone: Live emergency audio streaming -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>SkudyX needs microphone access for live emergency audio sharing during active cases.</string>
+    
+    <!-- Location: Background emergency tracking -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>SkudyX needs location access to track your position during an emergency case.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>SkudyX needs location access even when the app is in background to continuously track your emergency location and provide live support.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>SkudyX needs background location access for emergency tracking and safety monitoring.</string>
+    
+    <!-- ✅ Background Modes: Critical for audio streaming & location when app is minimized/screen off -->
     <key>UIBackgroundModes</key>
     <array>
         <string>audio</string>
         <string>location</string>
+        <string>fetch</string>
+        <string>remote-notification</string>
     </array>
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>SkudyX needs location access even when app is in background to track your emergency location.</string>
-    <key>NSLocationAlwaysUsageDescription</key>
-    <string>SkudyX needs background location access for emergency tracking.</string>
+    
+    <!-- ✅ Flutter Embedding -->
+    <key>io.flutter.embedded_views_preview</key>
+    <true/>
+    
+    <!-- ✅ ATS (App Transport Security) - Allow HTTP for local testing if needed -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
 </dict>
 </plist>

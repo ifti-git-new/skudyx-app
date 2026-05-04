@@ -1,14 +1,18 @@
-// lib/core/services/audio_foreground_service.dart
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 class AudioForegroundService {
   static bool _initialized = false;
+  static String? _currentCaseId;
+
+  static void initialize() {
+    _init();
+  }
 
   static void _init() {
     if (_initialized) return;
     _initialized = true;
-
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'audio_streaming_channel',
@@ -28,52 +32,99 @@ class AudioForegroundService {
         allowWifiLock: true,
       ),
     );
-
     if (kDebugMode) print('✅ [ForegroundService] Initialized');
   }
 
   static Future<void> start({required String caseId}) async {
     _init();
+    _currentCaseId = caseId;
 
     try {
-      // ✅ FIX: Check notification permission properly
-      final permission =
-          await FlutterForegroundTask.checkNotificationPermission();
-      if (permission == NotificationPermission.granted) {
-        // ✅ FIX: isRunningService is a getter, not a method (no parentheses)
-        if (await FlutterForegroundTask.isRunningService) {
-          await FlutterForegroundTask.updateService(
-            notificationTitle: 'Live Case Active',
-            notificationText: 'Streaming audio for case $caseId',
-          );
-          if (kDebugMode) print('✅ [ForegroundService] Updated for: $caseId');
-          return;
-        }
+      final isRunning = await FlutterForegroundTask.isRunningService;
 
-        await FlutterForegroundTask.startService(
+      if (isRunning) {
+        await FlutterForegroundTask.updateService(
           notificationTitle: 'Live Case Active',
-          notificationText: 'Streaming audio for case $caseId',
+          notificationText: 'Streaming audio for case #$caseId',
         );
-
-        if (kDebugMode) print('✅ [ForegroundService] Started for: $caseId');
-      } else {
-        if (kDebugMode)
-          print('⚠️ [ForegroundService] Notification permission denied');
+        if (kDebugMode) print('✅ [ForegroundService] Updated for: $caseId');
+        return;
       }
-    } catch (e) {
-      if (kDebugMode) print('⚠️ [ForegroundService] Start error: $e');
+
+      await FlutterForegroundTask.startService(
+        notificationTitle: 'Live Case Active',
+        notificationText: 'Streaming audio for case #$caseId',
+      );
+
+      if (kDebugMode) print('✅ [ForegroundService] Started for: $caseId');
+    } catch (e, stack) {
+      if (kDebugMode) {
+        print('⚠️ [ForegroundService] Start error: $e');
+        print('Stack: $stack');
+      }
+      // Don't crash - audio can still work without foreground service
+    }
+  }
+
+  static Future<void> updateCaseId(String caseId) async {
+    _currentCaseId = caseId;
+    if (await FlutterForegroundTask.isRunningService) {
+      await FlutterForegroundTask.updateService(
+        notificationTitle: 'Live Case Active',
+        notificationText: 'Streaming audio for case #$caseId',
+      );
     }
   }
 
   static Future<void> stop() async {
     try {
-      // ✅ FIX: isRunningService is a getter, not a method (no parentheses)
-      if (await FlutterForegroundTask.isRunningService) {
+      final isRunning = await FlutterForegroundTask.isRunningService;
+      if (isRunning) {
         await FlutterForegroundTask.stopService();
         if (kDebugMode) print('✅ [ForegroundService] Stopped');
       }
     } catch (e) {
       if (kDebugMode) print('⚠️ [ForegroundService] Stop error: $e');
     }
+    _currentCaseId = null;
+  }
+
+  static String? get currentCaseId => _currentCaseId;
+}
+
+// ✅ Required: TaskHandler for foreground task events (flutter_foreground_task v9+)
+class _ForegroundTaskHandler extends TaskHandler {
+  @override
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    if (kDebugMode) print('🔋 [ForegroundTask] onStart');
+  }
+
+  @override
+  void onRepeatEvent(DateTime timestamp) {
+    // Optional: periodic heartbeat
+    if (kDebugMode) print('💓 [ForegroundTask] Heartbeat');
+  }
+
+  @override
+  Future<void> onDestroy(DateTime timestamp, bool isTaskRemoved) async {
+    if (kDebugMode)
+      print('🔋 [ForegroundTask] onDestroy - removed: $isTaskRemoved');
+    // Clean up resources if needed
+  }
+
+  @override
+  void onNotificationButtonPressed(String id) {
+    // Handle button taps if you add buttons later
+  }
+
+  @override
+  void onNotificationPressed() {
+    // Bring app to foreground when notification tapped
+    FlutterForegroundTask.launchApp();
+  }
+
+  @override
+  void onNotificationDismissed() {
+    // Optional: handle dismissal
   }
 }

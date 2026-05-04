@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/core/config/app_config.dart';
 import 'package:skudyx/core/config/flavors.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
+import 'package:skudyx/core/services/audio_foreground_service.dart'; // ✅ ADDED
 import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/features/cases/presentation/controllers/live_case_call_controller.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
@@ -24,6 +27,33 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
   static const Color _orangeSoft = Color(0xFFFFEDD5);
 
   bool isActiveMode = true;
+
+  // ✅ ADDED: request Android 13+ notification permission for foreground service
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     AudioForegroundService.requestPermissions();
+  //   });
+  // }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        // ✅ Request notification permission for Android 13+
+        if (defaultTargetPlatform == TargetPlatform.android) {
+          final status = await Permission.notification.status;
+          if (status.isDenied || status.isRestricted) {
+            await Permission.notification.request();
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Permission request failed: $e');
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
