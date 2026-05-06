@@ -666,7 +666,6 @@ import 'package:skudyx/features/cases/data/remote/case_api.dart';
 import 'package:skudyx/features/cases/domain/services/websocket_audio_stream_service.dart';
 import 'package:skudyx/features/cases/presentation/controllers/live_case_call_controller.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
-import 'package:skudyx/core/config/app_config.dart';
 
 class DeviceSessionController extends ChangeNotifier
     with WidgetsBindingObserver {
@@ -694,12 +693,27 @@ class DeviceSessionController extends ChangeNotifier
 
   static const Duration _socketConnectTimeout = Duration(seconds: 12);
   static const Duration _apiTimeout = Duration(seconds: 15);
-  static const Duration _locationTimeout = Duration(seconds: 12);
+  static const Duration _initialLocationTimeout = Duration(seconds: 12);
+  static const Duration _tickLocationTimeout = Duration(milliseconds: 500);
   static const int _maxRetries = 3;
   static const Duration _retryDelay = Duration(seconds: 2);
 
   bool _servicesReady = false;
   bool _caseClosing = false;
+
+  // ──────────────────────────────────
+  // Location tracking fields
+  // ──────────────────────────────────
+  Timer? _timer;
+  bool _tickInFlight = false;
+  int _positionCount = 0;
+  final List<Position> _recentPositions = [];
+
+  static const Duration _tickInterval = Duration(milliseconds: 500);
+  static const double _accuracyThreshold = 20.0;
+  static const int _smoothingWindow = 3;
+  static const int _minWarmupPositions = 3; // **CHANGED** – was 5, now 3
+  // ──────────────────────────────────
 
   DeviceSessionController({
     required this.caseApi,
@@ -733,8 +747,6 @@ class DeviceSessionController extends ChangeNotifier
   bool audioActive = false;
   String? lastAudioError;
 
-  Timer? _timer;
-  bool _tickInFlight = false;
   int successUpdates = 0;
   int failedUpdates = 0;
   bool statusUpdating = false;
@@ -819,11 +831,24 @@ class DeviceSessionController extends ChangeNotifier
     }
   }
 
-  Future<Position> _getCurrentPosition() {
+  /// Used only for the very first location – long timeout
+  Future<Position> _getInitialPosition() {
     return Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-      timeLimit: _locationTimeout,
+      desiredAccuracy: LocationAccuracy.bestForNavigation,
+      timeLimit: _initialLocationTimeout,
     );
+  }
+
+  /// Used for 0.5‑sec ticks – short timeout, may return null
+  Future<Position?> _getTickPosition() async {
+    try {
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
+        timeLimit: _tickLocationTimeout,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<bool> _joinRealtimeServicesWithRetry({required String caseId}) async {
@@ -839,9 +864,9 @@ class DeviceSessionController extends ChangeNotifier
                 _log('⚠️ [Realtime] Watch timeout (attempt $attempt)');
               },
             )
-            .catchError((e) {
-              _log('⚠️ [Realtime] Watch error (attempt $attempt): $e');
-            });
+            .catchError(
+              (e) => _log('⚠️ [Realtime] Watch error (attempt $attempt): $e'),
+            );
 
         await audioRealtime
             .watchCase(caseId)
@@ -851,9 +876,10 @@ class DeviceSessionController extends ChangeNotifier
                 _log('⚠️ [AudioRealtime] Watch timeout (attempt $attempt)');
               },
             )
-            .catchError((e) {
-              _log('⚠️ [AudioRealtime] Watch error (attempt $attempt): $e');
-            });
+            .catchError(
+              (e) =>
+                  _log('⚠️ [AudioRealtime] Watch error (attempt $attempt): $e'),
+            );
 
         _log('✅ [Realtime] Successfully joined: $caseId');
         return true;
@@ -920,11 +946,13 @@ class DeviceSessionController extends ChangeNotifier
     successUpdates = 0;
     failedUpdates = 0;
     coordinates.clear();
+    _positionCount = 0;
+    _recentPositions.clear();
     notifyListeners();
 
     try {
-      _log('📍 [DeviceSession] Getting current position...');
-      final firstPos = await _getCurrentPosition();
+      _log('📍 [DeviceSession] Getting initial position (long timeout)...');
+      final firstPos = await _getInitialPosition();
 
       _log('📡 [DeviceSession] Creating case on server...');
       final data = await caseApi
@@ -960,15 +988,10 @@ class DeviceSessionController extends ChangeNotifier
       if (createdCaseId.startsWith('CL')) {
         _log('🎯 [DeviceSession] CL case — starting WebSocket audio streaming');
         try {
-          // ✅ 1. Start foreground service FIRST to avoid audio-focus conflict
           await AudioForegroundService.start(caseId: createdCaseId);
-
-          // ✅ 2. Let the notification settle completely before we touch the microphone
           if (Platform.isAndroid) {
             await Future.delayed(const Duration(seconds: 1));
           }
-
-          // ✅ 3. Now connect the WebSocket audio (which starts the persistent recorder)
           await wsAudioService
               .connect(caseId: createdCaseId)
               .timeout(
@@ -977,14 +1000,10 @@ class DeviceSessionController extends ChangeNotifier
                   _log('⚠️ [WebSocket] Audio connect timeout');
                 },
               );
-
-          // ✅ 4. Register the audio service as the foreground keep-alive target
           AudioForegroundService.audioService = wsAudioService;
-
           audioActive = true;
           _log('✅ [DeviceSession] WebSocket audio streaming started');
 
-          // ✅ 5. Battery-optimisation request
           if (Platform.isAndroid) {
             final status = await Permission.ignoreBatteryOptimizations
                 .request();
@@ -1003,20 +1022,24 @@ class DeviceSessionController extends ChangeNotifier
         }
       }
 
-      await _sendOneTick();
+      // ✅ Send the first position immediately
+      await _sendPositionToServer(firstPos);
 
+      // ✅ Start 0.5‑second timer
       _timer?.cancel();
-      _timer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      _timer = Timer.periodic(_tickInterval, (_) async {
         if (!tracking || _tickInFlight) return;
         _tickInFlight = true;
         try {
-          await _sendOneTick();
+          await _onLocationTick();
         } finally {
           _tickInFlight = false;
         }
       });
 
-      _log('✅ [DeviceSession] Location polling started (1s interval)');
+      _log(
+        '✅ [DeviceSession] Location polling started (${_tickInterval.inMilliseconds}ms interval)',
+      );
       _log('✅ [DeviceSession] startCase() completed successfully');
       return true;
     } on TimeoutException catch (e, stack) {
@@ -1040,7 +1063,117 @@ class DeviceSessionController extends ChangeNotifier
     }
   }
 
-  // ✅ Handle app lifecycle — screen off, minimize, phone call
+  // ──────────────────────────────────
+  // HIGH‑FREQUENCY LOCATION TICK
+  // ──────────────────────────────────
+  Future<void> _onLocationTick() async {
+    final pos = await _getTickPosition();
+    if (pos == null) return;
+
+    _positionCount++;
+
+    if (!_isValidPosition(pos)) return;
+
+    final smoothed = _getSmoothedPosition(pos);
+    if (smoothed == null) return;
+
+    await _sendPositionToServer(smoothed);
+  }
+
+  bool _isValidPosition(Position pos) {
+    if (pos.accuracy > _accuracyThreshold) return false;
+    if (pos.latitude == 0 && pos.longitude == 0) return false;
+    if (pos.isMocked) {
+      _log('⚠️ Mock location detected – ignoring');
+      return false;
+    }
+    if (_positionCount < _minWarmupPositions) return false;
+    return true;
+  }
+
+  Position? _getSmoothedPosition(Position newPos) {
+    _recentPositions.add(newPos);
+    if (_recentPositions.length > _smoothingWindow) {
+      _recentPositions.removeAt(0);
+    }
+
+    if (_recentPositions.length < _smoothingWindow) return null;
+
+    double avgLat = 0, avgLon = 0;
+    for (final p in _recentPositions) {
+      avgLat += p.latitude;
+      avgLon += p.longitude;
+    }
+    avgLat /= _recentPositions.length;
+    avgLon /= _recentPositions.length;
+
+    final bestAccuracy = _recentPositions
+        .map((p) => p.accuracy)
+        .reduce((a, b) => a < b ? a : b);
+
+    return Position(
+      latitude: avgLat,
+      longitude: avgLon,
+      accuracy: bestAccuracy,
+      altitude: newPos.altitude,
+      altitudeAccuracy: newPos.altitudeAccuracy,
+      heading: newPos.heading,
+      headingAccuracy: newPos.headingAccuracy,
+      speed: newPos.speed,
+      speedAccuracy: newPos.speedAccuracy,
+      timestamp: newPos.timestamp,
+      isMocked: newPos.isMocked,
+      floor: newPos.floor,
+    );
+  }
+
+  Future<void> _sendPositionToServer(Position pos) async {
+    final id = caseId;
+    if (id == null || !tracking) return;
+
+    try {
+      final result = await caseApi
+          .updateLocation(
+            caseId: id,
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+          )
+          .timeout(_apiTimeout);
+
+      successUpdates++;
+      if (successUpdates % 10 == 0) {
+        _log(
+          '[DeviceSession] 📊 Location updates: $successUpdates successful, $failedUpdates failed',
+        );
+      }
+
+      coordinates.add({
+        'latitude': pos.latitude,
+        'longitude': pos.longitude,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+
+      final status = result['status']?.toString();
+      _log('[DeviceSession] 📍 Tick status from server: $status');
+
+      if (status != null && _finalStatuses.contains(status) && !_caseClosing) {
+        _log('🏁 [DeviceSession] Final status detected in tick: $status');
+        await _closeRemotely(status);
+        return;
+      }
+
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) print('[DeviceSession] location tick failed => $e');
+      failedUpdates++;
+      notifyListeners();
+    }
+  }
+
+  // ──────────────────────────────────
+  // Lifecycle, realtime, cleanup (unchanged)
+  // ──────────────────────────────────
+
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     _log('📱 [DeviceSession] Lifecycle state: $state');
@@ -1146,51 +1279,6 @@ class DeviceSessionController extends ChangeNotifier
     notifyListeners();
   }
 
-  Future<void> _sendOneTick() async {
-    final id = caseId;
-    if (id == null || !tracking) return;
-
-    try {
-      final pos = await _getCurrentPosition();
-
-      coordinates.add({
-        'latitude': pos.latitude,
-        'longitude': pos.longitude,
-        'timestamp': DateTime.now().toIso8601String(),
-      });
-
-      final result = await caseApi
-          .updateLocation(
-            caseId: id,
-            latitude: pos.latitude,
-            longitude: pos.longitude,
-          )
-          .timeout(_apiTimeout);
-
-      successUpdates++;
-      if (successUpdates % 10 == 0) {
-        _log(
-          '[DeviceSession] 📊 Location updates: $successUpdates successful, $failedUpdates failed',
-        );
-      }
-
-      final status = result['status']?.toString();
-      _log('[DeviceSession] 📍 Tick status from server: $status');
-
-      if (status != null && _finalStatuses.contains(status) && !_caseClosing) {
-        _log('🏁 [DeviceSession] Final status detected in tick: $status');
-        await _closeRemotely(status);
-        return;
-      }
-
-      notifyListeners();
-    } catch (e) {
-      if (kDebugMode) print('[DeviceSession] location tick failed => $e');
-      failedUpdates++;
-      notifyListeners();
-    }
-  }
-
   void _onAudioEnded(AudioStreamEndedEvent event) async {
     _log('[DeviceSession] _onAudioEnded() - eventCase: ${event.caseId}');
     final id = caseId;
@@ -1215,6 +1303,8 @@ class DeviceSessionController extends ChangeNotifier
     _timer?.cancel();
     _timer = null;
     _tickInFlight = false;
+    _recentPositions.clear();
+
     starting = false;
     tracking = false;
 
@@ -1222,9 +1312,7 @@ class DeviceSessionController extends ChangeNotifier
     await audioRealtime.unwatchCase();
     await _stopAudio();
 
-    if (clearCase) {
-      clearLiveCallController();
-    }
+    if (clearCase) clearLiveCallController();
 
     if (clearCase) {
       caseId = null;
@@ -1302,6 +1390,7 @@ class DeviceSessionController extends ChangeNotifier
 
     _rtSub?.cancel();
     _audioEndedSub?.cancel();
+    _timer?.cancel();
 
     wsAudioService.dispose();
     AudioForegroundService.stop();

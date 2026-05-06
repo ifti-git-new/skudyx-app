@@ -8,8 +8,7 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
 
     <!-- Bluetooth -->
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_SCAN"
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
@@ -26,16 +25,19 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <!-- Foreground Service -->
+    <!-- Foreground Service (required) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Required for Android 14+ based on the service type -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <!-- Power & Wake -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Android 13+ notification permission -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:label="skudyx"
@@ -45,25 +47,17 @@
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true">
 
-        <!-- ✅ flutter_foreground_task service -->
-        <service
-            android:name="com.pravera.flutter_foreground_task.service.ForegroundTaskService"
-            android:foregroundServiceType="location|microphone|dataSync"
-            android:exported="false"
-            android:stopWithTask="false"
-            tools:replace="android:exported" />
+        <!-- ✅ Correct service declaration -->
+    <service
+        android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+        android:foregroundServiceType="dataSync|microphone"
+        android:exported="false"
+        android:stopWithTask="false" />
 
-        <!-- ✅ flutter_background_service (if still using) -->
-        <service
-            android:name="id.flutter.flutter_background_service.BackgroundService"
-            android:foregroundServiceType="location|microphone"
-            android:exported="false"
-            tools:replace="android:exported" />
-
-        <!-- ✅ Notification channel for foreground service -->
+        <!-- Notification channel metadata (must match Dart code) -->
         <meta-data
             android:name="com.pravera.flutter_foreground_task.notification_channel_id"
-            android:value="audio_streaming_channel" />
+            android:value="skudyx_audio_channel" />
 
         <activity
             android:name=".MainActivity"
@@ -76,11 +70,11 @@
             android:windowSoftInputMode="adjustResize"
             android:showWhenLocked="true"
             android:turnScreenOn="true">
-            
+
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
-                
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -90,10 +84,9 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-            
+
     </application>
 
-    <!-- Required for querying packages -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
