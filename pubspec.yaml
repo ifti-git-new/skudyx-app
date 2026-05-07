@@ -61,6 +61,7 @@ dependencies:
   pretty_dio_logger: ^1.4.0
   flutter_foreground_task: ^9.2.2
   audio_session: ^0.2.3
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
