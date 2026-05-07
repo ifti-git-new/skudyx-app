@@ -1448,6 +1448,8 @@ class DeviceSessionController extends ChangeNotifier
     WidgetsBinding.instance.addObserver(this);
     _log('[DeviceSession] Constructor initialized');
 
+    realtime.setCaseApi(caseApi);
+
     _rtSub = realtime.stream.listen(_onRealtimeUpdate);
     _audioEndedSub = audioRealtime.endedStream.listen(_onAudioEnded);
     _statusUpdateSub = realtime.statusUpdateStream.listen(_onStatusUpdate);

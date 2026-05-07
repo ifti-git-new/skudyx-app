@@ -42,6 +42,23 @@ class CaseApi {
     }
   }
 
+  Future<Map<String, dynamic>> getCaseDetails(String caseId) async {
+    try {
+      final response = await dio.get(
+        '$baseUrl/api/v1/cases/$caseId',
+        options: Options(extra: const {'requiresAuth': true}),
+      );
+      final body = response.data;
+      if (body is Map && body['success'] == true) {
+        return body['data'] ?? {};
+      }
+      return {};
+    } catch (e) {
+      if (kDebugMode) print('[CaseApi] getCaseDetails error: $e');
+      return {};
+    }
+  }
+
   Future<Map<String, dynamic>> updateLocation({
     required String caseId,
     required double latitude,

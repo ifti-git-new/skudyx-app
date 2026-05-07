@@ -2,91 +2,74 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- ✅ App Identity -->
-    <key>CFBundleDevelopmentRegion</key>
-    <string>$(DEVELOPMENT_LANGUAGE)</string>
-    <key>CFBundleDisplayName</key>
-    <string>Skudyx</string>
-    <key>CFBundleExecutable</key>
-    <string>$(EXECUTABLE_NAME)</string>
-    <key>CFBundleIdentifier</key>
-    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>skudyx</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>$(FLUTTER_BUILD_NAME)</string>
-    <key>CFBundleSignature</key>
-    <string>????</string>
-    <key>CFBundleVersion</key>
-    <string>$(FLUTTER_BUILD_NUMBER)</string>
-    
-    <!-- ✅ iOS Requirements -->
-    <key>LSRequiresIPhoneOS</key>
-    <true/>
-    <key>UILaunchStoryboardName</key>
-    <string>LaunchScreen</string>
-    <key>UIMainStoryboardFile</key>
-    <string>Main</string>
-    <key>UISupportedInterfaceOrientations</key>
-    <array>
-        <string>UIInterfaceOrientationPortrait</string>
-        <string>UIInterfaceOrientationLandscapeLeft</string>
-        <string>UIInterfaceOrientationLandscapeRight</string>
-    </array>
-    <key>UISupportedInterfaceOrientations~ipad</key>
-    <array>
-        <string>UIInterfaceOrientationPortrait</string>
-        <string>UIInterfaceOrientationPortraitUpsideDown</string>
-        <string>UIInterfaceOrientationLandscapeLeft</string>
-        <string>UIInterfaceOrientationLandscapeRight</string>
-    </array>
-    <key>CADisableMinimumFrameDurationOnPhone</key>
-    <true/>
-    <key>UIApplicationSupportsIndirectInputEvents</key>
-    <true/>
-    
-    <!-- ✅ Privacy Permissions -->
-    
-    <!-- Camera: Identity document verification -->
-    <key>NSCameraUsageDescription</key>
-    <string>SkudyX needs camera access to scan your identity document for verification.</string>
-    
-    <!-- Microphone: Live emergency audio streaming -->
-    <key>NSMicrophoneUsageDescription</key>
-    <string>SkudyX needs microphone access for live emergency audio sharing during active cases.</string>
-    
-    <!-- Location: Background emergency tracking -->
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>SkudyX needs location access to track your position during an emergency case.</string>
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>SkudyX needs location access even when the app is in background to continuously track your emergency location and provide live support.</string>
-    <key>NSLocationAlwaysUsageDescription</key>
-    <string>SkudyX needs background location access for emergency tracking and safety monitoring.</string>
-    
-    <!-- ✅ Background Modes: Critical for audio streaming & location when app is minimized/screen off -->
-    <key>UIBackgroundModes</key>
-    <array>
-        <string>audio</string>
-        <string>location</string>
-        <string>fetch</string>
-        <string>remote-notification</string>
-    </array>
-    
-    <!-- ✅ Flutter Embedding -->
-    <key>io.flutter.embedded_views_preview</key>
-    <true/>
-    
-    <!-- ✅ ATS (App Transport Security) - Allow HTTP for local testing if needed -->
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsArbitraryLoads</key>
-        <false/>
-        <key>NSAllowsLocalNetworking</key>
-        <true/>
-    </dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Skudyx</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.skudyx.test</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>skudyx</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>2</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>SkudyX needs camera access to scan your identity document for verification.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>SkudyX needs location access even when the app is in background to continuously track your emergency location and provide live support.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>SkudyX needs background location access for emergency tracking and safety monitoring.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SkudyX needs location access to track your position during an emergency case.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SkudyX needs microphone access for live emergency audio sharing during active cases.</string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>location</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
 </dict>
 </plist>
