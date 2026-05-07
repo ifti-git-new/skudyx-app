@@ -25,10 +25,12 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <!-- Foreground Service (CRITICAL FIXES) -->
+    <!-- Foreground Service (required) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Required for Android 14+ based on the service type -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- ✅ Add location foreground service permission -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <!-- Power & Wake -->
@@ -47,17 +49,17 @@
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true">
 
-        <!-- ✅ CORRECT: flutter_foreground_task service declaration -->
+        <!-- ✅ Correct service declaration with location type -->
         <service
-            android:name="com.pravera.flutter_foreground_task.service.ForegroundTaskService"
+            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
             android:foregroundServiceType="dataSync|microphone|location"
             android:exported="false"
             android:stopWithTask="false" />
 
-        <!-- Notification channel metadata (MUST match Dart code) -->
+        <!-- Notification channel metadata (must match Dart code) -->
         <meta-data
             android:name="com.pravera.flutter_foreground_task.notification_channel_id"
-            android:value="audio_streaming_channel" />
+            android:value="skudyx_audio_channel" />
 
         <activity
             android:name=".MainActivity"

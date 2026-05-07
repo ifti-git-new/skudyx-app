@@ -138,6 +138,7 @@ class AppCompositionRoot extends StatelessWidget {
             realtime: c.read<CaseRealtimeService>(),
             audioRealtime: c.read<CaseAudioRealtimeService>(),
             wsAudioService: c.read<WebSocketAudioStreamService>(),
+            tokenStorage: c.read<AuthTokenStorage>(), // ✅ add this line
           ),
         ),
 

@@ -7,14 +7,12 @@ import 'package:skudyx/app/composition_root.dart';
 import 'package:skudyx/core/config/app_config.dart';
 import 'package:skudyx/core/storage/app_prefs.dart';
 
-/// The entry point of the SkudyX application.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Initialize communication port for the foreground task
+  // ✅ Required for communication between foreground service and UI
   FlutterForegroundTask.initCommunicationPort();
 
-  // ✅ Configure audio session for speech/microphone use.
   final session = await AudioSession.instance;
   await session.configure(
     AudioSessionConfiguration(
