@@ -145,7 +145,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             if (!context.mounted) return;
 
                             if (ok) {
-                              context.go(AppRoutes.device);
+                              // TEMPORARY: mark onboarding as seen and go directly to DeviceConnectedScreen
+                              await auth.markOnboardingSeen();
+                              if (context.mounted) {
+                                context.go(AppRoutes.deviceList);
+                              }
                             } else {
                               final msg =
                                   context

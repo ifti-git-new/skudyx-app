@@ -459,7 +459,9 @@ class _SafetySectionState extends State<_SafetySection> {
                     )
                   : const Text(
                       key: ValueKey('idle'),
-                      'Start Live Case',
+                      'Start Case',
+
+                      // 'Start Live Case',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,

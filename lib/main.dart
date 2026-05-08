@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:skudyx/app/app.dart';
 import 'package:skudyx/app/bootstrap.dart';
-import 'package:skudyx/app/composition_root.dart';
+import 'package:skudyx/app/app_composition_root.dart';
 import 'package:skudyx/core/config/app_config.dart';
 import 'package:skudyx/core/storage/app_prefs.dart';
 

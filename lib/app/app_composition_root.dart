@@ -26,7 +26,7 @@ import 'package:skudyx/features/profile/data/remote/profile_api.dart';
 import 'package:skudyx/features/profile/data/remote/profile_update_api.dart';
 import 'package:skudyx/features/settings/presentation/controllers/notification_prefs_controller.dart';
 
-import 'router.dart';
+import 'app_router.dart';
 
 class AppCompositionRoot extends StatelessWidget {
   final AppConfig config;
