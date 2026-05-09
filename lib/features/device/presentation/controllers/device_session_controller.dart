@@ -1575,8 +1575,11 @@ class DeviceSessionController extends ChangeNotifier
 
   Future<Position> _getInitialPosition() {
     return Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.bestForNavigation,
-      timeLimit: _initialLocationTimeout,
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation
+      )
+      //desiredAccuracy: LocationAccuracy.bestForNavigation,
+      //timeLimit: _initialLocationTimeout,
     );
   }
 
@@ -1628,7 +1631,9 @@ class DeviceSessionController extends ChangeNotifier
   Future<bool> startCase({
     required bool isTest,
     required String caseName,
+    String caseType = '',
   }) async {
+   // final totalTimer = Stopwatch()..start();
     _log('🚀 [DeviceSession] startCase() CALLED');
     _log('🚀 [DeviceSession] isTest: $isTest, caseName: $caseName');
     _log('🚀 [DeviceSession] isConnected: $isConnected');
@@ -1702,20 +1707,22 @@ class DeviceSessionController extends ChangeNotifier
       lastStatus = (data['status'] ?? 'Pending').toString();
 
       starting = false;
-      tracking = true;
+      
       notifyListeners();
-
-      _log('📡 [DeviceSession] Joining case room via realtime service...');
-      final joined = await _joinRealtimeServicesWithRetry(
-        caseId: createdCaseId,
-      );
-      if (!joined) {
-        _log(
-          '⚠️ [DeviceSession] Realtime join failed, continuing with HTTP fallback...',
+      if (caseType != 'Basic') {
+        _log('📡 [DeviceSession] Joining case room via realtime service...');
+        final joined = await _joinRealtimeServicesWithRetry(
+          caseId: createdCaseId,
         );
+        if (!joined) {
+          _log(
+            '⚠️ [DeviceSession] Realtime join failed, continuing with HTTP fallback...',
+          );
+        }
       }
 
       if (createdCaseId.startsWith('CL')) {
+        tracking = true;
         _log('🎯 [DeviceSession] CL case — starting WebSocket audio streaming');
         try {
           final backendBaseUrl = caseApi.dio.options.baseUrl;
@@ -1738,7 +1745,7 @@ class DeviceSessionController extends ChangeNotifier
             }
           }
           if (Platform.isAndroid) {
-            await Future.delayed(const Duration(seconds: 1));
+            await Future.delayed(const Duration(milliseconds: 500));
           }
           await wsAudioService
               .connect(caseId: createdCaseId)
@@ -1767,6 +1774,9 @@ class DeviceSessionController extends ChangeNotifier
           _log('❌ [DeviceSession] WebSocket audio error: $e');
           notifyListeners();
         }
+      } else if (createdCaseId.startsWith('CB')) {
+        tracking = false;
+        return true;
       }
 
       await _sendInitialPositionToServer(firstPos);

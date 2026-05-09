@@ -80,7 +80,7 @@ class WebSocketAudioStreamService {
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
 
       await _channel!.ready.timeout(
-        const Duration(seconds: 15),
+        const Duration(seconds: 25),
         onTimeout: () => throw TimeoutException('WebSocket connection timeout'),
       );
 
@@ -346,6 +346,9 @@ class WebSocketAudioStreamService {
           final data = jsonDecode(message);
           final type = data['type'] as String?;
           switch (type) {
+            case 'no_chunk':
+            _handleConnectionError();
+            break;
             case 'joined':
               _log('✅ Joined case: ${data['caseId']}');
               break;
@@ -383,12 +386,12 @@ class WebSocketAudioStreamService {
     _healthCheckTimer?.cancel();
     _healthCheckTimer = Timer.periodic(_pingInterval, (_) {
       if (_intentionallyStopped || !_isConnected) return;
-      if (_lastPongTime != null &&
-          DateTime.now().difference(_lastPongTime!) > _pongTimeout) {
-        _log('⚠️ Pong timeout — reconnecting');
-        _handleConnectionError();
-        return;
-      }
+      // if (_lastPongTime != null &&
+      //     DateTime.now().difference(_lastPongTime!) > _pongTimeout) {
+      //   _log('⚠️ Pong timeout — reconnecting');
+      //   _handleConnectionError();
+      //   return;
+      // }
       try {
         _channel?.sink.add(
           jsonEncode({

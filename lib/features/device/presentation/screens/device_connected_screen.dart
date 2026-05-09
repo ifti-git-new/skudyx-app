@@ -1551,44 +1551,58 @@ class _SafetySection extends StatefulWidget {
 class _SafetySectionState extends State<_SafetySection> {
   bool _routingToTracking = false;
 
-  Future<void> _startLiveCase(BuildContext context) async {
+  Future<void> _startLiveCase(BuildContext context, String caseType) async {
     final session = context.read<DeviceSessionController>();
 
     setState(() => _routingToTracking = true);
 
     try {
-      final ok = await session.startCase(isTest: false, caseName: 'Live Case');
-
-      if (!mounted) return;
-
-      if (!ok || session.caseId == null) {
-        setState(() => _routingToTracking = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(session.lastError ?? 'Failed to start case'),
-            backgroundColor: Colors.red,
-          ),
+      if (caseType == 'Basic') {
+        final isOk = await session.startCase(
+          isTest: true,
+          caseName: 'Basic Live case',
+          caseType: 'Basic'
         );
-        return;
-      }
+        if (isOk) {
+         _showSuccessDialog(context);
+        }
+      } else {
+        final ok = await session.startCase(
+          isTest: false,
+          caseName: 'Live Case',
+        );
 
-      final config = context.read<AppConfig>();
-      final liveCallController = LiveCaseCallController(
-        socketBaseUrl: config.wsUrl,
-        uploadBaseUrl: config.apiBaseUrl,
-        uploadEndpoint: '/api/v1/cases/upload-final-audio',
-        caseId: session.caseId.toString(),
-        isCaller: true,
-      );
+        if (!mounted) return;
 
-      await liveCallController.start();
-      session.setLiveCallController(liveCallController);
+        if (!ok || session.caseId == null) {
+          setState(() => _routingToTracking = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(session.lastError ?? 'Failed to start case'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
 
-      if (!mounted) return;
+        final config = context.read<AppConfig>();
+        final liveCallController = LiveCaseCallController(
+          socketBaseUrl: config.wsUrl,
+          uploadBaseUrl: config.apiBaseUrl,
+          uploadEndpoint: '/api/v1/cases/upload-final-audio',
+          caseId: session.caseId.toString(),
+          isCaller: true,
+        );
 
-      setState(() => _routingToTracking = false);
-      if (mounted) {
-        context.go(AppRoutes.liveCaseTracking);
+        await liveCallController.start();
+        session.setLiveCallController(liveCallController);
+
+        if (!mounted) return;
+
+        setState(() => _routingToTracking = false);
+        if (mounted) {
+          context.go(AppRoutes.liveCaseTracking);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1600,6 +1614,8 @@ class _SafetySectionState extends State<_SafetySection> {
           ),
         );
       }
+    } finally{
+       setState(() => _routingToTracking = false);
     }
   }
 
@@ -1620,6 +1636,74 @@ class _SafetySectionState extends State<_SafetySection> {
       ),
     );
   }
+  void _showSuccessDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8F5E9),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_circle_rounded,
+              color: Color(0xFF4CAF50),
+              size: 40,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Success!',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Basic case has been created successfully.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4CAF50),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                'Done',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -1660,9 +1744,10 @@ class _SafetySectionState extends State<_SafetySection> {
               ? null
               : () {
                   if (isPremium) {
-                    _startLiveCase(context);
+                    _startLiveCase(context, 'premium');
                   } else {
-                    _showUpgradeDialog(context);
+                    _startLiveCase(context, 'Basic');
+                    //_showUpgradeDialog(context);
                   }
                 },
           style: ElevatedButton.styleFrom(
