@@ -19,13 +19,15 @@ class WebSocketAudioStreamService {
   Timer? _reconnectTimer;
   Timer? _healthCheckTimer;
   Timer? _connectionWatchdogTimer;
+  bool _wasInterrupted = false;
+  bool _waitingForChunkAck = false;
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   bool _waitingForNetwork = false;
 
   DateTime? _lastPongTime;
   static const Duration _pingInterval = Duration(seconds: 10);
-  static const Duration _pongTimeout = Duration(seconds: 15);
+  static const Duration _pongTimeout = Duration(seconds: 35);
 
   bool _isRecording = false;
   bool _isConnected = false;
@@ -57,6 +59,7 @@ class WebSocketAudioStreamService {
   int get chunkCount => _chunkCount;
   int get totalBytesSent => _totalBytesSent;
   bool get isConnected => _isConnected;
+  DateTime? _lastChunkSentTime;
 
   // ─────────────────────────────────────────────────
   // PUBLIC API
@@ -153,6 +156,10 @@ class WebSocketAudioStreamService {
 
     _audioController?.close();
     _audioController = null;
+    _wasInterrupted = false;
+    _waitingForChunkAck = false;
+    _ackCompleter?.complete(false);
+    _ackCompleter = null;
 
     _currentCaseId = null;
     _log('✅ Audio stream stopped completely');
@@ -276,6 +283,7 @@ class WebSocketAudioStreamService {
       if (_isConnected && _channel != null) {
         _chunkCount++;
         _totalBytesSent += data.length;
+        _lastChunkSentTime = DateTime.now();
 
         final chunkBase64 = base64Encode(data);
         if (_chunkCount <= 3) {
@@ -309,13 +317,90 @@ class WebSocketAudioStreamService {
   void _handleInterruption(AudioInterruptionEvent event) {
     _log('🔇 Audio interruption: begin=${event.begin} type=${event.type}');
     if (event.begin) {
+      _wasInterrupted = true;
       // Audio session was interrupted – the recorder will stop automatically.
       // Do NOT change WebSocket connection state.
     } else {
-      _log('▶️ Interruption ended — restarting recording pipeline');
-      // Only restart the recorder, keep WebSocket alive.
-      _fullRestartRecordingPipeline();
+      if (!_wasInterrupted) return;
+      _wasInterrupted = false;
+      _log('▶️ Interruption ended — recovering...');
+      if (!_intentionallyStopped && _currentCaseId != null) {
+        _recoverAfterInterruption();
+      }
     }
+  }
+
+  Future<void> _recoverAfterInterruption() async {
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (_intentionallyStopped) return;
+
+    _log('🔍 Probing WS with ping...');
+    _waitingForChunkAck = true;
+
+    bool probeSent = false;
+    try {
+      _channel?.sink.add(
+        jsonEncode({
+          'type': 'ping',
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        }),
+      );
+      probeSent = true;
+      _log('📤 Probe ping sent — waiting for pong...');
+    } catch (e) {
+      _log('❌ Probe send failed — WS is dead: $e');
+      _waitingForChunkAck = false;
+      await _doFullReconnect();
+      return;
+    }
+
+    if (!probeSent) {
+      return;
+    }
+
+    final ackReceived = await _waitForServerAck(
+      timeout: const Duration(seconds: 5),
+    );
+
+    _waitingForChunkAck = false;
+
+    if (ackReceived) {
+      _log('✅ Pong received — WS alive, restarting recorder only');
+      await _fullRestartRecordingPipeline();
+    } else {
+      _log('❌ No pong — WS dead, doing full reconnect');
+      await _doFullReconnect();
+    }
+  }
+
+  Completer<bool>? _ackCompleter;
+
+  Future<bool> _waitForServerAck({required Duration timeout}) async {
+    _ackCompleter = Completer<bool>();
+
+    final timer = Timer(timeout, () {
+      if (!(_ackCompleter?.isCompleted ?? true)) {
+        _ackCompleter?.complete(false); // timed out = WS dead
+      }
+    });
+
+    final result = await _ackCompleter!.future;
+    timer.cancel();
+    _ackCompleter = null;
+    return result;
+  }
+
+  Future<void> _doFullReconnect() async {
+    if (_intentionallyStopped || _isConnecting || _isConnected) return;
+    _log('🔄 Full reconnect triggered');
+    _isConnected = false;
+    _reconnectAttempts = 0;
+    _reconnectTimer
+        ?.cancel(); // ✅ cancel any pending _handleConnectionError timer
+    await _cleanupConnection(keepRecorder: false);
+    await Future.delayed(const Duration(milliseconds: 300));
+    _isConnecting = false;
+    await connect(caseId: _currentCaseId!);
   }
 
   // ─────────────────────────────────────────────────
@@ -342,18 +427,31 @@ class WebSocketAudioStreamService {
     _wsMessageSub?.cancel();
     _wsMessageSub = _channel!.stream.listen(
       (message) {
+        if (_waitingForChunkAck && !(_ackCompleter?.isCompleted ?? true)) {
+          _log('✅ Server responded during probe');
+          _ackCompleter?.complete(true);
+        }
         try {
           final data = jsonDecode(message);
           final type = data['type'] as String?;
           switch (type) {
             case 'no_chunk':
-            _handleConnectionError();
-            break;
+              _log('⚠️ Server says no_chunk');
+              // If we're probing, ack already completed above.
+              // If this fires during normal streaming = real error.
+              if (!_waitingForChunkAck) {
+                _handleConnectionError();
+              }
+              break;
             case 'joined':
               _log('✅ Joined case: ${data['caseId']}');
               break;
             case 'pong':
               _lastPongTime = DateTime.now();
+              if (_waitingForChunkAck &&
+                  !(_ackCompleter?.isCompleted ?? true)) {
+                _ackCompleter?.complete(true);
+              }
               break;
             case 'listener_update':
               _log('👥 Listeners: ${data['count']}');
@@ -368,6 +466,9 @@ class WebSocketAudioStreamService {
       onError: (error) {
         _log('❌ WS error: $error');
         _isConnected = false;
+        if (!(_ackCompleter?.isCompleted ?? true)) {
+          _ackCompleter?.complete(false);
+        }
         if (!_intentionallyStopped) _handleConnectionError();
       },
       onDone: () {
@@ -386,12 +487,23 @@ class WebSocketAudioStreamService {
     _healthCheckTimer?.cancel();
     _healthCheckTimer = Timer.periodic(_pingInterval, (_) {
       if (_intentionallyStopped || !_isConnected) return;
-      // if (_lastPongTime != null &&
-      //     DateTime.now().difference(_lastPongTime!) > _pongTimeout) {
-      //   _log('⚠️ Pong timeout — reconnecting');
-      //   _handleConnectionError();
-      //   return;
-      // }
+         // ✅ Pong timeout — but only if we haven't heard from server recently
+    if (_lastPongTime != null &&
+        DateTime.now().difference(_lastPongTime!) > _pongTimeout) {
+      _log('⚠️ Pong timeout — WS silently dead, reconnecting');
+      _handleConnectionError();
+      return;
+    }
+
+    // ✅ Skip ping if audio is actively flowing (chunks are the heartbeat)
+    final recentlySentChunk = _lastChunkSentTime != null &&
+        DateTime.now().difference(_lastChunkSentTime!) <
+            const Duration(seconds: 8);
+
+    if (recentlySentChunk) {
+      _log('💓 Heartbeat skipped — audio stream active');
+      return;
+    }
       try {
         _channel?.sink.add(
           jsonEncode({
