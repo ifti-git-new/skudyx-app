@@ -3,24 +3,31 @@ import '../storage/app_prefs.dart';
 
 class AppStatusController extends ChangeNotifier {
   final AppPrefs prefs;
-
   bool _isSubscribed;
+  String? _subscriptionPlan;
   bool _hasDeliveryDetails;
   bool _deviceArrived;
 
   AppStatusController({required this.prefs})
     : _isSubscribed = prefs.isSubscribed,
+      _subscriptionPlan = prefs.subscriptionPlan,
       _hasDeliveryDetails = prefs.hasDeliveryDetails,
       _deviceArrived = prefs.deviceArrived;
 
   bool get isSubscribed => _isSubscribed;
+  String? get subscriptionPlan => _subscriptionPlan;
   bool get hasDeliveryDetails => _hasDeliveryDetails;
   bool get deviceArrived => _deviceArrived;
 
-  Future<void> setSubscribed(bool value) async {
-    _isSubscribed = value;
+  Future<void> setSubscription({
+    required bool subscribed,
+    required String plan,
+  }) async {
+    _isSubscribed = subscribed;
+    _subscriptionPlan = plan;
     notifyListeners();
-    await prefs.setIsSubscribed(value);
+    await prefs.setIsSubscribed(subscribed);
+    await prefs.setSubscriptionPlan(plan);
   }
 
   Future<void> setHasDeliveryDetails(bool value) async {
@@ -37,6 +44,7 @@ class AppStatusController extends ChangeNotifier {
 
   Future<void> refresh() async {
     _isSubscribed = prefs.isSubscribed;
+    _subscriptionPlan = prefs.subscriptionPlan;
     _hasDeliveryDetails = prefs.hasDeliveryDetails;
     _deviceArrived = prefs.deviceArrived;
     notifyListeners();

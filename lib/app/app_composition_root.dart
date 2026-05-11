@@ -25,6 +25,7 @@ import 'package:skudyx/features/profile/controllers/profile_controller.dart';
 import 'package:skudyx/features/profile/data/remote/profile_api.dart';
 import 'package:skudyx/features/profile/data/remote/profile_update_api.dart';
 import 'package:skudyx/features/settings/presentation/controllers/notification_prefs_controller.dart';
+import 'package:skudyx/features/subscription/data/remote/subscription_api.dart';
 
 import 'app_router.dart';
 
@@ -67,6 +68,7 @@ class AppCompositionRoot extends StatelessWidget {
                 },
               ),
             );
+
             dio.interceptors.add(
               InterceptorsWrapper(
                 onRequest: (options, handler) async {
@@ -83,6 +85,7 @@ class AppCompositionRoot extends StatelessWidget {
                 },
               ),
             );
+
             if (kDebugMode) {
               dio.interceptors.add(
                 DioDebugInterceptor(
@@ -107,16 +110,17 @@ class AppCompositionRoot extends StatelessWidget {
         ProxyProvider<Dio, ProfileUpdateApi>(
           update: (_, dio, __) => ProfileUpdateApi(dio: dio),
         ),
+        ProxyProvider<Dio, SubscriptionApi>(
+          update: (_, dio, __) => SubscriptionApi(dio: dio),
+        ),
         ChangeNotifierProvider<AppStatusController>(
           create: (c) => AppStatusController(prefs: c.read<AppPrefs>()),
         ),
         ChangeNotifierProvider<DeviceScanController>(
           create: (_) => DeviceScanController(),
         ),
-
         // ✅ CaseRealtimeService - no constructor parameters needed
         Provider<CaseRealtimeService>(create: (_) => CaseRealtimeService()),
-
         // ✅ CORRECT: Pass REQUIRED config and tokenStorage parameters
         Provider<CaseAudioRealtimeService>(
           create: (c) => CaseAudioRealtimeService(
@@ -125,13 +129,11 @@ class AppCompositionRoot extends StatelessWidget {
           ),
           dispose: (_, svc) => svc.dispose(),
         ),
-
         // ✅ WebSocket Audio Service Provider
         Provider<WebSocketAudioStreamService>(
           create: (_) => WebSocketAudioStreamService(),
           dispose: (_, svc) => svc.stop(),
         ),
-
         ChangeNotifierProvider<DeviceSessionController>(
           create: (c) => DeviceSessionController(
             caseApi: c.read<CaseApi>(),
@@ -141,7 +143,6 @@ class AppCompositionRoot extends StatelessWidget {
             tokenStorage: c.read<AuthTokenStorage>(), // ✅ add this line
           ),
         ),
-
         ChangeNotifierProvider<EmergencyContactController>(
           create: (c) => EmergencyContactController(
             prefs: c.read<AppPrefs>(),

@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/core/config/app_config.dart';
 import 'package:skudyx/core/config/flavors.dart';
+import 'package:skudyx/core/controllers/app_status_controller.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/services/audio_foreground_service.dart'; // ✅ ADDED
 import 'package:skudyx/core/theme/app_text_styles.dart';
@@ -259,6 +260,8 @@ class _BleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = context.read<DeviceSessionController>();
+    final status = context.watch<AppStatusController>();
+    final subscriptionPlan = status.subscriptionPlan ?? 'Unknown';
 
     return _ResponsiveCard(
       child: Column(
@@ -305,9 +308,10 @@ class _BleCard extends StatelessWidget {
             ),
           ),
           const Divider(height: 1),
-          const _InfoRow(title: "Battery", value: "50%"),
+          // const _InfoRow(title: "Battery", value: "50%"),
+          _InfoRow(title: "Battery", value: "50%"),
           const Divider(height: 1),
-          const _InfoRow(title: "Subscription Plan", value: "Basic"),
+          _InfoRow(title: "Subscription Plan", value: subscriptionPlan),
         ],
       ),
     );

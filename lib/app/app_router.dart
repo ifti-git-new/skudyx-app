@@ -42,12 +42,12 @@ import 'package:skudyx/features/settings/presentation/screens/privacy_policy_scr
 import 'package:skudyx/features/settings/presentation/screens/terms_conditions_screen.dart';
 import 'package:skudyx/features/cases/presentation/screens/case_details_screen.dart';
 import 'package:skudyx/features/profile/presentation/screens/cases/presentation/screens/case_history_screen.dart';
-
 // ✅ NEW SCREEN IMPORT
 import 'package:skudyx/features/device/presentation/screens/live_case_tracking_screen.dart';
 
 class AppRouter {
   final AuthController auth;
+
   AppRouter({required this.auth});
 
   late final GoRouter router = GoRouter(
@@ -71,6 +71,7 @@ class AppRouter {
       final isOnboardingRoute = loc.startsWith('/onboarding');
 
       if (!loggedIn && !isAuthFlowRoute) return AppRoutes.login;
+
       if (loggedIn && !onboardingSeen && !isOnboardingRoute) {
         return AppRoutes.instruction1;
       }
@@ -105,7 +106,6 @@ class AppRouter {
         path: AppRoutes.settingsCompleteSetup,
         builder: (_, _) => const CompleteSetupScreen(),
       ),
-
       // Case Details - Moved here so it occupies full screen
       GoRoute(
         path: AppRoutes.settingsCaseDetails,
@@ -114,13 +114,11 @@ class AppRouter {
           return CaseDetailsScreen(caseId: Uri.decodeComponent(caseId));
         },
       ),
-
       // Contact Support - Also moved out based on your AppRoutes comment
       GoRoute(
         path: AppRoutes.settingsContactSupport,
         builder: (_, _) => const ContactSupportScreen(),
       ),
-
       GoRoute(
         path: AppRoutes.instruction1,
         builder: (_, _) => const Instruction1Screen(),
@@ -137,7 +135,6 @@ class AppRouter {
         path: AppRoutes.instruction4,
         builder: (_, _) => const Instruction4Screen(),
       ),
-
       GoRoute(
         path: AppRoutes.subscription,
         builder: (_, _) => const SubscriptionScreen(),
@@ -150,7 +147,6 @@ class AppRouter {
         path: AppRoutes.deliveryConfirmation,
         builder: (_, _) => const DeliveryConfirmationScreen(),
       ),
-
       GoRoute(
         path: AppRoutes.profileEdit,
         builder: (_, _) => const EditProfileScreen(),
@@ -175,7 +171,6 @@ class AppRouter {
         path: AppRoutes.settingsNotifications,
         builder: (_, _) => const NotificationPreferencesScreen(),
       ),
-
       GoRoute(
         path: AppRoutes.settingsHelpSupport,
         builder: (_, _) => const HelpSupportScreen(),
@@ -196,7 +191,6 @@ class AppRouter {
         path: AppRoutes.emergencyContactEdit,
         builder: (_, _) => const EmergencyContactFormScreen(),
       ),
-
       // ✅ LiveCaseTracking OUTSIDE shell (no bottom nav)
       GoRoute(
         path: AppRoutes.liveCaseTracking,
@@ -223,7 +217,6 @@ class AppRouter {
             path: AppRoutes.profile,
             builder: (_, _) => const ProfileScreen(),
           ),
-
           GoRoute(
             path: AppRoutes.deviceArrived,
             builder: (_, _) => const DeviceArrivedScreen(),
@@ -240,12 +233,10 @@ class AppRouter {
             path: AppRoutes.deviceConnected,
             builder: (_, _) => const DeviceConnectedScreen(),
           ),
-
           GoRoute(
             path: AppRoutes.emergencyContact,
             builder: (_, _) => const EmergencyContactScreen(),
           ),
-
           GoRoute(
             path: AppRoutes.settingsCaseHistory,
             builder: (_, _) => const CaseHistoryScreen(),
