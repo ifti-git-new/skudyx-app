@@ -42,7 +42,7 @@ class WebSocketAudioStreamService {
 
   static const int _maxReconnectAttempts = 15;
   static const String _wsUrl =
-      'wss://skudyx-backend-c8do.onrender.com/ws/audio-stream';
+      'wss://skudyx-backend-thtu.onrender.com/ws/audio-stream';
 
   static const int _sampleRate = 44100;
   static const int _bitRate = 128000;
@@ -487,23 +487,24 @@ class WebSocketAudioStreamService {
     _healthCheckTimer?.cancel();
     _healthCheckTimer = Timer.periodic(_pingInterval, (_) {
       if (_intentionallyStopped || !_isConnected) return;
-         // ✅ Pong timeout — but only if we haven't heard from server recently
-    if (_lastPongTime != null &&
-        DateTime.now().difference(_lastPongTime!) > _pongTimeout) {
-      _log('⚠️ Pong timeout — WS silently dead, reconnecting');
-      _handleConnectionError();
-      return;
-    }
+      // ✅ Pong timeout — but only if we haven't heard from server recently
+      if (_lastPongTime != null &&
+          DateTime.now().difference(_lastPongTime!) > _pongTimeout) {
+        _log('⚠️ Pong timeout — WS silently dead, reconnecting');
+        _handleConnectionError();
+        return;
+      }
 
-    // ✅ Skip ping if audio is actively flowing (chunks are the heartbeat)
-    final recentlySentChunk = _lastChunkSentTime != null &&
-        DateTime.now().difference(_lastChunkSentTime!) <
-            const Duration(seconds: 8);
+      // ✅ Skip ping if audio is actively flowing (chunks are the heartbeat)
+      final recentlySentChunk =
+          _lastChunkSentTime != null &&
+          DateTime.now().difference(_lastChunkSentTime!) <
+              const Duration(seconds: 8);
 
-    if (recentlySentChunk) {
-      _log('💓 Heartbeat skipped — audio stream active');
-      return;
-    }
+      if (recentlySentChunk) {
+        _log('💓 Heartbeat skipped — audio stream active');
+        return;
+      }
       try {
         _channel?.sink.add(
           jsonEncode({

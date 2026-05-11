@@ -23,7 +23,7 @@ class AppConfig {
     const flavorStr = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
 
     // ✅ FIXED: Use the correct backend URL from logs
-    const baseUrl = 'https://skudyx-backend-c8do.onrender.com';
+    const baseUrl = 'https://skudyx-backend-thtu.onrender.com';
 
     final flavor = flavorFromString(flavorStr);
 
