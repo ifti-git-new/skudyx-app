@@ -25,6 +25,30 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   PlanType _plan = PlanType.premium;
   BillingCycle _cycle = BillingCycle.yearly;
 
+  // ✅ Responsive helpers
+  late double _screenWidth;
+  late double _screenHeight;
+  late bool _isSmallScreen;
+  late double _horizontalPadding;
+  late double _titleFontSize;
+  late double _bodyFontSize;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateResponsiveValues();
+  }
+
+  void _updateResponsiveValues() {
+    final mediaQuery = MediaQuery.of(context);
+    _screenWidth = mediaQuery.size.width;
+    _screenHeight = mediaQuery.size.height;
+    _isSmallScreen = _screenWidth < 360; // iPhone SE, small Android
+    _horizontalPadding = _screenWidth < 375 ? 16.0 : 22.0;
+    _titleFontSize = _isSmallScreen ? 28.0 : 32.0;
+    _bodyFontSize = _isSmallScreen ? 14.0 : 16.0;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -36,16 +60,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     });
   }
 
-  /// ✅ Fixed Navigation:
-  /// Prevents "Nothing to pop" error and routes to Device Screen (NotPurchasedView)
+  /// ✅ Fixed Navigation with responsive safety
   void _onCancelPressed() {
     final status = context.read<AppStatusController>();
-
-    // If not subscribed, we want them back on the Device tab (showing Lock screen)
     if (!status.isSubscribed) {
       context.go(AppRoutes.device);
     } else {
-      // If they ARE subscribed, try to pop back to where they came from
       if (GoRouter.of(context).canPop()) {
         context.pop();
       } else {
@@ -56,170 +76,229 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Re-calculate on every build for rotation/orientation changes
+    _updateResponsiveValues();
     final planData = _plan == PlanType.premium ? _premiumPlan() : _basicPlan();
 
     return Scaffold(
       backgroundColor: Colors.white,
+      // ✅ Prevent overflow on very small screens
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Header with Cancel Button and Close Icon
-            Padding(
-              padding: const EdgeInsets.only(left: 16, top: 12),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: InkWell(
-                  onTap: _onCancelPressed,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 22,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Cancel',
-                        style: AppTextStyles.button.copyWith(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Column(
+              children: [
+                // ✅ Header with Cancel Button - responsive padding
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: _horizontalPadding,
+                    top: _isSmallScreen ? 8 : 12,
                   ),
-                ),
-              ),
-            ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 22),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 24),
-                    Text(
-                      'Pick Your Plan',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.h1.copyWith(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Select how you want SkudyX to help you in an emergency.',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.body.copyWith(
-                        color: _subText,
-                        fontSize: 16,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-
-                    // Toggle for Premium / Basic
-                    _SegmentedToggle(
-                      left: 'Premium',
-                      right: 'Basic',
-                      selectedLeft: _plan == PlanType.premium,
-                      onLeft: () => setState(() => _plan = PlanType.premium),
-                      onRight: () => setState(() => _plan = PlanType.basic),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Subscription Card
-                    _PlanCard(
-                      title: planData.title,
-                      badgeText: planData.badgeText,
-                      description: planData.description,
-                      features: planData.features,
-                      monthlyPrice: planData.monthlyPrice,
-                      yearlyOldPrice: planData.yearlyOldPrice,
-                      yearlyPrice: planData.yearlyPrice,
-                      cycle: _cycle,
-                      onCycleChange: (c) => setState(() => _cycle = c),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Subscribe Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _navy,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                        ),
-                        onPressed: () async {
-                          await context
-                              .read<AppStatusController>()
-                              .setSubscribed(true);
-                          if (context.mounted) {
-                            context.push(AppRoutes.deliveryDetails);
-                          }
-                        },
-                        child: Text(
-                          'Subscribe',
-                          style: AppTextStyles.button.copyWith(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Restore Purchases
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Already a subscriber? ',
-                          style: AppTextStyles.caption.copyWith(
-                            color: _subText,
-                            fontSize: 14,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {},
-                          child: Text(
-                            'Restore',
-                            style: AppTextStyles.caption.copyWith(
-                              color: _navy,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: InkWell(
+                      onTap: _onCancelPressed,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Icon(
+                                Icons.close_rounded,
+                                size: _isSmallScreen ? 20 : 22,
+                                color: Colors.black,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Text(
+                              'Cancel',
+                              style: AppTextStyles.button.copyWith(
+                                fontSize: _isSmallScreen ? 14 : 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 40),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ],
+
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    // ✅ Use responsive padding
+                    padding: EdgeInsets.symmetric(
+                      horizontal: _horizontalPadding,
+                      vertical: _isSmallScreen ? 8 : 0,
+                    ),
+                    child: ConstrainedBox(
+                      // ✅ Prevent content from exceeding screen width on tablets
+                      constraints: BoxConstraints(
+                        maxWidth: _screenWidth > 600 ? 500 : double.infinity,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(height: _isSmallScreen ? 16 : 24),
+
+                          // ✅ Responsive title with FittedBox fallback
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Pick Your Plan',
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.h1.copyWith(
+                                fontSize: _titleFontSize,
+                                fontWeight: FontWeight.w800,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+
+                          SizedBox(height: _isSmallScreen ? 8 : 12),
+
+                          // ✅ Responsive description
+                          Text(
+                            'Select how you want SkudyX to help you in an emergency.',
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.body.copyWith(
+                              color: _subText,
+                              fontSize: _bodyFontSize,
+                              height: 1.4,
+                            ),
+                          ),
+
+                          SizedBox(height: _isSmallScreen ? 20 : 28),
+
+                          // ✅ Responsive Segmented Toggle
+                          _SegmentedToggle(
+                            left: 'Premium',
+                            right: 'Basic',
+                            selectedLeft: _plan == PlanType.premium,
+                            onLeft: () =>
+                                setState(() => _plan = PlanType.premium),
+                            onRight: () =>
+                                setState(() => _plan = PlanType.basic),
+                            screenWidth: _screenWidth,
+                            isSmallScreen: _isSmallScreen,
+                          ),
+
+                          SizedBox(height: _isSmallScreen ? 16 : 24),
+
+                          // ✅ Responsive Plan Card
+                          _PlanCard(
+                            title: planData.title,
+                            badgeText: planData.badgeText,
+                            description: planData.description,
+                            features: planData.features,
+                            monthlyPrice: planData.monthlyPrice,
+                            yearlyOldPrice: planData.yearlyOldPrice,
+                            yearlyPrice: planData.yearlyPrice,
+                            cycle: _cycle,
+                            onCycleChange: (c) => setState(() => _cycle = c),
+                            screenWidth: _screenWidth,
+                            isSmallScreen: _isSmallScreen,
+                          ),
+
+                          SizedBox(height: _isSmallScreen ? 24 : 32),
+
+                          // ✅ Subscribe Button - responsive max width
+                          SizedBox(
+                            width: double.infinity,
+                            height: _isSmallScreen ? 50 : 56,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: _screenWidth > 600
+                                    ? 400
+                                    : double.infinity,
+                              ),
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _navy,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      _isSmallScreen ? 25 : 50,
+                                    ),
+                                  ),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: _isSmallScreen ? 12 : 24,
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  await context
+                                      .read<AppStatusController>()
+                                      .setSubscribed(true);
+                                  if (context.mounted) {
+                                    context.push(AppRoutes.deliveryDetails);
+                                  }
+                                },
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    'Subscribe',
+                                    style: AppTextStyles.button.copyWith(
+                                      color: Colors.white,
+                                      fontSize: _isSmallScreen ? 16 : 18,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          SizedBox(height: _isSmallScreen ? 12 : 16),
+
+                          // ✅ Restore Purchases - responsive layout
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Already a subscriber? ',
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: _subText,
+                                    fontSize: _isSmallScreen ? 12 : 14,
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {},
+                                child: Text(
+                                  'Restore',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: _navy,
+                                    fontSize: _isSmallScreen ? 12 : 14,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: _isSmallScreen ? 24 : 40),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -278,12 +357,15 @@ class _PlanModel {
   });
 }
 
+// ✅ RESPONSIVE SEGMENTED TOGGLE
 class _SegmentedToggle extends StatelessWidget {
   final String left;
   final String right;
   final bool selectedLeft;
   final VoidCallback onLeft;
   final VoidCallback onRight;
+  final double screenWidth;
+  final bool isSmallScreen;
 
   const _SegmentedToggle({
     required this.left,
@@ -291,38 +373,60 @@ class _SegmentedToggle extends StatelessWidget {
     required this.selectedLeft,
     required this.onLeft,
     required this.onRight,
+    required this.screenWidth,
+    required this.isSmallScreen,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      height: 48,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        borderRadius: BorderRadius.circular(999),
-        color: Colors.white,
-      ),
-      child: Row(
-        children: [
-          _ToggleItem(label: left, isSelected: selectedLeft, onTap: onLeft),
-          _ToggleItem(label: right, isSelected: !selectedLeft, onTap: onRight),
-        ],
+    // ✅ Responsive width: 80% on small screens, fixed max on large
+    final toggleWidth = screenWidth < 375
+        ? screenWidth * 0.85
+        : (screenWidth > 600 ? 300.0 : 260.0);
+
+    return Center(
+      child: Container(
+        width: toggleWidth,
+        height: isSmallScreen ? 42 : 48,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          borderRadius: BorderRadius.circular(999),
+          color: Colors.white,
+        ),
+        child: Row(
+          children: [
+            _ToggleItem(
+              label: left,
+              isSelected: selectedLeft,
+              onTap: onLeft,
+              isSmallScreen: isSmallScreen,
+            ),
+            _ToggleItem(
+              label: right,
+              isSelected: !selectedLeft,
+              onTap: onRight,
+              isSmallScreen: isSmallScreen,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+// ✅ RESPONSIVE TOGGLE ITEM
 class _ToggleItem extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool isSmallScreen;
 
   const _ToggleItem({
     required this.label,
     required this.isSelected,
     required this.onTap,
+    required this.isSmallScreen,
   });
 
   @override
@@ -336,12 +440,20 @@ class _ToggleItem extends StatelessWidget {
             color: isSelected ? const Color(0xFF4FD3E6) : Colors.transparent,
             borderRadius: BorderRadius.circular(999),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.black : const Color(0xFF6B7280),
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 8 : 12,
+            vertical: isSmallScreen ? 4 : 8,
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.black : const Color(0xFF6B7280),
+                fontSize: isSmallScreen ? 13 : 15,
+                fontWeight: FontWeight.w700,
+                height: 1.2,
+              ),
             ),
           ),
         ),
@@ -350,6 +462,7 @@ class _ToggleItem extends StatelessWidget {
   }
 }
 
+// ✅ RESPONSIVE PLAN CARD
 class _PlanCard extends StatelessWidget {
   final String title;
   final String? badgeText;
@@ -360,6 +473,8 @@ class _PlanCard extends StatelessWidget {
   final String yearlyPrice;
   final BillingCycle cycle;
   final ValueChanged<BillingCycle> onCycleChange;
+  final double screenWidth;
+  final bool isSmallScreen;
 
   const _PlanCard({
     required this.title,
@@ -371,13 +486,15 @@ class _PlanCard extends StatelessWidget {
     required this.yearlyPrice,
     required this.cycle,
     required this.onCycleChange,
+    required this.screenWidth,
+    required this.isSmallScreen,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmallScreen ? 14 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: const Color(0xFFE5E7EB)),
@@ -385,84 +502,112 @@ class _PlanCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 18 : 20,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2,
+                    ),
+                  ),
                 ),
               ),
               if (badgeText != null) ...[
                 const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDFF7DF),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    badgeText!,
-                    style: const TextStyle(
-                      color: Color(0xFF16A34A),
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                Flexible(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 8 : 10,
+                      vertical: isSmallScreen ? 3 : 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDFF7DF),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        badgeText!,
+                        style: TextStyle(
+                          color: const Color(0xFF16A34A),
+                          fontSize: isSmallScreen ? 10 : 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 6 : 8),
           Text(
             description,
-            style: const TextStyle(color: Color(0xFF6B7280), height: 1.4),
+            style: TextStyle(
+              color: const Color(0xFF6B7280),
+              fontSize: isSmallScreen ? 12 : 14,
+              height: 1.4,
+            ),
           ),
-          const SizedBox(height: 20),
-          const Text(
+          SizedBox(height: isSmallScreen ? 14 : 20),
+          Text(
             'Features:',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: isSmallScreen ? 14 : 16,
+            ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: isSmallScreen ? 8 : 12),
           ...features.map(
             (f) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: EdgeInsets.only(bottom: isSmallScreen ? 8 : 10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.check_circle_outline,
-                    size: 20,
-                    color: Color(0xFF4FD3E6),
+                    size: isSmallScreen ? 16 : 20,
+                    color: const Color(0xFF4FD3E6),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: isSmallScreen ? 8 : 10),
                   Expanded(
-                    child: Text(f, style: const TextStyle(fontSize: 14)),
+                    child: Text(
+                      f,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 12 : 14,
+                        height: 1.3,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          const Divider(height: 32),
+          Divider(height: isSmallScreen ? 24 : 32),
           _PriceOption(
             price: monthlyPrice,
             period: '/Month',
             isSelected: cycle == BillingCycle.monthly,
             onTap: () => onCycleChange(BillingCycle.monthly),
+            isSmallScreen: isSmallScreen,
           ),
-          const Divider(height: 16),
+          Divider(height: isSmallScreen ? 12 : 16),
           _PriceOption(
             price: yearlyPrice,
-            oldPrice: yearlyOldPrice,
+            // oldPrice: yearlyOldPrice,
             period: '/Year',
             isSelected: cycle == BillingCycle.yearly,
-            isRecommended: true,
+            // isRecommended: true,
             onTap: () => onCycleChange(BillingCycle.yearly),
+            isSmallScreen: isSmallScreen,
           ),
         ],
       ),
@@ -470,6 +615,7 @@ class _PlanCard extends StatelessWidget {
   }
 }
 
+// ✅ RESPONSIVE PRICE OPTION
 class _PriceOption extends StatelessWidget {
   final String price;
   final String? oldPrice;
@@ -477,6 +623,7 @@ class _PriceOption extends StatelessWidget {
   final bool isSelected;
   final bool isRecommended;
   final VoidCallback onTap;
+  final bool isSmallScreen;
 
   const _PriceOption({
     required this.price,
@@ -485,48 +632,91 @@ class _PriceOption extends StatelessWidget {
     required this.isSelected,
     this.isRecommended = false,
     required this.onTap,
+    required this.isSmallScreen,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            if (oldPrice != null) ...[
-              Text(
-                oldPrice!,
-                style: const TextStyle(
-                  decoration: TextDecoration.lineThrough,
-                  color: Colors.grey,
-                ),
+            Expanded(
+              child: Row(
+                children: [
+                  if (oldPrice != null) ...[
+                    Flexible(
+                      child: Text(
+                        oldPrice!,
+                        style: TextStyle(
+                          decoration: TextDecoration.lineThrough,
+                          color: Colors.grey,
+                          fontSize: isSmallScreen ? 12 : 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    SizedBox(width: isSmallScreen ? 4 : 8),
+                  ],
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        price,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 18 : 22,
+                          fontWeight: FontWeight.w900,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      period,
+                      style: TextStyle(
+                        color: const Color(0xFF6B7280),
+                        fontSize: isSmallScreen ? 12 : 14,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              price,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
             ),
-            Text(period, style: const TextStyle(color: Color(0xFF6B7280))),
-            const Spacer(),
-            if (isRecommended)
-              Container(
-                margin: const EdgeInsets.only(right: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFE9A6),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'Recommended',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-              ),
+            // const Spacer(),
+            // if (isRecommended)
+            //   Container(
+            //     margin: EdgeInsets.only(right: isSmallScreen ? 8 : 12),
+            //     padding: EdgeInsets.symmetric(
+            //       horizontal: isSmallScreen ? 6 : 8,
+            //       vertical: isSmallScreen ? 3 : 4,
+            //     ),
+            //     decoration: BoxDecoration(
+            //       color: const Color(0xFFFFE9A6),
+            //       borderRadius: BorderRadius.circular(6),
+            //     ),
+            //     child: FittedBox(
+            //       fit: BoxFit.scaleDown,
+            //       child: Text(
+            //         'Recommended',
+            //         style: TextStyle(
+            //           fontSize: isSmallScreen ? 9 : 11,
+            //           fontWeight: FontWeight.bold,
+            //         ),
+            //       ),
+            //     ),
+            //   ),
             Icon(
               isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
               color: isSelected ? const Color(0xFF4FD3E6) : Colors.grey,
+              size: isSmallScreen ? 20 : 24,
             ),
           ],
         ),
