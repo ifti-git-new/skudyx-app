@@ -270,7 +270,7 @@ class CaseRealtimeService {
     _log('🔌 Connecting to Socket.IO...');
 
     _socket = io.io(
-      'https://skudyx-backend-c8do.onrender.com',
+      'https://skudyx-backend-thtu.onrender.com',
       io.OptionBuilder()
           .setTransports(['websocket'])
           .disableAutoConnect()

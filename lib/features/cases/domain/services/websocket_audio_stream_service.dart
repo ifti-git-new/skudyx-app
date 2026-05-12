@@ -19,20 +19,22 @@ class WebSocketAudioStreamService {
   Timer? _reconnectTimer;
   Timer? _healthCheckTimer;
   Timer? _connectionWatchdogTimer;
-
+  bool _pipelineRestarting = false;
+  Timer? _chunkStarvationTimer; // add this field
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   bool _waitingForNetwork = false;
 
   DateTime? _lastPongTime;
   static const Duration _pingInterval = Duration(seconds: 10);
-  static const Duration _pongTimeout = Duration(seconds: 15);
+  static const Duration _pongTimeout = Duration(seconds: 35);
 
   bool _isRecording = false;
   bool _isConnected = false;
   bool _isConnecting = false;
   bool _intentionallyStopped = false;
   bool _wasDisconnectedBySystem = false;
-
+  // Add this field
+  DateTime? _lastChunkSentTime;
   String? _currentCaseId;
   int _chunkCount = 0;
   int _totalBytesSent = 0;
@@ -40,7 +42,7 @@ class WebSocketAudioStreamService {
 
   static const int _maxReconnectAttempts = 15;
   static const String _wsUrl =
-      'wss://skudyx-backend-c8do.onrender.com/ws/audio-stream';
+      'wss://skudyx-backend-thtu.onrender.com/ws/audio-stream';
 
   static const int _sampleRate = 44100;
   static const int _bitRate = 128000;
@@ -137,7 +139,9 @@ class WebSocketAudioStreamService {
   Future<void> stop() async {
     _log('🛑 Stopping audio stream...');
     _intentionallyStopped = true;
-
+    _pipelineRestarting = false;
+     _chunkStarvationTimer?.cancel();
+  _chunkStarvationTimer = null;
     _cancelTimers();
     _disposeConnectivityListener();
     _cancelInterruptionListener();
@@ -155,6 +159,7 @@ class WebSocketAudioStreamService {
     _audioController = null;
 
     _currentCaseId = null;
+    _lastChunkSentTime = null;
     _log('✅ Audio stream stopped completely');
   }
 
@@ -166,6 +171,14 @@ class WebSocketAudioStreamService {
 
   Future<void> _fullRestartRecordingPipeline() async {
     _log('🔄 [Pipeline] Full restart of recording pipeline...');
+    if (_pipelineRestarting) {
+      _log('⚠️ [Pipeline] Already restarting, skipping duplicate call');
+      return;
+    }
+    _pipelineRestarting = true;
+    _chunkStarvationTimer?.cancel();
+    _chunkStarvationTimer = null;
+    _lastChunkSentTime = null; // ✅ reset so watchdog measures fresh
 
     await _audioStreamSub?.cancel();
     _audioStreamSub = null;
@@ -189,6 +202,7 @@ class WebSocketAudioStreamService {
     await _startPersistentRecording();
 
     _attachSender();
+    _pipelineRestarting = false;
 
     _log('✅ [Pipeline] Recording pipeline restarted');
   }
@@ -220,6 +234,17 @@ class WebSocketAudioStreamService {
     _isRecording = true;
     _chunkCount = 0;
     _totalBytesSent = 0;
+
+    _chunkStarvationTimer?.cancel();
+    _chunkStarvationTimer = Timer(const Duration(seconds: 4), () {
+      if (_intentionallyStopped || !_isConnected || _pipelineRestarting) return;
+      if (_lastChunkSentTime == null) {
+        _log(
+          '🍽️ [Starvation] No chunks after 4s — mic focus lost, restarting',
+        );
+        _fullRestartRecordingPipeline();
+      }
+    });
 
     _cancelInterruptionListener();
     _interruptionSub = session.interruptionEventStream.listen(
@@ -293,6 +318,13 @@ class WebSocketAudioStreamService {
               'caseId': _currentCaseId,
             }),
           );
+          _lastChunkSentTime = DateTime.now();
+
+          if (_chunkCount == 1) {
+            _chunkStarvationTimer?.cancel();
+            _chunkStarvationTimer = null;
+            _log('✅ First chunk flowing — starvation timer cancelled');
+          }
 
           if (_chunkCount % 10 == 0) {
             _log('📤 Chunk #$_chunkCount (${data.length}B)');
@@ -314,7 +346,11 @@ class WebSocketAudioStreamService {
     } else {
       _log('▶️ Interruption ended — restarting recording pipeline');
       // Only restart the recorder, keep WebSocket alive.
-      _fullRestartRecordingPipeline();
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!_intentionallyStopped) {
+          _fullRestartRecordingPipeline();
+        }
+      });
     }
   }
 
@@ -383,12 +419,34 @@ class WebSocketAudioStreamService {
     _healthCheckTimer?.cancel();
     _healthCheckTimer = Timer.periodic(_pingInterval, (_) {
       if (_intentionallyStopped || !_isConnected) return;
-      if (_lastPongTime != null &&
-          DateTime.now().difference(_lastPongTime!) > _pongTimeout) {
-        _log('⚠️ Pong timeout — reconnecting');
+      final now = DateTime.now();
+      final pongAge = _lastPongTime != null
+          ? now.difference(_lastPongTime!)
+          : _pongTimeout + const Duration(seconds: 1);
+      final chunkAge = _lastChunkSentTime != null
+          ? now.difference(_lastChunkSentTime!)
+          : const Duration(seconds: 99);
+
+      final chunksStopped = chunkAge > const Duration(seconds: 15);
+      final pongTimedOut = pongAge > _pongTimeout;
+
+      if (pongTimedOut && chunksStopped) {
+        _log('⚠️ Pong timeout + no chunks — WS dead, reconnecting');
         _handleConnectionError();
         return;
       }
+
+      if (pongTimedOut) {
+        _log('💓 Pong late but chunks flowing — server busy, skipping');
+        return;
+      }
+
+      // Skip ping if audio actively flowing
+      if (chunkAge < const Duration(seconds: 8)) {
+        _log('💓 Heartbeat skipped — audio stream active');
+        return;
+      }
+
       try {
         _channel?.sink.add(
           jsonEncode({
@@ -406,11 +464,30 @@ class WebSocketAudioStreamService {
     _connectionWatchdogTimer?.cancel();
     _connectionWatchdogTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       if (_intentionallyStopped) return;
+
       if (_isConnected && !_isRecording) {
         _log('🐕 [Watchdog] Connected but recorder dead — restarting pipeline');
         _fullRestartRecordingPipeline();
-      } else if (_isConnected && _isRecording) {
-        _log('🐕 [Watchdog] OK — chunks=$_chunkCount');
+        return;
+      }
+
+      if (_isConnected && _isRecording) {
+        // ✅ Check if chunks are actually flowing, not just recorder flag
+        final chunkAge = _lastChunkSentTime != null
+            ? DateTime.now().difference(_lastChunkSentTime!)
+            : const Duration(seconds: 999);
+
+        if (chunkAge > const Duration(seconds: 25)) {
+          _log(
+            '🐕 [Watchdog] Recorder alive but NO chunks for ${chunkAge.inSeconds}s — restarting pipeline',
+          );
+          _fullRestartRecordingPipeline();
+          return;
+        }
+
+        _log(
+          '🐕 [Watchdog] OK — chunks=$_chunkCount lastChunk=${chunkAge.inSeconds}s ago',
+        );
       }
     });
   }
@@ -503,6 +580,7 @@ class WebSocketAudioStreamService {
   }
 
   void _cancelTimers() {
+     _chunkStarvationTimer?.cancel();
     _reconnectTimer?.cancel();
     _healthCheckTimer?.cancel();
     _connectionWatchdogTimer?.cancel();
