@@ -7,7 +7,7 @@ class CaseApi {
 
   CaseApi({
     required this.dio,
-    this.baseUrl = 'https://skudyx-backend-c8do.onrender.com',
+    this.baseUrl = 'https://skudyx-backend-thtu.onrender.com',
   });
 
   Future<Map<String, dynamic>> triggerCase({
