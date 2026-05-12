@@ -199,10 +199,27 @@ class WebSocketAudioStreamService {
     _audioController?.close();
     _audioController = StreamController<Uint8List>.broadcast();
 
-    await _startPersistentRecording();
-
+    try {
+      await _startPersistentRecording();
     _attachSender();
-    _pipelineRestarting = false;
+    _log('✅ [Pipeline] Recording pipeline restarted');
+    } catch (e) {
+       _log('❌ [Pipeline] Failed to start recording: $e — starvation timer will retry');
+    // Start starvation timer manually so it retries after 4s
+    _chunkStarvationTimer?.cancel();
+    _chunkStarvationTimer = Timer(const Duration(seconds: 4), () {
+      if (_intentionallyStopped || !_isConnected || _pipelineRestarting) return;
+      _log('🍽️ [Starvation] Retrying after session failure...');
+      _fullRestartRecordingPipeline();
+    });
+    }finally {
+_pipelineRestarting = false;
+    }
+
+    // await _startPersistentRecording();
+
+    // _attachSender();
+    
 
     _log('✅ [Pipeline] Recording pipeline restarted');
   }
@@ -220,7 +237,26 @@ class WebSocketAudioStreamService {
     }
 
     final session = await AudioSession.instance;
-    await session.setActive(true);
+    //await session.setActive(true);
+     bool sessionActivated = false;
+  for (int attempt = 1; attempt <= 5; attempt++) {
+    try {
+      await session.setActive(true);
+      sessionActivated = true;
+      _log('✅ Audio session activated (attempt $attempt)');
+      break;
+    } catch (e) {
+      _log('⚠️ Session activation failed attempt $attempt: $e');
+      if (attempt < 5) {
+        await Future.delayed(Duration(seconds: attempt)); // 1s, 2s, 3s, 4s
+      }
+    }
+  }
+
+  if (!sessionActivated) {
+    _log('❌ Could not activate audio session after 5 attempts');
+    throw Exception('Audio session activation failed');
+  }
 
     final stream = await _recorder!.startStream(
       const RecordConfig(
