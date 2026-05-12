@@ -238,7 +238,9 @@ class WebSocketAudioStreamService {
     _chunkStarvationTimer?.cancel();
     _chunkStarvationTimer = Timer(const Duration(seconds: 4), () {
       if (_intentionallyStopped || !_isConnected || _pipelineRestarting) return;
-      if (_lastChunkSentTime == null) {
+       final noChunks = _lastChunkSentTime == null ||
+      DateTime.now().difference(_lastChunkSentTime!) > const Duration(seconds: 4);
+      if (noChunks) {
         _log(
           '🍽️ [Starvation] No chunks after 4s — mic focus lost, restarting',
         );
@@ -584,7 +586,7 @@ class WebSocketAudioStreamService {
     _reconnectTimer?.cancel();
     _healthCheckTimer?.cancel();
     _connectionWatchdogTimer?.cancel();
-    _reconnectTimer = _healthCheckTimer = _connectionWatchdogTimer = null;
+    _chunkStarvationTimer = _reconnectTimer = _healthCheckTimer = _connectionWatchdogTimer = null;
   }
 
   void _cancelInterruptionListener() {
