@@ -800,6 +800,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
   }
 
+  bool _isAlreadySubscribed(String subscriptionPlan) {
+    switch (_plan) {
+      case PlanType.premium:
+        return subscriptionPlan == 'Premium';
+      case PlanType.basic:
+        return subscriptionPlan == 'Basic';
+    }
+  }
+
   Future<void> _handleSubscribe() async {
     setState(() => _isLoading = true);
     try {
@@ -837,6 +846,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Widget build(BuildContext context) {
     _updateResponsiveValues();
     final planData = _plan == PlanType.premium ? _premiumPlan() : _basicPlan();
+    final status = context.watch<AppStatusController>();
+    final subscriptionPlan = status.subscriptionPlan ?? 'Unknown';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -958,54 +969,71 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                             isSmallScreen: _isSmallScreen,
                           ),
                           SizedBox(height: _isSmallScreen ? 24 : 32),
-                          SizedBox(
-                            width: double.infinity,
-                            height: _isSmallScreen ? 50 : 56,
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: _screenWidth > 600
-                                    ? 400
-                                    : double.infinity,
-                              ),
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _isLoading
-                                      ? Colors.grey
-                                      : _navy,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      _isSmallScreen ? 25 : 50,
-                                    ),
+
+                          Builder(
+                            builder: (context) {
+                              final alreadySubscribed = _isAlreadySubscribed(
+                                subscriptionPlan,
+                              );
+                              final isDisabled =
+                                  _isLoading || alreadySubscribed;
+                              return SizedBox(
+                                width: double.infinity,
+                                height: _isSmallScreen ? 50 : 56,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: _screenWidth > 600
+                                        ? 400
+                                        : double.infinity,
                                   ),
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: _isSmallScreen ? 12 : 24,
-                                  ),
-                                ),
-                                onPressed: _isLoading ? null : _handleSubscribe,
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.5,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Text(
-                                          'Subscribe',
-                                          style: AppTextStyles.button.copyWith(
-                                            color: Colors.white,
-                                            fontSize: _isSmallScreen ? 16 : 18,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _isLoading
+                                          ? Colors.grey
+                                          : _navy,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          _isSmallScreen ? 25 : 50,
                                         ),
                                       ),
-                              ),
-                            ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: _isSmallScreen ? 12 : 24,
+                                      ),
+                                    ),
+                                    onPressed: isDisabled
+                                        ? null
+                                        : _handleSubscribe,
+                                    child: _isLoading
+                                        ? const SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              alreadySubscribed
+                                                  ? 'Already Subscribed'
+                                                  : 'Subscribe',
+                                              style: AppTextStyles.button
+                                                  .copyWith(
+                                                    color: Colors.white,
+                                                    fontSize: _isSmallScreen
+                                                        ? 16
+                                                        : 18,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                           SizedBox(height: _isSmallScreen ? 12 : 16),
                           Row(

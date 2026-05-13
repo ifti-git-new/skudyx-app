@@ -10,6 +10,7 @@ import 'package:skudyx/core/controllers/app_status_controller.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/services/audio_foreground_service.dart'; // ✅ ADDED
 import 'package:skudyx/core/theme/app_text_styles.dart';
+import 'package:skudyx/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:skudyx/features/cases/presentation/controllers/live_case_call_controller.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 
@@ -59,6 +60,11 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<DeviceSessionController>();
+    final auth = context.watch<AuthController>();
+    final status = context.watch<AppStatusController>();
+    final subscriptionPlan = status.subscriptionPlan ?? 'Unknown';
+    //final subscriptionPlan = auth.state.user?.subscriptionPlan ?? 'Basic';
+
     final config = context.read<AppConfig>();
     final showInternalTesting = config.flavor != Flavor.prod;
     final width = MediaQuery.of(context).size.width;
@@ -145,9 +151,9 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
                 onChanged: (val) => setState(() => isActiveMode = val),
               ),
               const SizedBox(height: 28),
-              _BleCard(statusColor: statusColor, softColor: statusSoftColor),
+              _BleCard(statusColor: statusColor, softColor: statusSoftColor,subscriptionPlan: subscriptionPlan),
               const SizedBox(height: 28),
-              _SafetySection(showInternalTesting: showInternalTesting),
+              _SafetySection(showInternalTesting: showInternalTesting,subscriptionPlan: subscriptionPlan,),
             ],
           ),
         ),
@@ -254,14 +260,14 @@ class _ModeSwitcher extends StatelessWidget {
 class _BleCard extends StatelessWidget {
   final Color statusColor;
   final Color softColor;
+  final String subscriptionPlan;
 
-  const _BleCard({required this.statusColor, required this.softColor});
+  const _BleCard({required this.statusColor, required this.softColor,required this.subscriptionPlan});
 
   @override
   Widget build(BuildContext context) {
     final session = context.read<DeviceSessionController>();
-    final status = context.watch<AppStatusController>();
-    final subscriptionPlan = status.subscriptionPlan ?? 'Unknown';
+    
 
     return _ResponsiveCard(
       child: Column(
@@ -320,7 +326,8 @@ class _BleCard extends StatelessWidget {
 
 class _SafetySection extends StatefulWidget {
   final bool showInternalTesting;
-  const _SafetySection({required this.showInternalTesting});
+   final String subscriptionPlan;
+  const _SafetySection({required this.showInternalTesting,  required this.subscriptionPlan,});
 
   @override
   State<_SafetySection> createState() => _SafetySectionState();
@@ -329,49 +336,63 @@ class _SafetySection extends StatefulWidget {
 class _SafetySectionState extends State<_SafetySection> {
   bool _routingToTracking = false;
 
-  Future<void> _startLiveCase(BuildContext context) async {
+  Future<void> _startLiveCase(BuildContext context, String caseType) async {
     final session = context.read<DeviceSessionController>();
 
     setState(() => _routingToTracking = true);
 
     try {
-      final ok = await session.startCase(isTest: false, caseName: 'Live Case');
-
-      if (!mounted) return;
-
-      if (!ok || session.caseId == null) {
-        setState(() => _routingToTracking = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(session.lastError ?? 'Failed to start case'),
-            backgroundColor: Colors.red,
-          ),
+      if (caseType == 'Basic') {
+        final isOk = await session.startCase(
+          isTest: true,
+          caseName: 'Basic Live case',
+          caseType: 'Basic',
         );
-        return;
-      }
+        if (isOk) {
+          _showSuccessDialog(context);
+        }
+      } else {
+        final ok = await session.startCase(
+          isTest: false,
+          caseName: 'Live Case',
+        );
 
-      // ✅ Initialize LiveCaseCallController and store in session controller
-      final config = context.read<AppConfig>();
-      final liveCallController = LiveCaseCallController(
-        socketBaseUrl: config.wsUrl,
-        uploadBaseUrl: config.apiBaseUrl,
-        uploadEndpoint: '/api/v1/cases/upload-final-audio',
-        caseId: session.caseId.toString(),
-        isCaller: true,
-      );
+        if (!mounted) return;
 
-      await liveCallController.start();
+        if (!ok || session.caseId == null) {
+          setState(() => _routingToTracking = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(session.lastError ?? 'Failed to start case'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
 
-      // ✅ Store controller in DeviceSessionController for persistence
-      session.setLiveCallController(liveCallController);
+        // ✅ Initialize LiveCaseCallController and store in session controller
+        final config = context.read<AppConfig>();
+        final liveCallController = LiveCaseCallController(
+          socketBaseUrl: config.wsUrl,
+          uploadBaseUrl: config.apiBaseUrl,
+          uploadEndpoint: '/api/v1/cases/upload-final-audio',
+          caseId: session.caseId.toString(),
+          isCaller: true,
+        );
 
-      if (!mounted) return;
+        await liveCallController.start();
 
-      setState(() => _routingToTracking = false);
+        // ✅ Store controller in DeviceSessionController for persistence
+        session.setLiveCallController(liveCallController);
 
-      // ✅ USE GoRouter navigation (route is OUTSIDE ShellRoute → no bottom nav)
-      if (mounted) {
-        context.go(AppRoutes.liveCaseTracking);
+        if (!mounted) return;
+
+        setState(() => _routingToTracking = false);
+
+        // ✅ USE GoRouter navigation (route is OUTSIDE ShellRoute → no bottom nav)
+        if (mounted) {
+          context.go(AppRoutes.liveCaseTracking);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -383,7 +404,67 @@ class _SafetySectionState extends State<_SafetySection> {
           ),
         );
       }
+    }finally{
+      setState(() => _routingToTracking = false);
     }
+  }
+
+  void _showSuccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE8F5E9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF4CAF50),
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Success!',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Basic case has been created successfully.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.black54),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4CAF50),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text(
+                  'Done',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -392,7 +473,7 @@ class _SafetySectionState extends State<_SafetySection> {
 
     final bool isLoading =
         _routingToTracking || session.starting || session.statusUpdating;
-
+    final isPremium = widget.subscriptionPlan == 'Premium';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -427,9 +508,16 @@ class _SafetySectionState extends State<_SafetySection> {
           ),
           const SizedBox(height: 12),
           ElevatedButton(
-            onPressed: (isLoading || session.tracking)
+            onPressed: (isLoading)
                 ? null
-                : () => _startLiveCase(context),
+                : () {
+                    if (isPremium) {
+                      _startLiveCase(context, 'premium');
+                    } else {
+                      _startLiveCase(context, 'Basic');
+                      //_showUpgradeDialog(context);
+                    }
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF10B981),
               minimumSize: const Size(double.infinity, 48),

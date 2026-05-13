@@ -1628,6 +1628,7 @@ class DeviceSessionController extends ChangeNotifier
   Future<bool> startCase({
     required bool isTest,
     required String caseName,
+    String caseType = '',
   }) async {
     _log('🚀 [DeviceSession] startCase() CALLED');
     _log('🚀 [DeviceSession] isTest: $isTest, caseName: $caseName');
@@ -1702,20 +1703,22 @@ class DeviceSessionController extends ChangeNotifier
       lastStatus = (data['status'] ?? 'Pending').toString();
 
       starting = false;
-      tracking = true;
-      notifyListeners();
 
-      _log('📡 [DeviceSession] Joining case room via realtime service...');
-      final joined = await _joinRealtimeServicesWithRetry(
-        caseId: createdCaseId,
-      );
-      if (!joined) {
-        _log(
-          '⚠️ [DeviceSession] Realtime join failed, continuing with HTTP fallback...',
+      notifyListeners();
+      if (caseType != 'Basic') {
+        _log('📡 [DeviceSession] Joining case room via realtime service...');
+        final joined = await _joinRealtimeServicesWithRetry(
+          caseId: createdCaseId,
         );
+        if (!joined) {
+          _log(
+            '⚠️ [DeviceSession] Realtime join failed, continuing with HTTP fallback...',
+          );
+        }
       }
 
       if (createdCaseId.startsWith('CL')) {
+        tracking = true;
         _log('🎯 [DeviceSession] CL case — starting WebSocket audio streaming');
         try {
           final backendBaseUrl = caseApi.dio.options.baseUrl;
@@ -1767,6 +1770,9 @@ class DeviceSessionController extends ChangeNotifier
           _log('❌ [DeviceSession] WebSocket audio error: $e');
           notifyListeners();
         }
+      } else if (createdCaseId.startsWith('CB')) {
+        tracking = false;
+        return true;
       }
 
       await _sendInitialPositionToServer(firstPos);
