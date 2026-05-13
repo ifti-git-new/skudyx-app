@@ -14,16 +14,39 @@ class EmergencyContactScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Watch the controller. This triggers a rebuild when saveContact()
-    // or init() calls notifyListeners().
     final controller = context.watch<EmergencyContactController>();
-    final prefs = context.read<AppPrefs>();
 
-    // ✅ Logical Check: If the preference is true OR the controller has a contact loaded
-    if (prefs.ecAdded || controller.contact != null) {
+    // 🔄 Loading
+    if (controller.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // ❌ Error state (optional but recommended)
+    if (controller.errorMessage != null && controller.contact == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(controller.errorMessage!),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () =>
+                    context.read<EmergencyContactController>().init(),
+                child: const Text("Retry"),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ✅ If API returned contact
+    if (controller.contact != null) {
       return const _OverviewView();
     }
 
+    // ✅ No contact from API
     return const _WhyWeNeedThisView();
   }
 }
@@ -128,16 +151,7 @@ class _OverviewView extends StatelessWidget {
     final c = context.watch<EmergencyContactController>();
 
     // Fallback logic remains to prevent crashes if data is still loading
-    final contact =
-        c.contact ??
-        const EmergencyContactModel(
-          firstName: 'Jerome',
-          lastName: 'Bell',
-          phone: '+12 345 6789',
-          email: 'jerome.bell@yourmail.com',
-          relation: '-',
-          address: '21 East  Dhanmondi, Dhaka, Bangladesh',
-        );
+    final contact = c.contact!;
 
     return Scaffold(
       backgroundColor: Colors.white,

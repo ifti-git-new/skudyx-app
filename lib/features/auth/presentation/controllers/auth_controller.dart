@@ -88,13 +88,67 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  String _dioMessage(DioException e) {
+  /// Register a new user and auto-login on success.
+  /// Returns true on success, false on failure (check [state.errorMessage]).
+  Future<bool> register({
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String password,
+    String role = 'user',
+    String? address,
+  }) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    notifyListeners();
+ 
+    try {
+      final res = await api.register(
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        password: password,
+        role: role,
+        address: address,
+      );
+ 
+      // Auto-login: persist tokens returned from the register endpoint
+      await tokenStorage.saveTokens(
+        accessToken: res.accessToken,
+        refreshToken: res.refreshToken,
+        persist: true,
+      );
+ 
+      await prefs.setLoggedIn(true);
+ 
+      state = state.copyWith(
+        isAuthenticated: true,
+        isLoading: false,
+        errorMessage: null,
+      );
+      notifyListeners();
+      return true;
+    } on DioException catch (e) {
+      final msg = _dioMessage(e, fallback: 'Registration failed. Please try again.');
+      state = state.copyWith(isLoading: false, errorMessage: msg);
+      notifyListeners();
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Something went wrong. Please try again.',
+      );
+      notifyListeners();
+      return false;
+    }
+  }
+
+String _dioMessage(DioException e, {String? fallback}) {
     final data = e.response?.data;
     if (data is Map && data['message'] != null) {
       return data['message'].toString();
     }
     if (e.error is String) return e.error.toString();
-
+ 
     return switch (e.type) {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
@@ -102,8 +156,8 @@ class AuthController extends ChangeNotifier {
         'Connection timeout. Server may be waking up—please try again.',
       DioExceptionType.connectionError => 'No internet / connection error.',
       DioExceptionType.badResponse =>
-        'Login failed (${e.response?.statusCode ?? ''}).',
-      _ => 'Login failed. Please try again.',
+        '${fallback ?? 'Request failed'} (${e.response?.statusCode ?? ''}).',
+      _ => fallback ?? 'Request failed. Please try again.',
     };
   }
 

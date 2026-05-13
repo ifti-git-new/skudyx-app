@@ -13,6 +13,7 @@ class EmergencyContactController extends ChangeNotifier {
   bool emailVerified = false;
 
   bool isSaving = false;
+  bool isLoading = false;
   String? errorMessage;
 
   EmergencyContactController({required this.prefs, required this.api});
@@ -20,18 +21,14 @@ class EmergencyContactController extends ChangeNotifier {
   Future<void> init() async {
     phoneVerified = prefs.ecPhoneVerified;
     emailVerified = prefs.ecEmailVerified;
-
-    // If contact was previously added but app restarted, restore the data
-    if (prefs.ecAdded && contact == null) {
-      contact = const EmergencyContactModel(
-        firstName: 'Jerome',
-        lastName: 'Bell',
-        phone: '+12 345 6789',
-        email: 'jerome.bell@yourmail.com',
-        relation: '-',
-        address: '21 East  Dhanmondi, Dhaka, Bangladesh',
-      );
-    }
+await getContactFromBackend();
+    // Fetch live contact from backend if one was previously saved
+    // if (prefs.ecAdded && contact == null) {
+    //   await getContactFromBackend();
+    //   // getContactFromBackend calls notifyListeners() internally, so we return
+    //   // early to avoid a redundant extra notify below.
+    //   return;
+    // }
 
     notifyListeners();
   }
@@ -89,6 +86,61 @@ class EmergencyContactController extends ChangeNotifier {
       return false;
     } catch (_) {
       isSaving = false;
+      errorMessage = 'Something went wrong. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Fetch emergency contact from backend and hydrate local state.
+  /// Returns true on success, false on failure (check [errorMessage]).
+  Future<bool> getContactFromBackend() async {
+    if (isLoading) return false;
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final data = await api.getEmergencyContact();
+
+      // Map API snake_case fields → EmergencyContactModel
+      // contact_name may come as a single full-name string; split on first space
+      final rawName = (data['contact_name'] as String? ?? '').trim();
+      final spaceIndex = rawName.indexOf(' ');
+      final firstName =
+          spaceIndex != -1 ? rawName.substring(0, spaceIndex) : rawName;
+      final lastName =
+          spaceIndex != -1 ? rawName.substring(spaceIndex + 1) : '';
+
+      contact = EmergencyContactModel(
+        firstName: firstName,
+        lastName: lastName,
+        phone: (data['phone'] as String? ?? '').trim(),
+        email: (data['email'] as String? ?? '').trim(),
+        relation: (data['relation'] as String? ?? '').trim(),
+        address: (data['address'] as String? ?? '').trim(),
+      );
+
+      // Mark contact as added in prefs so init() doesn't overwrite on restart
+      await prefs.setEcAdded(true);
+
+      isLoading = false;
+      errorMessage = null;
+      notifyListeners();
+      return true;
+    } on DioException catch (e) {
+      final body = e.response?.data;
+      final msg = (body is Map && body['message'] != null)
+          ? body['message'].toString()
+          : (e.message ?? 'Failed to fetch emergency contact.');
+
+      isLoading = false;
+      errorMessage = msg;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      isLoading = false;
       errorMessage = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;

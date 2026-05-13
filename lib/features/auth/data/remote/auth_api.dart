@@ -87,6 +87,76 @@ class AuthApi {
         );
   }
 
+  /// Register a new user account
+  Future<({String accessToken, String refreshToken, Map<String, dynamic> user})>
+  register({
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String password,
+    String role = 'user',
+    String? address,
+  }) async {
+    try {
+      final res = await dio.post(
+        '/api/v1/auth/register',
+        data: {
+          'first_name': firstName.trim(),
+          'last_name': lastName.trim(),
+          'email': email.trim(),
+          'password': password,
+          'role': role,
+          if (address != null && address.trim().isNotEmpty)
+            'address': address.trim(),
+        },
+        options: Options(
+          extra: const {'requiresAuth': false},
+          receiveTimeout: const Duration(seconds: 60),
+          sendTimeout: const Duration(seconds: 40),
+        ),
+      );
+ 
+      final body = res.data;
+      if (body is! Map<String, dynamic>) {
+        throw DioException(
+          requestOptions: res.requestOptions,
+          error: 'Invalid response format',
+        );
+      }
+ 
+      if (body['success'] != true) {
+        final msg = (body['message'] ?? 'Registration failed').toString();
+        throw DioException(
+          requestOptions: res.requestOptions,
+          response: res,
+          error: msg,
+        );
+      }
+ 
+      final data = (body['data'] as Map<String, dynamic>);
+      final accessToken = (data['accessToken'] as String?) ?? '';
+      final refreshToken = (data['refreshToken'] as String?) ?? '';
+      final user =
+          (data['user'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+ 
+      if (accessToken.isEmpty || refreshToken.isEmpty) {
+        throw DioException(
+          requestOptions: res.requestOptions,
+          response: res,
+          error: 'Missing tokens from server',
+        );
+      }
+ 
+      return (
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        user: user,
+      );
+    } on DioException {
+      rethrow;
+    }
+  }
+
   /// Logout API call
   Future<void> logout() async {
     final res = await dio.post(

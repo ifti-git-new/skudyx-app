@@ -88,7 +88,7 @@ class AppRouter {
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(
         path: AppRoutes.register,
-        builder: (_, _) => const RegisterScreen(),
+        builder: (_, _) => const CreateAccountScreen(),
       ),
       GoRoute(
         path: AppRoutes.emailOtp,

@@ -36,4 +36,24 @@ class EmergencyContactApi {
 
     return (body['data'] as Map<String, dynamic>);
   }
+
+   Future<Map<String, dynamic>> getEmergencyContact() async {
+    final res = await dio.get(
+      '/api/v1/emergency-contact/view',
+      options: Options(extra: const {'requiresAuth': true}),
+    );
+ 
+    final body = res.data;
+    if (body is! Map<String, dynamic> || body['success'] != true) {
+      final msg =
+          (body is Map ? body['message'] : null) ?? 'Failed to fetch contact';
+      throw DioException(
+        requestOptions: res.requestOptions,
+        response: res,
+        error: msg.toString(),
+      );
+    }
+ 
+    return (body['data'] as Map<String, dynamic>);
+  }
 }
