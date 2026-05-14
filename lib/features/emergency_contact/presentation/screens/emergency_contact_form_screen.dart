@@ -20,14 +20,31 @@ class _EmergencyContactFormScreenState
   static const _navy = Color(0xFF081B4A);
   static const _sub = Color(0xFF6B7280);
 
-  final first = TextEditingController(text: 'Jerome');
-  final last = TextEditingController(text: 'Bell');
-  final phone = TextEditingController(text: '+8801611807607');
-  final email = TextEditingController(text: 'apusardar07+12@gmail.com');
-  final relation = TextEditingController(text: 'Father');
-  final address = TextEditingController(
-    text: '21 East Dhanmondi, Dhaka, Bangladesh',
-  );
+ final first = TextEditingController();
+final last = TextEditingController();
+final phone = TextEditingController();
+final email = TextEditingController();
+final relation = TextEditingController();
+final address = TextEditingController();
+bool _isInitialized = false;
+
+@override
+void didChangeDependencies() {
+  super.didChangeDependencies();
+
+  final contact = context.read<EmergencyContactController>().contact;
+
+  if (!_isInitialized && contact != null) {
+    first.text = contact.firstName;
+    last.text = contact.lastName;
+    phone.text = contact.phone;
+    email.text = contact.email;
+    relation.text = contact.relation;
+    address.text = contact.address;
+
+    _isInitialized = true;
+  }
+}
 
   @override
   void dispose() {
