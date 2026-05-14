@@ -7,11 +7,28 @@ import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/storage/app_prefs.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
-import 'package:skudyx/features/emergency/presentation/models/emergency_contact_model.dart';
+import 'package:skudyx/features/emergency/data/models/emergency_contact_model.dart';
 
-class EmergencyContactScreen extends StatelessWidget {
+class EmergencyContactScreen extends StatefulWidget {
   const EmergencyContactScreen({super.key});
 
+  @override
+  State<EmergencyContactScreen> createState() => _EmergencyContactScreenState();
+}
+
+class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
+   @override
+  void initState() {
+    super.initState();
+    // We'll load data in build first? No, better to trigger in build after first frame.
+    // Actually call init here but it will be fine because widget just created.
+    // The controller might not be ready? It's ready after build. Use addPostFrameCallback.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<EmergencyContactController>().init();
+      }
+    });
+  }
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<EmergencyContactController>();

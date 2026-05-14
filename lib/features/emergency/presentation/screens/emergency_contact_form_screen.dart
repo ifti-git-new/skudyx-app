@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
-import 'package:skudyx/features/emergency/presentation/models/emergency_contact_model.dart';
+import 'package:skudyx/features/emergency/data/models/emergency_contact_model.dart';
 
 class EmergencyContactFormScreen extends StatefulWidget {
   const EmergencyContactFormScreen({super.key});

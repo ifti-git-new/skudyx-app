@@ -19,7 +19,7 @@ import 'package:skudyx/features/cases/domain/services/websocket_audio_stream_ser
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
-import 'package:skudyx/features/emergency_contact/data/remote/emergency_contact_api.dart';
+import 'package:skudyx/features/emergency/data/remote/emergency_contact_api.dart';
 import 'package:skudyx/features/profile/controllers/identity_verification_controller.dart';
 import 'package:skudyx/features/profile/controllers/profile_controller.dart';
 import 'package:skudyx/features/profile/data/remote/profile_api.dart';

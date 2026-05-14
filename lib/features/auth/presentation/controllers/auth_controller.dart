@@ -18,6 +18,7 @@ class AuthController extends ChangeNotifier {
   bool _initialized = false;
 
   bool isLoggingOut = false;
+  String? otpErrorMessage ;
 
   AuthController({
     required this.prefs,
@@ -65,6 +66,7 @@ class AuthController extends ChangeNotifier {
       );
 
       await prefs.setLoggedIn(true);
+      await markOnboardingSeen();
 
       state = state.copyWith(
         isAuthenticated: true,
@@ -90,57 +92,92 @@ class AuthController extends ChangeNotifier {
 
   /// Register a new user and auto-login on success.
   /// Returns true on success, false on failure (check [state.errorMessage]).
-  Future<bool> register({
-    required String firstName,
-    required String lastName,
-    required String email,
-    required String password,
-    String role = 'user',
-    String? address,
-  }) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+ 
+Future<String?> register({
+  required String firstName,
+  required String lastName,
+  required String email,
+  required String password,
+  required String phone,
+  String? address,
+  String role = 'user',
+}) async {
+  state = state.copyWith(isLoading: true, errorMessage: null);
+  notifyListeners();
+
+  try {
+    final res = await api.register(
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      password: password,
+      role: role,
+      address: address,
+      phone: phone,
+    );
+
+    state = state.copyWith(isLoading: false);
     notifyListeners();
- 
-    try {
-      final res = await api.register(
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        password: password,
-        role: role,
-        address: address,
-      );
- 
-      // Auto-login: persist tokens returned from the register endpoint
-      await tokenStorage.saveTokens(
-        accessToken: res.accessToken,
-        refreshToken: res.refreshToken,
-        persist: true,
-      );
- 
-      await prefs.setLoggedIn(true);
- 
-      state = state.copyWith(
-        isAuthenticated: true,
-        isLoading: false,
-        errorMessage: null,
-      );
-      notifyListeners();
-      return true;
-    } on DioException catch (e) {
-      final msg = _dioMessage(e, fallback: 'Registration failed. Please try again.');
-      state = state.copyWith(isLoading: false, errorMessage: msg);
-      notifyListeners();
-      return false;
-    } catch (_) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: 'Something went wrong. Please try again.',
-      );
-      notifyListeners();
-      return false;
-    }
+
+    return res.email; // ✅ RETURN EMAIL HERE
+  } on DioException catch (e) {
+    final msg =
+        _dioMessage(e, fallback: 'Registration failed. Please try again.');
+    state = state.copyWith(isLoading: false, errorMessage: msg);
+    notifyListeners();
+    return null;
+  } catch (_) {
+    state = state.copyWith(
+      isLoading: false,
+      errorMessage: 'Something went wrong. Please try again.',
+    );
+    notifyListeners();
+    return null;
   }
+}
+
+
+Future<bool> verifyUserOtp({
+  required String email,
+  required String otp,
+}) async {
+  try {
+    otpErrorMessage = null;
+    notifyListeners();
+
+    final res = await api.verifyOtp(
+      email: email,
+      otp: otp,
+    );
+
+    /// ✅ SAVE TOKENS
+    await tokenStorage.saveTokens(
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      persist: true,
+    );
+
+    /// ✅ Mark logged in
+    await prefs.setLoggedIn(true);
+
+    state = state.copyWith(
+      isAuthenticated: true,
+    );
+
+    notifyListeners();
+
+    return true;
+  } on DioException catch (e) {
+    otpErrorMessage =
+        _dioMessage(e, fallback: 'Invalid or expired OTP');
+    notifyListeners();
+    return false;
+  } catch (_) {
+    otpErrorMessage = 'Something went wrong. Please try again.';
+    notifyListeners();
+    return false;
+  }
+}
 
 String _dioMessage(DioException e, {String? fallback}) {
     final data = e.response?.data;

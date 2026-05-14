@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
@@ -31,8 +33,8 @@ import 'package:skudyx/features/device/presentation/device_arrived_screen.dart';
 import 'package:skudyx/features/device/presentation/screens/device_searching_screen.dart';
 import 'package:skudyx/features/device/presentation/screens/device_list_screen.dart';
 import 'package:skudyx/features/device/presentation/screens/device_connected_screen.dart';
-import 'package:skudyx/features/emergency_contact/presentation/screens/emergency_contact_screen.dart';
-import 'package:skudyx/features/emergency_contact/presentation/screens/emergency_contact_form_screen.dart';
+import 'package:skudyx/features/emergency/presentation/screens/emergency_contact_screen.dart';
+import 'package:skudyx/features/emergency/presentation/screens/emergency_contact_form_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/complete_setup_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/notification_preferences_screen.dart';
 import 'package:skudyx/features/settings/presentation/screens/help_support_screen.dart';
@@ -55,29 +57,46 @@ class AppRouter {
     refreshListenable: auth,
     redirect: (context, state) {
       final loc = state.matchedLocation;
+
       if (loc == AppRoutes.splash) return null;
 
       final loggedIn = auth.state.isAuthenticated;
       final onboardingSeen = auth.state.onboardingSeen;
-      final prefs = auth.prefs;
+      log('loggedIn: $loggedIn, onboardingSeen: $onboardingSeen, loc: $loc');
 
-      final isAuthFlowRoute =
+      final isAuthRoute =
           loc == AppRoutes.login ||
           loc == AppRoutes.register ||
           loc == AppRoutes.emailOtp ||
-          loc == AppRoutes.forgotPassword ||
-          loc == AppRoutes.registerSuccess;
+          loc == AppRoutes.forgotPassword;
+
+      final isRegisterSuccess = loc == AppRoutes.registerSuccess;
 
       final isOnboardingRoute = loc.startsWith('/onboarding');
 
-      if (!loggedIn && !isAuthFlowRoute) return AppRoutes.login;
+      /// ✅ 1. Not logged in → only allow auth routes
+      if (!loggedIn) {
+        return isAuthRoute ? null : AppRoutes.login;
+      }
 
-      if (loggedIn && !onboardingSeen && !isOnboardingRoute) {
+      /// ✅ 2. Logged in but onboarding NOT seen
+      if (loggedIn && !onboardingSeen) {
+        // Allow register success page
+        if (isRegisterSuccess) return null;
+
+        // Allow onboarding pages
+        if (isOnboardingRoute) return null;
+
+        // Otherwise force onboarding
         return AppRoutes.instruction1;
       }
 
-      if (loggedIn && onboardingSeen && isAuthFlowRoute) {
-        return AppRoutes.device;
+      /// ✅ 3. Logged in + onboarding completed
+      if (loggedIn && onboardingSeen) {
+        // Prevent going back to auth pages
+        if (isAuthRoute || isRegisterSuccess) {
+          return AppRoutes.device;
+        }
       }
 
       return null;

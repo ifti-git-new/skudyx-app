@@ -89,7 +89,8 @@ class Instruction4Screen extends StatelessWidget {
                   if (context.mounted) {
                     // 2. Direct the user to the Subscription screen immediately
                     // instead of the Device tab to start the purchase/details flow.
-                    context.go(AppRoutes.subscription);
+                  //  context.go(AppRoutes.subscription);
+                  context.go(AppRoutes.device);
                   }
                 },
               ),

@@ -19,11 +19,15 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
   final _passwordController = TextEditingController();
 
   final _firstNameFocus = FocusNode();
   final _lastNameFocus = FocusNode();
   final _emailFocus = FocusNode();
+  final _phoneFocusNode = FocusNode();
+  final _addressFocusNode = FocusNode();
   final _passwordFocus = FocusNode();
 
   @override
@@ -31,9 +35,13 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
     _passwordController.dispose();
     _firstNameFocus.dispose();
     _lastNameFocus.dispose();
+    _phoneFocusNode.dispose();
+    _addressFocusNode.dispose();
     _emailFocus.dispose();
     _passwordFocus.dispose();
     super.dispose();
@@ -71,25 +79,28 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   // ── Register action ─────────────────────────────────────────────────────────
 
   Future<void> _onRegister() async {
-    // Dismiss keyboard
+    //context.push(AppRoutes.emailOtp, extra: 'abc@mail.com');
+   // Dismiss keyboard
     FocusScope.of(context).unfocus();
 
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final controller = context.read<AuthController>();
 
-    final success = await controller.register(
+    final registeredEmail = await controller.register(
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
+      phone: _phoneController.text.trim(),
+      address: _addressController.text,
     );
 
     if (!mounted) return;
 
-    if (success) {
-      // TODO: Navigate to home / onboarding
-      context.push(AppRoutes.emailOtp);
+    if (registeredEmail != null) {
+
+      context.push(AppRoutes.emailOtp,extra: registeredEmail);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Account created successfully!'),
@@ -194,8 +205,31 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       onFieldSubmitted: (_) =>
-                          FocusScope.of(context).requestFocus(_passwordFocus),
+                          FocusScope.of(context).requestFocus(_phoneFocusNode),
+
                       validator: _validateEmail,
+                    ),
+                    const SizedBox(height: 14),
+                    _buildFormField(
+                      controller: _phoneController,
+                      focusNode: _phoneFocusNode,
+                      hintText: 'Phone *',
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => FocusScope.of(
+                        context,
+                      ).requestFocus(_addressFocusNode),
+                      validator: (v) => _validateRequired(v, 'Phone'),
+                    ),
+                    const SizedBox(height: 14),
+                    _buildFormField(
+                      controller: _addressController,
+                      focusNode: _addressFocusNode,
+                      hintText: 'Address ',
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: null,
+                      // FocusScope.of(context).requestFocus(_passwordFocus),
+                      validator: null,
                     ),
 
                     const SizedBox(height: 14),
@@ -469,7 +503,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
       errorStyle: const TextStyle(fontSize: 11.5, color: Color(0xFFB71C1C)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       filled: true,
-      fillColor: const Color(0xFFF5F5F7),
+      fillColor: Colors.white,
     );
   }
 }

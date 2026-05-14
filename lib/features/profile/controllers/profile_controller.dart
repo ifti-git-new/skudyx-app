@@ -14,17 +14,17 @@ class ProfileController extends ChangeNotifier {
   String? errorMessage;
   bool _loadedOnce = false;
 
-  // Existing fields
-  String firstName = 'Theresa';
-  String lastName = 'Webb';
+  // ---------- Fields (initialised empty) ----------
+  String firstName = '';
+  String lastName = '';
 
-  int profilePercent = 75;
+  int profilePercent = 0;
 
-  String phone = '+12 345 6789';
-  bool phoneVerified = true;
+  String phone = '';
+  bool phoneVerified = false;
 
-  String email = 'jerome.bell@yourmail.com';
-  bool emailVerified = true;
+  String email = '';
+  bool emailVerified = false;
 
   String addressLine1 = '';
   String addressLine2 = '';
@@ -34,8 +34,30 @@ class ProfileController extends ChangeNotifier {
   String country = '';
 
   bool identityVerified = false;
+  void _resetFields() {
+  firstName = '';
+  lastName = '';
+  profilePercent = 0;
+  phone = '';
+  phoneVerified = false;
+  email = '';
+  emailVerified = false;
+  addressLine1 = '';
+  addressLine2 = '';
+  city = '';
+  state = '';
+  zip = '';
+  country = '';
+  identityVerified = false;
+}
 
-  String get fullName => '$firstName $lastName';
+  // ---------- Derived getters ----------
+  String get fullName {
+    final f = firstName.trim();
+    final l = lastName.trim();
+    if (f.isEmpty && l.isEmpty) return '—';
+    return '$f $l'.trim();
+  }
 
   String get addressDisplay {
     final parts = [
@@ -53,8 +75,9 @@ class ProfileController extends ChangeNotifier {
 
   /// Call from ProfileScreen initState and RefreshIndicator.
   Future<void> loadProfile({bool force = false}) async {
-    if (_loadedOnce && !force) return;
+    //if (_loadedOnce && !force) return;
     if (isLoading) return;
+     _resetFields(); 
 
     isLoading = true;
     errorMessage = null;
@@ -63,8 +86,9 @@ class ProfileController extends ChangeNotifier {
     try {
       final body = await api.getProfile();
 
-      // completion_percentage
-      profilePercent = (body['completion_percentage'] as num?)?.toInt() ?? 0;
+      // completion_percentage is often a top-level field
+      profilePercent =
+          (body['completion_percentage'] as num?)?.toInt() ?? 0;
 
       final data = body['data'];
       log('Profile data loaded: $data');
@@ -75,17 +99,16 @@ class ProfileController extends ChangeNotifier {
         );
       }
 
-      // Map fields from response
-      firstName = (data['first_name'] ?? firstName).toString();
-      lastName = (data['last_name'] ?? lastName).toString();
+      // Map every field from the response – fallback to empty string
+      firstName = (data['first_name'] ?? '').toString();
+      lastName = (data['last_name'] ?? '').toString();
 
-      phone = (data['phone'] ?? phone).toString();
-      email = (data['email'] ?? email).toString();
+      phone = (data['phone'] ?? '').toString();
+      email = (data['email'] ?? '').toString();
 
-      phoneVerified = (data['phoneVerified'] as bool?) ?? phoneVerified;
-      emailVerified = (data['emailVerified'] as bool?) ?? emailVerified;
+      phoneVerified = (data['phoneVerified'] as bool?) ?? false;
+      emailVerified = (data['emailVerified'] as bool?) ?? false;
 
-      // address + parts
       addressLine1 = (data['address'] ?? '').toString();
       addressLine2 = (data['address_line_2'] ?? '').toString();
       city = (data['city'] ?? '').toString();
@@ -94,9 +117,8 @@ class ProfileController extends ChangeNotifier {
       country = (data['country'] ?? '').toString();
 
       // identity
-      final identityStatus = (data['identityStatus'] ?? '')
-          .toString()
-          .toLowerCase();
+      final identityStatus =
+          (data['identityStatus'] ?? '').toString().toLowerCase();
       final isCardVerified = (data['isCardVerified'] as bool?) ?? false;
       identityVerified = identityStatus == 'verified' || isCardVerified;
 
@@ -121,7 +143,7 @@ class ProfileController extends ChangeNotifier {
     }
   }
 
-  // Keep your existing local edit method
+  /// Local update (after editing) – keeps fields in sync
   void updateProfile({
     required String firstName,
     required String lastName,
@@ -133,6 +155,7 @@ class ProfileController extends ChangeNotifier {
     required String zip,
     required String country,
   }) {
+    // If phone changed, reset verification
     if (this.phone.trim() != phone.trim()) {
       phoneVerified = false;
     }

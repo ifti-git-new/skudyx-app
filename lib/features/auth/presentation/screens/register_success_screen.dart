@@ -53,7 +53,7 @@ class RegisterSuccessScreen extends StatelessWidget {
                   ),
                   onPressed: () async {
                     // await auth.mockLogin(isNewUser: true);
-                    // if (context.mounted) context.go(AppRoutes.instruction1);
+                    context.push(AppRoutes.instruction1);
                   },
                   child: const Text(
                     'Done',

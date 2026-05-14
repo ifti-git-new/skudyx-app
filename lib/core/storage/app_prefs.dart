@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPrefs {
@@ -6,9 +7,33 @@ class AppPrefs {
   AppPrefs(this._sp);
 
   static Future<AppPrefs> create() async {
+   
     final sp = await SharedPreferences.getInstance();
+    await clearSecureStorageOnFreshInstall(sp);
     return AppPrefs(sp);
   }
+
+static Future<void> clearSecureStorageOnFreshInstall(SharedPreferences sp) async {
+  final sp = await SharedPreferences.getInstance();
+
+  const installKey = 'app_install_id';
+
+  final installId = sp.getString(installKey);
+
+  // Fresh install detected
+  if (installId == null) {
+    const secureStorage = FlutterSecureStorage();
+
+    // Clear iOS keychain / secure storage
+    await secureStorage.deleteAll();
+
+    // Save install marker
+    await sp.setString(
+      installKey,
+      DateTime.now().millisecondsSinceEpoch.toString(),
+    );
+  }
+}
 
   // ---------------------------
   // Keys
