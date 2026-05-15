@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
+import 'package:skudyx/features/delivery/presentation/controller/delivery_details_controller.dart';
 
 import '../../../../core/controllers/app_status_controller.dart';
 import '../../../../core/navigation/app_routes.dart';
@@ -17,19 +18,16 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
   static const _navy = Color(0xFF081B4A);
   static const _subText = Color(0xFF6B7280);
 
-  final _firstName = TextEditingController(text: 'Jerome');
-  final _phone = TextEditingController(text: '+12 345 6789');
-  final _addr1 = TextEditingController(
-    text: '21 East Dhanmondi, Dhaka, Bangladesh',
-  );
-  final _addr2 = TextEditingController(
-    text: '21 East Dhanmondi, Dhaka, Bangladesh',
-  );
+  final _firstName = TextEditingController();
+  final _phone = TextEditingController();
+  final _addr1 = TextEditingController();
+  final _addr2 = TextEditingController();
   final _city = TextEditingController();
   final _state = TextEditingController();
-  final _zip = TextEditingController(text: '-');
+  final _zip = TextEditingController();
 
   String _country = '-';
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -43,10 +41,63 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
     super.dispose();
   }
 
-  /// ✅ Logic for Cancel Button
-  /// Redirects to Device Screen where logic will show _PurchasedNoDeliveryView
   void _onCancelPressed() {
     context.go(AppRoutes.device);
+  }
+
+  Future<void> _onConfirm() async {
+    if (_isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    final deliveryData = {
+      'fullName': _firstName.text.trim(),
+      'phone': _phone.text.trim(),
+      'addressLine1': _addr1.text.trim(),
+      'addressLine2': _addr2.text.trim(),
+      'city': _city.text.trim(),
+      'state': _state.text.trim(),
+      'zipCode': _zip.text.trim(),
+      'country': _country,
+    };
+
+    try {
+      final controller = context.read<DeviceDeliveryController>();
+      final success = await controller.submitDeliveryDetails(deliveryData);
+
+      if (!mounted) return;
+
+      if (success) {
+        // Update local app status if needed
+        await context.read<AppStatusController>().setHasDeliveryDetails(true);
+        if (context.mounted) {
+          context.go(AppRoutes.device);
+        }
+      } else {
+        final msg =
+            controller.errorMessage ?? 'Failed to save delivery details';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Something went wrong'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   @override
@@ -68,20 +119,23 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
                   borderRadius: BorderRadius.circular(50),
                 ),
               ),
-              onPressed: () async {
-                // Update status and navigate to Device Tab
-                await context.read<AppStatusController>().setHasDeliveryDetails(
-                  true,
-                );
-                if (context.mounted) context.go(AppRoutes.device);
-              },
-              child: Text(
-                'Confirm',
-                style: AppTextStyles.button.copyWith(
-                  color: Colors.white,
-                  fontSize: 18,
-                ),
-              ),
+              onPressed: _isSubmitting ? null : _onConfirm,
+              child: _isSubmitting
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      'Confirm',
+                      style: AppTextStyles.button.copyWith(
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -90,7 +144,6 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
         child: Column(
           children: [
             const SizedBox(height: 10),
-            // Header: Close Button with "Cancel" text
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: InkWell(

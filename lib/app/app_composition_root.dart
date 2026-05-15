@@ -16,6 +16,9 @@ import 'package:skudyx/features/auth/data/social/google_auth_provider.dart';
 import 'package:skudyx/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:skudyx/features/cases/data/remote/case_api.dart';
 import 'package:skudyx/features/cases/domain/services/websocket_audio_stream_service.dart';
+import 'package:skudyx/features/delivery/data/remote/device_delivery_api.dart';
+import 'package:skudyx/features/delivery/presentation/controller/delivery_details_controller.dart';
+import 'package:skudyx/features/delivery/presentation/screens/delivery_details_screen.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_scan_controller.dart';
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 import 'package:skudyx/features/emergency/presentation/controllers/emergency_contact_controller.dart';
@@ -107,8 +110,12 @@ class AppCompositionRoot extends StatelessWidget {
         ProxyProvider<Dio, ProfileApi>(
           update: (_, dio, __) => ProfileApi(dio: dio),
         ),
+        
         ProxyProvider<Dio, ProfileUpdateApi>(
           update: (_, dio, __) => ProfileUpdateApi(dio: dio),
+        ),
+        ProxyProvider<Dio, DeviceDeliveryApi>(
+          update: (_, dio, __) => DeviceDeliveryApi(dio: dio),
         ),
         ProxyProvider<Dio, SubscriptionApi>(
           update: (_, dio, __) => SubscriptionApi(dio: dio),
@@ -151,6 +158,9 @@ class AppCompositionRoot extends StatelessWidget {
         ),
         ChangeNotifierProvider<ProfileController>(
           create: (c) => ProfileController(api: c.read<ProfileApi>()),
+        ),
+        ChangeNotifierProvider<DeviceDeliveryController>(
+          create: (c) => DeviceDeliveryController(api: c.read<DeviceDeliveryApi>()),
         ),
         ChangeNotifierProvider<NotificationPrefsController>(
           create: (c) =>

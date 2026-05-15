@@ -72,19 +72,19 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
     final statusColor = isActiveMode ? _green : _orange;
     final statusSoftColor = isActiveMode ? _greenSoft : _orangeSoft;
 
-    if (!session.isConnected) {
-      return const Scaffold(
-        backgroundColor: _bg,
-        body: SafeArea(
-          child: Center(
-            child: Text(
-              'No device connected',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-      );
-    }
+    // if (!session.isConnected) {
+    //   return const Scaffold(
+    //     backgroundColor: _bg,
+    //     body: SafeArea(
+    //       child: Center(
+    //         child: Text(
+    //           'No device connected',
+    //           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+    //         ),
+    //       ),
+    //     ),
+    //   );
+    // }
 
     return Scaffold(
       backgroundColor: _bg,

@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:skudyx/features/profile/data/model/profile_model.dart';
 import 'package:skudyx/features/profile/data/remote/profile_api.dart';
 
 class ProfileController extends ChangeNotifier {
@@ -13,6 +14,10 @@ class ProfileController extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
   bool _loadedOnce = false;
+
+  ProfileModel? _profileModel;
+  ProfileModel? get profileModel => _profileModel;
+  
 
   // ---------- Fields (initialised empty) ----------
   String firstName = '';
@@ -77,6 +82,7 @@ class ProfileController extends ChangeNotifier {
   Future<void> loadProfile({bool force = false}) async {
     //if (_loadedOnce && !force) return;
     if (isLoading) return;
+    _profileModel = null;
      _resetFields(); 
 
     isLoading = true;
@@ -87,17 +93,22 @@ class ProfileController extends ChangeNotifier {
       final body = await api.getProfile();
 
       // completion_percentage is often a top-level field
+      if(body.isNotEmpty){
+
+      }
       profilePercent =
           (body['completion_percentage'] as num?)?.toInt() ?? 0;
 
       final data = body['data'];
       log('Profile data loaded: $data');
+      
       if (data is! Map<String, dynamic>) {
         throw DioException(
           requestOptions: RequestOptions(path: '/api/v1/users/profile'),
           error: 'Invalid profile response: data is missing',
         );
       }
+      _profileModel = ProfileModel.fromJson(body);
 
       // Map every field from the response – fallback to empty string
       firstName = (data['first_name'] ?? '').toString();

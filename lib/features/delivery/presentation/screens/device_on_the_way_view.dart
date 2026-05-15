@@ -6,18 +6,48 @@ import 'package:skudyx/core/controllers/app_status_controller.dart';
 import 'package:skudyx/core/navigation/app_routes.dart';
 import 'package:skudyx/core/theme/app_colors.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
+import 'package:skudyx/features/delivery/presentation/controller/delivery_details_controller.dart';
 
-class DeviceOnTheWayView extends StatelessWidget {
+class DeviceOnTheWayView extends StatefulWidget {
   const DeviceOnTheWayView({super.key});
 
-  // static  _titleStyle = AppTextStyles.h2light.copyWith(
-  //   fontSize: 26,
-  //   fontWeight: FontWeight.w700,
-  //   height: 1.2,
-  // );
+  // static final _dateFormat = DateFormat("EEEE, MMM d, yyyy h:mm a");
+
+  // Define the static steps (title ↔ API status value)
+  static const _steps = [
+    _StepInfo(title: 'Order Placed', statusKey: 'Placed'),
+    _StepInfo(title: 'Order Confirm', statusKey: 'confirmed'),
+    _StepInfo(title: 'Shipped', statusKey: 'Shipped'),
+  ];
 
   @override
+  State<DeviceOnTheWayView> createState() => _DeviceOnTheWayViewState();
+}
+
+class _DeviceOnTheWayViewState extends State<DeviceOnTheWayView> {
+  @override
   Widget build(BuildContext context) {
+    final controller = context.watch<DeviceDeliveryController>(); // adjust to your actual controller
+    final order = controller.orderDetailsModel;
+
+    // Show loading spinner if order is still being fetched
+    if (controller.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (order == null) {
+      return const Scaffold(
+        body: Center(child: Text('No order information available')),
+      );
+    }
+
+    // Determine current step index based on global status.
+    // If the status is unknown, assume 0.
+    final currentIdx = DeviceOnTheWayView._steps.indexWhere((s) => s.statusKey == order.data?.status);
+    final effectiveIdx = currentIdx >= 0 ? currentIdx : -1; // -1 means no step done
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -33,64 +63,32 @@ class DeviceOnTheWayView extends StatelessWidget {
               ),
               const SizedBox(height: 26),
 
-              const _TimelineItem(
-                done: true,
-                isLast: false,
-                title: 'Order Placed',
-                subtitle: 'Tuesday, Jan 27, 2026 12:34 PM',
-              ),
-              const SizedBox(height: 14),
-              const _TimelineItem(
-                done: true,
-                isLast: false,
-                title: 'Order Confirm',
-                subtitle: 'Tuesday, Jan 27, 2026 12:34 PM',
-              ),
-              const SizedBox(height: 14),
+              // Build dynamic timeline
+              ...List.generate(DeviceOnTheWayView._steps.length, (i) {
+                final step = DeviceOnTheWayView._steps[i];
+                final done = i <= effectiveIdx;
+                // final timelineEntry = order.data?.timeline?.firstWhere(
+                //   (t) => t.status == step.statusKey,
+                //   orElse: () => null,
+                //);
+                // final subtitle = timelineEntry != null
+                //     ? _formatTimestamp(timelineEntry.timestamp)
+                //     : done
+                //         ? _formatTimestamp(order.createdAt) // fallback: order creation date
+                //         : 'Pending...';
 
-              InkWell(
-                onTap: () async {
-                  await context.read<AppStatusController>().setDeviceArrived(
-                    true,
-                  );
-                  if (context.mounted) context.push(AppRoutes.deviceArrived);
-                },
-                child: const _TimelineItem(
-                  done: false,
-                  isLast: true,
-                  title: 'Shipped',
-                  subtitle: 'Pending...',
-                ),
-              ),
+                return Padding(
+                  padding: EdgeInsets.only(bottom: i == DeviceOnTheWayView._steps.length - 1 ? 0 : 14),
+                  child: _TimelineItem(
+                    done: done,
+                    isLast: i == DeviceOnTheWayView._steps.length - 1,
+                    title: step.title,
+                    subtitle: '',
+                  ),
+                );
+              }),
+
               const Spacer(),
-
-              // TEMP BUTTON
-              // SizedBox(
-              //   width: 220,
-              //   height: 48,
-              //   child: ElevatedButton(
-              //     style: ElevatedButton.styleFrom(
-              //       backgroundColor: AppColors.primary,
-              //       foregroundColor: Colors.white,
-              //       elevation: 0,
-              //       shape: RoundedRectangleBorder(
-              //         borderRadius: BorderRadius.circular(12),
-              //       ),
-              //     ),
-              //     onPressed: () async {
-              //       await context.read<AppStatusController>().setDeviceArrived(
-              //         true,
-              //       );
-              //       if (context.mounted) context.push(AppRoutes.deviceArrived);
-              //     },
-              //     child: Text(
-              //       'Shipped',
-              //       style: AppTextStyles.button.copyWith(
-              //         fontWeight: FontWeight.w700,
-              //       ),
-              //     ),
-              //   ),
-              // ),
               const SizedBox(height: 22),
             ],
           ),
@@ -99,6 +97,7 @@ class DeviceOnTheWayView extends StatelessWidget {
     );
   }
 }
+
 
 class _TimelineItem extends StatelessWidget {
   final bool done;
@@ -177,4 +176,10 @@ class _TimelineItem extends StatelessWidget {
       ],
     );
   }
+}
+
+class _StepInfo {
+  final String title;
+  final String statusKey;
+  const _StepInfo({required this.title, required this.statusKey});
 }
