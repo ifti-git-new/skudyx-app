@@ -12,7 +12,7 @@ class RegisterSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.read<AuthController>();
+   
 
     return Scaffold(
       body: SafeArea(
@@ -53,7 +53,7 @@ class RegisterSuccessScreen extends StatelessWidget {
                   ),
                   onPressed: () async {
                     // await auth.mockLogin(isNewUser: true);
-                    context.push(AppRoutes.instruction1);
+                    context.go(AppRoutes.instruction1);
                   },
                   child: const Text(
                     'Done',

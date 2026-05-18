@@ -121,7 +121,7 @@ class AppCompositionRoot extends StatelessWidget {
           update: (_, dio, __) => SubscriptionApi(dio: dio),
         ),
         ChangeNotifierProvider<AppStatusController>(
-          create: (c) => AppStatusController(prefs: c.read<AppPrefs>()),
+          create: (c) => AppStatusController(prefs: c.read<AppPrefs>(),subscriptionApi: c.read<SubscriptionApi>()),
         ),
         ChangeNotifierProvider<DeviceScanController>(
           create: (_) => DeviceScanController(),
@@ -157,7 +157,7 @@ class AppCompositionRoot extends StatelessWidget {
           )..init(),
         ),
         ChangeNotifierProvider<ProfileController>(
-          create: (c) => ProfileController(api: c.read<ProfileApi>()),
+          create: (c) => ProfileController(api: c.read<ProfileApi>(),prefs: c.read<AppPrefs>()),
         ),
         ChangeNotifierProvider<DeviceDeliveryController>(
           create: (c) => DeviceDeliveryController(api: c.read<DeviceDeliveryApi>()),

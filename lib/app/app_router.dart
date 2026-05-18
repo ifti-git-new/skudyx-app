@@ -55,52 +55,48 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash,
     refreshListenable: auth,
-    redirect: (context, state) {
-      final loc = state.matchedLocation;
+//   redirect: (context, state) {
+//   final loc = state.matchedLocation;
 
-      if (loc == AppRoutes.splash) return null;
+//   if (loc == AppRoutes.splash) return null;
 
-      final loggedIn = auth.state.isAuthenticated;
-      final onboardingSeen = auth.state.onboardingSeen;
-      log('loggedIn: $loggedIn, onboardingSeen: $onboardingSeen, loc: $loc');
+//   final loggedIn = auth.state.isAuthenticated;
+//   final onboardingSeen = auth.state.onboardingSeen;
 
-      final isAuthRoute =
-          loc == AppRoutes.login ||
-          loc == AppRoutes.register ||
-          loc == AppRoutes.emailOtp ||
-          loc == AppRoutes.forgotPassword;
+//   final isAuthRoute =
+//       loc == AppRoutes.login ||
+//       loc == AppRoutes.register ||
+//       loc == AppRoutes.emailOtp ||
+//       loc == AppRoutes.forgotPassword;
 
-      final isRegisterSuccess = loc == AppRoutes.registerSuccess;
+//   final isRegisterSuccess = loc == AppRoutes.registerSuccess;
+//   final isOnboardingRoute = loc.startsWith('/onboarding');
 
-      final isOnboardingRoute = loc.startsWith('/onboarding');
+//   // ✅ Not logged in
+//   if (!loggedIn) {
+//     return isAuthRoute ? null : AppRoutes.login;
+//   }
 
-      /// ✅ 1. Not logged in → only allow auth routes
-      if (!loggedIn) {
-        return isAuthRoute ? null : AppRoutes.login;
-      }
+//   // ✅ Logged in, onboarding NOT seen
+//   if (!onboardingSeen) {
+//     // Allow register success + onboarding pages to render freely
+//     if (isRegisterSuccess || isOnboardingRoute) return null;
 
-      /// ✅ 2. Logged in but onboarding NOT seen
-      if (loggedIn && !onboardingSeen) {
-        // Allow register success page
-        if (isRegisterSuccess) return null;
+//     // ✅ If on an auth route after login (e.g. OTP just succeeded),
+//     // go to register success first — NOT device
+//     if (isAuthRoute) return AppRoutes.registerSuccess;
 
-        // Allow onboarding pages
-        if (isOnboardingRoute) return null;
+//     // Any other page → force onboarding
+//     return AppRoutes.instruction1;
+//   }
 
-        // Otherwise force onboarding
-        return AppRoutes.instruction1;
-      }
+//   // ✅ Logged in, onboarding completed
+//   if (isAuthRoute || isRegisterSuccess) {
+//     return AppRoutes.device;
+//   }
 
-      /// ✅ 3. Logged in + onboarding completed
-      if (loggedIn && onboardingSeen) {
-        // Prevent going back to auth pages
-        if (isAuthRoute || isRegisterSuccess) {
-          return AppRoutes.device;
-        }
-      }
-
-      return null;
-    },
+//   return null;
+// },
     routes: [
       // --- ROOT LEVEL ROUTES (NO BOTTOM BAR) ---
       GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),

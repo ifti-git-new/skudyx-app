@@ -25,6 +25,15 @@ class DeviceOnTheWayView extends StatefulWidget {
 }
 
 class _DeviceOnTheWayViewState extends State<DeviceOnTheWayView> {
+    @override
+ void initState() {
+    super.initState();
+
+    // Call API after widget is created
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DeviceDeliveryController>().fetchMyOrder();
+    });
+  }
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<DeviceDeliveryController>(); // adjust to your actual controller

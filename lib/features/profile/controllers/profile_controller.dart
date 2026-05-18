@@ -2,13 +2,16 @@ import 'dart:developer';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:skudyx/core/controllers/app_status_controller.dart';
+import 'package:skudyx/core/storage/app_prefs.dart';
 import 'package:skudyx/features/profile/data/model/profile_model.dart';
 import 'package:skudyx/features/profile/data/remote/profile_api.dart';
 
 class ProfileController extends ChangeNotifier {
   final ProfileApi api;
+  final AppPrefs prefs;
 
-  ProfileController({required this.api});
+  ProfileController({required this.api, required this.prefs});
 
   // UI state
   bool isLoading = false;
@@ -109,6 +112,15 @@ class ProfileController extends ChangeNotifier {
         );
       }
       _profileModel = ProfileModel.fromJson(body);
+      if(profileModel?.data?.subscriptionPlan != null){
+        final isSubscribed = profileModel!.data!.subscriptionPlan != 'N/A' && profileModel!.data!.subscriptionStatus == 'Active';
+        setSubscription(subscribed: isSubscribed, plan: profileModel!.data!.subscriptionPlan!);
+
+      }else{
+         setSubscription(subscribed: false, plan: 'N/A');
+      }
+      
+    
 
       // Map every field from the response – fallback to empty string
       firstName = (data['first_name'] ?? '').toString();
@@ -152,6 +164,16 @@ class ProfileController extends ChangeNotifier {
       errorMessage = 'Something went wrong. Please try again.';
       notifyListeners();
     }
+  }
+    Future<void> setSubscription({
+    required bool subscribed,
+    required String plan,
+  }) async {
+    // _isSubscribed = subscribed;
+    // _subscriptionPlan = plan;
+  //  notifyListeners();
+    await prefs.setIsSubscribed(subscribed);
+    await prefs.setSubscriptionPlan(plan);
   }
 
   /// Local update (after editing) – keeps fields in sync

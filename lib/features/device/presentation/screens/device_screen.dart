@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:skudyx/features/delivery/presentation/controller/delivery_details_controller.dart';
 import 'package:skudyx/features/device/presentation/device_arrived_screen.dart';
 import 'package:skudyx/features/profile/controllers/profile_controller.dart';
 
@@ -26,54 +27,135 @@ class _DeviceScreenState extends State<DeviceScreen> {
     // Fetch the fresh profile on screen load
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProfileController>().loadProfile();
+     // _handleConditionalAPIcalls();
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final status = context.watch<AppStatusController>();
-    final session = context.watch<DeviceSessionController>();
-    final profileCtrl = context.watch<ProfileController>();
+  // void _handleConditionalAPIcalls() {
+  //   final profile = context.read<ProfileController>().profileModel;
+  //   if (profile == null) return;
+  //   final data = profile.data;
+  //   final shouldLoadDelivery =
+  //       data?.subscriptionPlan != 'N/A' &&
+  //       data?.subscriptionStatus == 'Active' &&
+  //       data?.orderStatus == 'Placed' &&
+  //       data?.bleDeviceId == null;
+  //   if (shouldLoadDelivery) {
+  //     context.read<DeviceDeliveryController>().fetchMyOrder();
+  //   }
+  // }
 
-    final profileData = profileCtrl.profileModel;
-    if (profileData != null) {
-      final subscriptionPlan = profileData.data!.subscriptionPlan;
-      final subscriptionStatus = profileData.data!.subscriptionStatus;
-      final bleDeviceID = profileData.data!.bleDeviceId;
-      final orderStatus = profileData.data!.orderStatus;
-      if (subscriptionPlan == 'N/A') {
-        return _NotPurchasedView();
-      } else if (subscriptionPlan != 'N/A' &&
-          subscriptionStatus == 'Active' &&
-          bleDeviceID == null && orderStatus == null) {
-        return _PurchasedNoDeliveryView();
-      } else if (subscriptionPlan != 'N/A' &&
-          subscriptionStatus == 'Active' &&
-          orderStatus == 'Placed' && //placed/confirm
-          bleDeviceID == null) {
-        return DeviceOnTheWayView();
-      } else if (subscriptionPlan != 'N/A' &&
-          subscriptionStatus == 'Active' &&
-          orderStatus == 'Shipped' && //placed/confirm
-          bleDeviceID == null) {
-        return DeviceArrivedScreen();
-      } else {
-        return DeviceConnectedScreen();
-      }
-    } else {
-      return SizedBox.shrink();
-    }
+ @override
+Widget build(BuildContext context) {
+  final profileCtrl = context.watch<ProfileController>();
+  final profileData = profileCtrl.profileModel;
 
-    // ✅ If device arrived -> show connected/list based on session
-    // if (status.deviceArrived) {
-    //   return session.isConnected
-    //       ? const DeviceConnectedScreen()
-    //       : const DeviceListScreen();
-    // }
+  // 1. Loading
+  if (profileCtrl.isLoading) {
+    return const Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 12),
+            Text(
+              "Preparing your device dashboard...",
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-    // if (!status.isSubscribed) return const _NotPurchasedView();
-    // if (!status.hasDeliveryDetails) return const _PurchasedNoDeliveryView();
-    // return const DeviceOnTheWayView();
+  // 2. Failed to load
+  if (profileData == null) {
+    return _profileErrorWidget(profileCtrl);
+  }
+
+  // 3. Profile loaded — check subscription/device state
+  final subscriptionPlan = profileData.data!.subscriptionPlan;
+  final subscriptionStatus = profileData.data!.subscriptionStatus;
+  final bleDeviceID = profileData.data!.bleDeviceId;
+  final orderStatus = profileData.data!.orderStatus;
+
+  if (subscriptionPlan == 'N/A') {
+    return _NotPurchasedView();
+  }
+
+  if (subscriptionStatus == 'Active' && bleDeviceID == null && orderStatus == null) {
+    return _PurchasedNoDeliveryView();
+  }
+
+  if (subscriptionStatus == 'Active' && orderStatus == 'Placed' && bleDeviceID == null) {
+    return DeviceArrivedScreen();
+    //return DeviceOnTheWayView();
+  }
+   if (subscriptionStatus == 'Active' && orderStatus == 'Confirmed' && bleDeviceID == null) {
+    return DeviceArrivedScreen();
+    //return DeviceOnTheWayView();
+  }
+
+  if (subscriptionStatus == 'Active' && orderStatus == 'Shipped' && bleDeviceID == null) {
+    return DeviceArrivedScreen();
+  }
+
+  return DeviceConnectedScreen();
+}
+
+  Scaffold _profileErrorWidget(ProfileController profileCtrl) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                const Text(
+                  'Unable to load your profile',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Something went wrong while fetching your data.\nPlease try again.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                  onPressed: () => profileCtrl
+                      .loadProfile(), // 👈 replace with your actual refresh method
+                  icon: const Icon(Icons.refresh),
+                  label: const Text(
+                    'Retry',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -171,7 +253,7 @@ class _PurchasedNoDeliveryView extends StatelessWidget {
                       ),
                     ),
                     // ✅ Restore real navigation
-                    onPressed: () => context.push(AppRoutes.deliveryDetails),
+                    onPressed: () => context.go(AppRoutes.deliveryDetails),
                     child: const Text(
                       'Add Delivery Address',
                       style: TextStyle(fontWeight: FontWeight.w700),

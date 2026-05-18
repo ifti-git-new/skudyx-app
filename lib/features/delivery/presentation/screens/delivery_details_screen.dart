@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:skudyx/core/theme/app_text_styles.dart';
 import 'package:skudyx/features/delivery/presentation/controller/delivery_details_controller.dart';
+import 'package:skudyx/features/profile/controllers/profile_controller.dart';
 
 import '../../../../core/controllers/app_status_controller.dart';
 import '../../../../core/navigation/app_routes.dart';
@@ -42,6 +43,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
   }
 
   void _onCancelPressed() {
+    context.read<ProfileController>().loadProfile();
     context.go(AppRoutes.device);
   }
 
@@ -71,6 +73,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
 
       if (success) {
         // Update local app status if needed
+        await context.read<ProfileController>().loadProfile();
         await context.read<AppStatusController>().setHasDeliveryDetails(true);
         if (context.mounted) {
           context.go(AppRoutes.device);
