@@ -124,7 +124,7 @@ class AppCompositionRoot extends StatelessWidget {
           create: (c) => AppStatusController(prefs: c.read<AppPrefs>(),subscriptionApi: c.read<SubscriptionApi>()),
         ),
         ChangeNotifierProvider<DeviceScanController>(
-          create: (_) => DeviceScanController(),
+          create: (c) => DeviceScanController(api: c.read<DeviceDeliveryApi>()),
         ),
         // ✅ CaseRealtimeService - no constructor parameters needed
         Provider<CaseRealtimeService>(create: (_) => CaseRealtimeService()),

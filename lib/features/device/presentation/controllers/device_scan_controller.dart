@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:math';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:skudyx/features/delivery/data/remote/device_delivery_api.dart';
 
 class FoundDevice {
   final String name;
@@ -8,9 +11,12 @@ class FoundDevice {
 }
 
 class DeviceScanController extends ChangeNotifier {
+  final DeviceDeliveryApi api;
+  DeviceScanController({required this.api});
   bool scanning = false;
   final List<FoundDevice> devices = [];
-
+  bool isConnecting = false;
+  String? errorMessage;
   Timer? _timer;
 
   void startMockScan() {
@@ -32,6 +38,50 @@ class DeviceScanController extends ChangeNotifier {
       scanning = false;
       notifyListeners();
     });
+  }
+String? connectingDeviceName;  
+Future<bool> selectDevice(FoundDevice device) async {
+  if (connectingDeviceName != null) return false;
+
+  connectingDeviceName = device.name;
+  errorMessage = null;
+  notifyListeners();
+
+  try {
+    final randomId = _generateRandomId();
+    await api.updateBleDeviceId(bleDeviceId: randomId);
+
+    connectingDeviceName = null;
+    notifyListeners();
+    return true;
+  } on DioException catch (e) {
+    final body = e.response?.data;
+    errorMessage = (body is Map && body['message'] != null)
+        ? body['message'].toString()
+        : (e.message ?? 'Failed to connect device');
+
+    connectingDeviceName = null;
+    notifyListeners();
+    return false;
+  } catch (_) {
+    errorMessage = 'Something went wrong. Please try again.';
+    connectingDeviceName = null;
+    notifyListeners();
+    return false;
+  }
+}
+
+  /// ✅ Random string generator
+  String _generateRandomId({int length = 12}) {
+    const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    final rand = Random();
+    return String.fromCharCodes(
+      Iterable.generate(
+        length,
+        (_) => chars.codeUnitAt(rand.nextInt(chars.length)),
+      ),
+    );
   }
 
   @override

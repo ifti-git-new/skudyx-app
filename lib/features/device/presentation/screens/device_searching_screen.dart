@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -19,21 +21,45 @@ class _DeviceSearchingScreenState extends State<DeviceSearchingScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DeviceScanController>().startMockScan();
+      final controller = context.read<DeviceScanController>();
+      controller.startMockScan();
+      controller.addListener(_onScanUpdate);
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final scan = context.watch<DeviceScanController>();
-
-    // When devices are found -> replace searching with list
-    if (!_navigated && !scan.scanning && scan.devices.isNotEmpty) {
+  void _onScanUpdate() {
+    final scan = context.read<DeviceScanController>();
+    if (_navigated) return;
+    if (!scan.scanning && scan.devices.isNotEmpty) {
       _navigated = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.replace(AppRoutes.deviceList);
+        if (mounted) {
+          context.replace(AppRoutes.deviceList);
+        }
       });
     }
+  }
+
+  @override
+void dispose() {
+  context.read<DeviceScanController>().removeListener(_onScanUpdate);
+  super.dispose();
+}
+
+  @override
+  Widget build(BuildContext context) {
+    // final scan = context.watch<DeviceScanController>();
+    // log(
+    //   '_navigated $_navigated ,is scanning ${scan.scanning}, is device empty ${scan.devices.isNotEmpty}',
+    // );
+
+    // // When devices are found -> replace searching with list
+    // if (!_navigated && !scan.scanning && scan.devices.isNotEmpty) {
+    //   _navigated = true;
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //     if (mounted) context.replace(AppRoutes.deviceList);
+    //   });
+    // }
 
     return Scaffold(
       backgroundColor: Colors.white,

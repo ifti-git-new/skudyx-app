@@ -19,7 +19,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
 
   bool _started = false;
   bool _redirecting = false;
-
+  String? connectingDeviceName;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -135,21 +135,36 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (_, i) {
                     final d = scan.devices[i];
+                    final isLoading = scan.connectingDeviceName == d.name;
                     return _DeviceCard(
                       name: d.name,
                       timeText: d.timeText,
-                      onTap: () {
-                        context.read<DeviceSessionController>().connectDevice(
-                          d,
-                        );
+                      isLoading: isLoading,
+                      onTap: isLoading
+                          ? null
+                          : () async {
+                              final success = await context
+                                  .read<DeviceScanController>()
+                                  .selectDevice(d);
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Selected ${d.name}')),
-                        );
+                              if (!mounted) return;
 
-                        // ✅ Explicit navigation fixes blank screen immediately.
-                        context.go(AppRoutes.deviceConnected);
-                      },
+                              if (success) {
+                                context
+                                    .read<DeviceSessionController>()
+                                    .connectDevice(d);
+
+                                context.go(AppRoutes.deviceConnected);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      scan.errorMessage ?? 'Failed to connect',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
                     );
                   },
                 ),
@@ -165,12 +180,15 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
 class _DeviceCard extends StatelessWidget {
   final String name;
   final String timeText;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool isLoading;
 
   const _DeviceCard({
     required this.name,
     required this.timeText,
+
     required this.onTap,
+    required this.isLoading,
   });
 
   @override
@@ -222,20 +240,30 @@ class _DeviceCard extends StatelessWidget {
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFDFF7DF),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                'Available',
-                style: AppTextStyles.caption.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF16A34A),
+            if (isLoading)
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDFF7DF),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'Available',
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF16A34A),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),

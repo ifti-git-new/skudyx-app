@@ -59,4 +59,34 @@ class DeviceDeliveryApi {
 
     return (body['data'] as Map<String, dynamic>);
   }
+
+    /// POST /api/v1/users/update
+  /// Updates user BLE device ID
+  Future<Map<String, dynamic>> updateBleDeviceId({
+    required String bleDeviceId,
+  }) async {
+    final res = await dio.post(
+      '/api/v1/users/update',
+      data: {
+        'ble_device_id': bleDeviceId,
+      },
+      options: Options(extra: const {'requiresAuth': true}),
+    );
+
+    final body = res.data;
+
+    if (body is! Map<String, dynamic> || body['success'] != true) {
+      final msg =
+          (body is Map ? body['message'] : null) ??
+          'Failed to update BLE device ID';
+
+      throw DioException(
+        requestOptions: res.requestOptions,
+        response: res,
+        error: msg.toString(),
+      );
+    }
+
+    return (body['data'] as Map<String, dynamic>);
+  }
 }
