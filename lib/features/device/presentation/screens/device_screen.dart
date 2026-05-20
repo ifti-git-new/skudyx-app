@@ -102,7 +102,7 @@ Widget build(BuildContext context) {
     return DeviceArrivedScreen();
   }
 
-  return DeviceConnectedScreen();
+  return DeviceConnectedScreen(bleDeviceID: bleDeviceID,);
 }
 
   Scaffold _profileErrorWidget(ProfileController profileCtrl) {

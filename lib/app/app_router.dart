@@ -246,7 +246,7 @@ class AppRouter {
           ),
           GoRoute(
             path: AppRoutes.deviceConnected,
-            builder: (_, _) => const DeviceConnectedScreen(),
+            builder: (_, _) => const DeviceConnectedScreen(bleDeviceID: 'ab',),
           ),
           GoRoute(
             path: AppRoutes.emergencyContact,

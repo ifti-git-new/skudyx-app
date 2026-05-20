@@ -1629,15 +1629,21 @@ class DeviceSessionController extends ChangeNotifier
     required bool isTest,
     required String caseName,
     String caseType = '',
+     String bleDeviceID =''
   }) async {
     _log('🚀 [DeviceSession] startCase() CALLED');
     _log('🚀 [DeviceSession] isTest: $isTest, caseName: $caseName');
     _log('🚀 [DeviceSession] isConnected: $isConnected');
 
-    if (!isConnected) {
+    // if (!isConnected) {
+    //   _setError('No device connected.');
+    //   return false;
+    // }
+     if (bleDeviceID.isEmpty) {
       _setError('No device connected.');
       return false;
     }
+    
 
     if (starting || tracking) {
       _log('⚠️ [DeviceSession] Already starting or tracking');

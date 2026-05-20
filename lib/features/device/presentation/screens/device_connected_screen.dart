@@ -15,7 +15,8 @@ import 'package:skudyx/features/cases/presentation/controllers/live_case_call_co
 import 'package:skudyx/features/device/presentation/controllers/device_session_controller.dart';
 
 class DeviceConnectedScreen extends StatefulWidget {
-  const DeviceConnectedScreen({super.key});
+  final String bleDeviceID;
+  const DeviceConnectedScreen({super.key, required this.bleDeviceID});
 
   @override
   State<DeviceConnectedScreen> createState() => _DeviceConnectedScreenState();
@@ -151,9 +152,17 @@ class _DeviceConnectedScreenState extends State<DeviceConnectedScreen> {
                 onChanged: (val) => setState(() => isActiveMode = val),
               ),
               const SizedBox(height: 28),
-              _BleCard(statusColor: statusColor, softColor: statusSoftColor,subscriptionPlan: subscriptionPlan),
+              _BleCard(
+                statusColor: statusColor,
+                softColor: statusSoftColor,
+                subscriptionPlan: subscriptionPlan,
+              ),
               const SizedBox(height: 28),
-              _SafetySection(showInternalTesting: showInternalTesting,subscriptionPlan: subscriptionPlan,),
+              _SafetySection(
+                showInternalTesting: showInternalTesting,
+                subscriptionPlan: subscriptionPlan,
+                bleDeviceID: widget.bleDeviceID,
+              ),
             ],
           ),
         ),
@@ -262,12 +271,15 @@ class _BleCard extends StatelessWidget {
   final Color softColor;
   final String subscriptionPlan;
 
-  const _BleCard({required this.statusColor, required this.softColor,required this.subscriptionPlan});
+  const _BleCard({
+    required this.statusColor,
+    required this.softColor,
+    required this.subscriptionPlan,
+  });
 
   @override
   Widget build(BuildContext context) {
     final session = context.read<DeviceSessionController>();
-    
 
     return _ResponsiveCard(
       child: Column(
@@ -326,8 +338,13 @@ class _BleCard extends StatelessWidget {
 
 class _SafetySection extends StatefulWidget {
   final bool showInternalTesting;
-   final String subscriptionPlan;
-  const _SafetySection({required this.showInternalTesting,  required this.subscriptionPlan,});
+  final String subscriptionPlan;
+  final String bleDeviceID;
+  const _SafetySection({
+    required this.showInternalTesting,
+    required this.subscriptionPlan,
+    required this.bleDeviceID,
+  });
 
   @override
   State<_SafetySection> createState() => _SafetySectionState();
@@ -347,6 +364,7 @@ class _SafetySectionState extends State<_SafetySection> {
           isTest: true,
           caseName: 'Basic Live case',
           caseType: 'Basic',
+          bleDeviceID: widget.bleDeviceID,
         );
         if (isOk) {
           _showSuccessDialog(context);
@@ -355,6 +373,7 @@ class _SafetySectionState extends State<_SafetySection> {
         final ok = await session.startCase(
           isTest: false,
           caseName: 'Live Case',
+          bleDeviceID: widget.bleDeviceID,
         );
 
         if (!mounted) return;
@@ -404,7 +423,7 @@ class _SafetySectionState extends State<_SafetySection> {
           ),
         );
       }
-    }finally{
+    } finally {
       setState(() => _routingToTracking = false);
     }
   }
